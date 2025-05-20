@@ -429,8 +429,8 @@ def main():
     recipe_nutrition = get_recipe_nutrition()
     
     # App title
-    st.title("🍲 Thai Food Recipe Chatbot - โภชนาการ")
-    st.write("ถามเกี่ยวกับวิธีทำอาหารไทยและข้อมูลโภชนาการได้เลย! Ask about Thai food recipes and nutrition!")
+    st.title("🍲 Thai Food Recipe Chatbot")
+    st.write("ถามเกี่ยวกับอาหารไทยได้เลย! Ask about Thai food!")
     
     # Sidebar for nutrition filtering
     with st.sidebar:
