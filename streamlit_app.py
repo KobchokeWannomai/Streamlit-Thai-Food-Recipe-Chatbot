@@ -12,7 +12,7 @@ from typing import Dict, List, Tuple, Optional, Union
 
 # Page config
 st.set_page_config(
-    page_title="Thai Food Recipe Chatbot - โภชนาการ",
+    page_title="Thai Food Recipe Chatbot",
     page_icon="🍲",
     layout="wide"
 )
