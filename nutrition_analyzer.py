@@ -1,458 +1,446 @@
 import pandas as pd
+import numpy as np
 import requests
-import re
 import json
+import re
+from typing import Dict, List, Tuple, Optional
 import time
-from typing import Dict, List, Optional, Tuple
-import logging
-from dataclasses import dataclass
+from functools import lru_cache
+import pickle
+import os
 
-# ตั้งค่าการบันทึกล็อก
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-@dataclass
-class NutritionInfo:
-    """คลาสสำหรับเก็บข้อมูลคุณค่าทางโภชนาการ"""
-    calories: float = 0.0
-    protein: float = 0.0
-    carbohydrates: float = 0.0
-    fat: float = 0.0
-    fiber: float = 0.0
-    sugar: float = 0.0
-    sodium: float = 0.0
-    calcium: float = 0.0
-    iron: float = 0.0
-    vitamin_a: float = 0.0
-    vitamin_c: float = 0.0
-    vitamin_d: float = 0.0
-    vitamin_e: float = 0.0
-    vitamin_k: float = 0.0
-    thiamin: float = 0.0
-    riboflavin: float = 0.0
-    niacin: float = 0.0
-    vitamin_b6: float = 0.0
-    folate: float = 0.0
-    vitamin_b12: float = 0.0
-    phosphorus: float = 0.0
-    magnesium: float = 0.0
-    zinc: float = 0.0
-    potassium: float = 0.0
-
-class NutritionAnalyzer:
-    """คลาสสำหรับวิเคราะห์และหาข้อมูลคุณค่าทางโภชนาการ"""
+class ThaiNutritionAnalyzer:
+    """
+    คลาสสำหรับวิเคราะห์คุณค่าทางโภชนาการของวัตถุดิบอาหารไทย
+    """
     
-    def __init__(self, api_key: str = None):
-        """
-        เริ่มต้นตัววิเคราะห์คุณค่าทางโภชนาการ
+    def __init__(self, cache_file='nutrition_cache.pkl'):
+        self.cache_file = cache_file
+        self.nutrition_cache = self._load_cache()
         
-        Args:
-            api_key: คีย์ API สำหรับเข้าถึงฐานข้อมูลคุณค่าทางโภชนาการ
-        """
-        self.api_key = api_key
-        self.usda_base_url = "https://api.nal.usda.gov/fdc/v1"
-        self.nutrition_cache = {}  # แคชข้อมูลเพื่อลดการเรียก API
-        
-        # พจนานุกรมแปลงชื่อวัตถุดิบไทยเป็นอังกฤษ
-        self.thai_to_english = {
-            'กุ้ง': 'shrimp',
-            'ปลา': 'fish',
-            'หมู': 'pork',
-            'ไก่': 'chicken',
-            'เนื้อ': 'beef',
-            'ข้าว': 'rice',
-            'น้ำมัน': 'oil',
-            'น้ำตาล': 'sugar',
-            'เกลือ': 'salt',
-            'พริก': 'pepper',
-            'หอม': 'onion',
-            'กระเทียม': 'garlic',
-            'ขิง': 'ginger',
-            'ตะไคร้': 'lemongrass',
-            'ใบมะกรูด': 'kaffir lime leaves',
-            'ผักชี': 'cilantro',
-            'มะพร้าว': 'coconut',
-            'มะนาว': 'lime',
-            'มะขาม': 'tamarind',
-            'ถั่ว': 'beans',
-            'ผักบุ้ง': 'water spinach',
-            'คะน้า': 'chinese broccoli',
-            'ผักกาด': 'chinese cabbage',
-            'มะเขือ': 'eggplant',
-            'ฟัก': 'gourd',
-            'แตงกวา': 'cucumber',
-            'มะเขือเทศ': 'tomato',
-            'หน่อไม้': 'bamboo shoots',
-            'เห็ด': 'mushroom',
-            'ไข่': 'egg',
-            'นม': 'milk',
-            'เต้าหู้': 'tofu',
-            'แป้ง': 'flour',
-            'น้ำปลา': 'fish sauce',
-            'ซีอิ๊ว': 'soy sauce',
-            'กะปิ': 'shrimp paste'
-        }
-
-    def extract_ingredients(self, ingredient_text: str) -> List[str]:
-        """
-        แยกวัตถุดิบจากข้อความ
-        
-        Args:
-            ingredient_text: ข้อความที่มีรายการวัตถุดิบ
-            
-        Returns:
-            รายการวัตถุดิบที่แยกแล้ว
-        """
-        if not ingredient_text or pd.isna(ingredient_text):
-            return []
-            
-        # แยกวัตถุดิบตามเครื่องหมาย - และ \n
-        ingredients = re.split(r'[-\n]+', ingredient_text)
-        
-        # ทำความสะอาดและกรองเฉพาะชื่อวัตถุดิบ
-        cleaned_ingredients = []
-        for ingredient in ingredients:
-            ingredient = ingredient.strip()
-            if ingredient and len(ingredient) > 2:
-                # ลบตัวเลขและหน่วยออก
-                ingredient_name = re.sub(r'\d+.*$', '', ingredient).strip()
-                if ingredient_name:
-                    cleaned_ingredients.append(ingredient_name)
-        
-        return cleaned_ingredients
-
-    def translate_ingredient(self, thai_ingredient: str) -> str:
-        """
-        แปลชื่อวัตถุดิบจากไทยเป็นอังกฤษ
-        
-        Args:
-            thai_ingredient: ชื่อวัตถุดิบภาษาไทย
-            
-        Returns:
-            ชื่อวัตถุดิบภาษาอังกฤษ
-        """
-        # ตรวจสอบการแปลงโดยตรง
-        for thai, english in self.thai_to_english.items():
-            if thai in thai_ingredient:
-                return english
-                
-        # ถ้าไม่พบการแปลงโดยตรง ให้ใช้ชื่อเดิม
-        return thai_ingredient
-
-    def search_usda_food(self, ingredient: str) -> Optional[Dict]:
-        """
-        ค้นหาข้อมูลอาหารจาก USDA FoodData Central
-        
-        Args:
-            ingredient: ชื่อวัตถุดิบ
-            
-        Returns:
-            ข้อมูลอาหารจาก USDA หรือ None ถ้าไม่พบ
-        """
-        if not self.api_key:
-            logger.warning("ไม่มี API key สำหรับ USDA FoodData Central")
-            return None
-            
-        # ตรวจสอบแคช
-        if ingredient in self.nutrition_cache:
-            return self.nutrition_cache[ingredient]
-            
-        try:
-            # แปลงชื่อวัตถุดิบเป็นอังกฤษ
-            english_ingredient = self.translate_ingredient(ingredient)
-            
-            # ค้นหาอาหารใน USDA
-            search_url = f"{self.usda_base_url}/foods/search"
-            params = {
-                'api_key': self.api_key,
-                'query': english_ingredient,
-                'pageSize': 5
+        # ฐานข้อมูลคุณค่าทางโภชนาการพื้นฐานของวัตถุดิบไทย (ต่อ 100 กรัม)
+        self.thai_ingredients_nutrition = {
+            'กุ้ง': {
+                'พลังงาน': 99, 'โปรตีน': 20.1, 'ไขมัน': 1.7,
+                'คาร์โบไฮเดรต': 0.9, 'แคลเซียม': 54, 'ฟอสฟอรัส': 244,
+                'เหล็ก': 2.1, 'วิตามินเอ': 180, 'วิตามินบี1': 0.03,
+                'วิตามินบี2': 0.05, 'ไนอาซิน': 3.0
+            },
+            'หมู': {
+                'พลังงาน': 242, 'โปรตีน': 16.9, 'ไขมัน': 19.2,
+                'คาร์โบไฮเดรต': 0, 'แคลเซียม': 11, 'ฟอสฟอรัส': 198,
+                'เหล็ก': 0.9, 'วิตามินเอ': 7, 'วิตามินบี1': 0.83,
+                'วิตามินบี2': 0.25, 'ไนอาซิน': 4.8
+            },
+            'ไก่': {
+                'พลังงาน': 165, 'โปรตีน': 31.0, 'ไขมัน': 3.6,
+                'คาร์โบไฮเดรต': 0, 'แคลเซียม': 15, 'ฟอสฟอรัส': 228,
+                'เหล็ก': 1.0, 'วิตามินเอ': 41, 'วิตามินบี1': 0.08,
+                'วิตามินบี2': 0.16, 'ไนอาซิน': 8.9
+            },
+            'ปลา': {
+                'พลังงาน': 124, 'โปรตีน': 20.4, 'ไขมัน': 4.5,
+                'คาร์โบไฮเดรต': 0, 'แคลเซียม': 20, 'ฟอสฟอรัส': 200,
+                'เหล็ก': 0.8, 'วิตามินเอ': 30, 'วิตามินบี1': 0.05,
+                'วิตามินบี2': 0.10, 'ไนอาซิน': 2.8
+            },
+            'ไข่': {
+                'พลังงาน': 155, 'โปรตีน': 12.6, 'ไขมัน': 10.6,
+                'คาร์โบไฮเดรต': 1.1, 'แคลเซียม': 56, 'ฟอสฟอรัส': 180,
+                'เหล็ก': 1.8, 'วิตามินเอ': 540, 'วิตามินบี1': 0.10,
+                'วิตามินบี2': 0.47, 'ไนอาซิน': 0.1
+            },
+            'พริกไทย': {
+                'พลังงาน': 255, 'โปรตีน': 10.4, 'ไขมัน': 3.3,
+                'คาร์โบไฮเดรต': 64.8, 'แคลเซียม': 443, 'ฟอสฟอรัส': 173,
+                'เหล็ก': 9.7, 'วิตามินเอ': 370, 'วิตามินบี1': 0.10,
+                'วิตามินบี2': 0.18, 'ไนอาซิน': 1.1
+            },
+            'กระเทียม': {
+                'พลังงาน': 149, 'โปรตีน': 6.4, 'ไขมัน': 0.5,
+                'คาร์โบไฮเดรต': 33.1, 'แคลเซียม': 181, 'ฟอสฟอรัส': 153,
+                'เหล็ก': 1.7, 'วิตามินเอ': 0, 'วิตามินบี1': 0.20,
+                'วิตามินบี2': 0.11, 'ไนอาซิน': 0.7, 'วิตามินซี': 31
+            },
+            'หอม': {
+                'พลังงาน': 40, 'โปรตีน': 1.1, 'ไขมัน': 0.1,
+                'คาร์โบไฮเดรต': 9.3, 'แคลเซียม': 23, 'ฟอสฟอรัส': 29,
+                'เหล็ก': 0.2, 'วิตามินเอ': 0, 'วิตามินบี1': 0.05,
+                'วิตามินบี2': 0.03, 'ไนอาซิน': 0.1, 'วิตามินซี': 7
+            },
+            'ข่า': {
+                'พลังงาน': 71, 'โปรตีน': 1.8, 'ไขมัน': 0.7,
+                'คาร์โบไฮเดรต': 15.5, 'แคลเซียม': 16, 'ฟอสฟอรัส': 36,
+                'เหล็ก': 1.8, 'วิตามินเอ': 0, 'วิตามินบี1': 0.03,
+                'วิตามินบี2': 0.03, 'ไนอาซิน': 0.6
+            },
+            'ตะไคร้': {
+                'พลังงาน': 99, 'โปรตีน': 1.8, 'ไขมัน': 0.5,
+                'คาร์โบไฮเดรต': 25.3, 'แคลเซียม': 65, 'ฟอสฟอรัส': 101,
+                'เหล็ก': 8.2, 'วิตามินเอ': 0, 'วิตามินบี1': 0.07,
+                'วิตามินบี2': 0.14, 'ไนอาซิน': 1.1
+            },
+            'ใบมะกรูด': {
+                'พลังงาน': 70, 'โปรตีน': 1.5, 'ไขมัน': 0.6,
+                'คาร์โบไฮเดรต': 16.8, 'แคลเซียม': 629, 'ฟอสฟอรัส': 63,
+                'เหล็ก': 0.8, 'วิตามินเอ': 0, 'วิตามินบี1': 0.01,
+                'วิตามินบี2': 0.26, 'ไนอาซิน': 0.9, 'วิตามินซี': 30
+            },
+            'น้ำปลา': {
+                'พลังงาน': 25, 'โปรตีน': 4.0, 'ไขมัน': 0,
+                'คาร์โบไฮเดรต': 2.0, 'แคลเซียม': 20, 'ฟอสฟอรัส': 30,
+                'เหล็ก': 0.5, 'โซเดียม': 5720
+            },
+            'มะพร้าว': {
+                'พลังงาน': 354, 'โปรตีน': 3.3, 'ไขมัน': 33.5,
+                'คาร์โบไฮเดรต': 15.2, 'แคลเซียม': 14, 'ฟอสฟอรัส': 113,
+                'เหล็ก': 2.4, 'วิตามินเอ': 0, 'วิตามินบี1': 0.07,
+                'วิตามินบี2': 0.02, 'ไนอาซิน': 0.5, 'วิตามินซี': 3
+            },
+            'ผักชี': {
+                'พลังงาน': 23, 'โปรตีน': 2.1, 'ไขมัน': 0.5,
+                'คาร์โบไฮเดรต': 3.7, 'แคลเซียม': 67, 'ฟอสฟอรัส': 48,
+                'เหล็ก': 1.8, 'วิตามินเอ': 6748, 'วิตามินบี1': 0.07,
+                'วิตามินบี2': 0.16, 'ไนอาซิน': 1.1, 'วิตามินซี': 27
+            },
+            'แป้ง': {
+                'พลังงาน': 364, 'โปรตีน': 10.3, 'ไขมัน': 1.0,
+                'คาร์โบไฮเดรต': 76.3, 'แคลเซียม': 18, 'ฟอสฟอรัส': 108,
+                'เหล็ก': 1.2, 'วิตามินเอ': 0, 'วิตามินบี1': 0.12,
+                'วิตามินบี2': 0.04, 'ไนอาซิน': 1.3
+            },
+            'น้ำมันหมู': {
+                'พลังงาน': 900, 'โปรตีน': 0, 'ไขมัน': 100,
+                'คาร์โบไฮเดรต': 0, 'แคลเซียม': 0, 'ฟอสฟอรัส': 0,
+                'เหล็ก': 0, 'วิตามินเอ': 0, 'วิตามินบี1': 0,
+                'วิตามินบี2': 0, 'ไนอาซิน': 0
             }
-            
-            response = requests.get(search_url, params=params, timeout=10)
-            response.raise_for_status()
-            
-            data = response.json()
-            
-            if data.get('foods'):
-                # เลือกผลลัพธ์แรกที่มีข้อมูลคุณค่าทางโภชนาการ
-                for food in data['foods']:
-                    if food.get('foodNutrients'):
-                        food_details = self.get_food_details(food['fdcId'])
-                        if food_details:
-                            self.nutrition_cache[ingredient] = food_details
-                            return food_details
-                            
-            # ถ้าไม่พบข้อมูลใน USDA ให้ใช้ข้อมูลเริ่มต้น
-            default_nutrition = self.get_default_nutrition(ingredient)
-            self.nutrition_cache[ingredient] = default_nutrition
-            return default_nutrition
-            
-        except requests.RequestException as e:
-            logger.error(f"ข้อผิดพลาดในการเรียก USDA API: {e}")
-            return self.get_default_nutrition(ingredient)
-        except Exception as e:
-            logger.error(f"ข้อผิดพลาดในการค้นหาข้อมูล {ingredient}: {e}")
-            return self.get_default_nutrition(ingredient)
-
-    def get_food_details(self, fdc_id: str) -> Optional[Dict]:
-        """
-        ดึงรายละเอียดอาหารจาก USDA FoodData Central
+        }
         
-        Args:
-            fdc_id: รหัสอาหารใน USDA
-            
-        Returns:
-            รายละเอียดอาหารหรือ None ถ้าไม่พบ
-        """
+        # แมปชื่อวัตถุดิบภาษาไทยกับภาษาอังกฤษ
+        self.ingredient_mapping = {
+            'กุ้ง': ['shrimp', 'prawn'],
+            'หมู': ['pork'],
+            'ไก่': ['chicken'],
+            'ปลา': ['fish'],
+            'ไข่': ['egg'],
+            'พริกไทย': ['black pepper', 'pepper'],
+            'กระเทียม': ['garlic'],
+            'หอม': ['onion', 'shallot'],
+            'ข่า': ['galangal'],
+            'ตะไคร้': ['lemongrass'],
+            'ใบมะกรูด': ['kaffir lime leaves'],
+            'น้ำปลา': ['fish sauce'],
+            'มะพร้าว': ['coconut'],
+            'ผักชี': ['coriander', 'cilantro'],
+            'แป้ง': ['flour'],
+            'น้ำมันหมู': ['lard', 'pork fat']
+        }
+        
+    def _load_cache(self) -> Dict:
+        """โหลดแคชข้อมูลคุณค่าทางโภชนาการ"""
+        if os.path.exists(self.cache_file):
+            try:
+                with open(self.cache_file, 'rb') as f:
+                    return pickle.load(f)
+            except:
+                return {}
+        return {}
+    
+    def _save_cache(self):
+        """บันทึกแคชข้อมูลคุณค่าทางโภชนาการ"""
         try:
-            detail_url = f"{self.usda_base_url}/food/{fdc_id}"
-            params = {'api_key': self.api_key}
-            
-            response = requests.get(detail_url, params=params, timeout=10)
-            response.raise_for_status()
-            
-            return response.json()
-            
+            with open(self.cache_file, 'wb') as f:
+                pickle.dump(self.nutrition_cache, f)
         except Exception as e:
-            logger.error(f"ข้อผิดพลาดในการดึงรายละเอียดอาหาร {fdc_id}: {e}")
-            return None
-
-    def get_default_nutrition(self, ingredient: str) -> Dict:
+            print(f"เกิดข้อผิดพลาดในการบันทึกแคช: {e}")
+    
+    def extract_ingredients(self, ingredient_text: str) -> List[Tuple[str, float, str]]:
         """
-        ให้ข้อมูลคุณค่าทางโภชนาการเริ่มต้นสำหรับวัตถุดิบที่ไม่พบในฐานข้อมูล
+        แยกวัตถุดิบและปริมาณจากข้อความ
         
         Args:
-            ingredient: ชื่อวัตถุดิบ
+            ingredient_text: ข้อความรายการวัตถุดิบ
             
         Returns:
-            ข้อมูลคุณค่าทางโภชนาการเริ่มต้น
+            List ของ (ชื่อวัตถุดิบ, ปริมาณ, หน่วย)
         """
-        # ข้อมูลคุณค่าทางโภชนาการเริ่มต้นสำหรับวัตถุดิบทั่วไป
-        default_values = {
-            'กุ้ง': {'calories': 99, 'protein': 18.0, 'fat': 1.4, 'calcium': 52, 'iron': 0.5},
-            'ปลา': {'calories': 206, 'protein': 22.0, 'fat': 12.0, 'calcium': 20, 'iron': 1.0},
-            'หมู': {'calories': 242, 'protein': 27.0, 'fat': 14.0, 'iron': 0.9, 'zinc': 2.9},
-            'ไก่': {'calories': 239, 'protein': 27.0, 'fat': 14.0, 'iron': 1.0, 'zinc': 1.3},
-            'เนื้อ': {'calories': 250, 'protein': 26.0, 'fat': 15.0, 'iron': 2.6, 'zinc': 4.8},
-            'ข้าว': {'calories': 130, 'carbohydrates': 28.0, 'protein': 2.7, 'fat': 0.3},
-            'น้ำมัน': {'calories': 884, 'fat': 100.0},
-            'น้ำตาล': {'calories': 387, 'carbohydrates': 100.0},
-            'เกลือ': {'sodium': 38758},
-            'ไข่': {'calories': 155, 'protein': 13.0, 'fat': 11.0, 'vitamin_a': 160, 'vitamin_d': 20}
-        }
+        ingredients = []
+        lines = ingredient_text.strip().split('\n')
         
-        # ค้นหาข้อมูลเริ่มต้นที่เหมาะสม
-        for key, values in default_values.items():
-            if key in ingredient:
-                return {
-                    'description': ingredient,
-                    'foodNutrients': [
-                        {'nutrientName': name, 'value': value, 'unitName': 'per 100g'}
-                        for name, value in values.items()
-                    ]
-                }
+        for line in lines:
+            if line.strip() and line.strip().startswith('-'):
+                # ลบเครื่องหมาย - ออก
+                ingredient_line = line.strip()[1:].strip()
+                
+                # แยกชื่อวัตถุดิบและปริมาณ
+                # ค้นหาตัวเลขในบรรทัด
+                numbers = re.findall(r'(\d+(?:\.\d+)?)\s*(\w+)', ingredient_line)
+                
+                if numbers:
+                    # มีปริมาณระบุ
+                    quantity = float(numbers[0][0])
+                    unit = numbers[0][1]
+                    # ตัดส่วนปริมาณออกเพื่อเหลือแต่ชื่อ
+                    name = re.sub(r'\d+(?:\.\d+)?\s*\w+', '', ingredient_line).strip()
+                else:
+                    # ไม่มีปริมาณระบุ
+                    quantity = 100  # ค่าเริ่มต้น 100 กรัม
+                    unit = 'กรัม'
+                    name = ingredient_line
+                
+                # ทำความสะอาดชื่อวัตถุดิบ
+                name = re.sub(r'\s+', ' ', name).strip()
+                
+                if name:
+                    ingredients.append((name, quantity, unit))
         
-        # ถ้าไม่พบข้อมูลเริ่มต้น ให้ใช้ค่าเริ่มต้นทั่วไป
-        return {
-            'description': ingredient,
-            'foodNutrients': [
-                {'nutrientName': 'calories', 'value': 0, 'unitName': 'per 100g'}
-            ]
-        }
-
-    def extract_nutrition_values(self, food_data: Dict) -> NutritionInfo:
+        return ingredients
+    
+    def get_base_ingredient(self, ingredient_name: str) -> Optional[str]:
         """
-        แยกข้อมูลคุณค่าทางโภชนาการจากข้อมูลอาหาร
+        หาวัตถุดิบพื้นฐานจากชื่อวัตถุดิบ
         
         Args:
-            food_data: ข้อมูลอาหารจาก API
+            ingredient_name: ชื่อวัตถุดิบ
             
         Returns:
-            ข้อมูลคุณค่าทางโภชนาการ
+            ชื่อวัตถุดิบพื้นฐาน หรือ None ถ้าไม่พบ
         """
-        nutrition = NutritionInfo()
+        ingredient_lower = ingredient_name.lower()
         
-        if not food_data or 'foodNutrients' not in food_data:
+        # ค้นหาวัตถุดิบพื้นฐาน
+        for base, keywords in self.thai_ingredients_nutrition.items():
+            if base in ingredient_name:
+                return base
+                
+        # ค้นหาคำสำคัญ
+        ingredient_keywords = {
+            'กุ้ง': ['กุ้ง', 'กุ้งนาง', 'กุ้งแห้ง', 'กุ้งตะเข็บ'],
+            'หมู': ['หมู', 'เนื้อหมู', 'หมูสับ', 'หมูบด'],
+            'ไก่': ['ไก่', 'เนื้อไก่', 'อกไก่', 'น่องไก่'],
+            'ปลา': ['ปลา', 'ปลาทู', 'ปลาช่อน', 'ปลากะพง'],
+            'ไข่': ['ไข่', 'ไข่เป็ด', 'ไข่ไก่', 'ไข่นก'],
+            'พริกไทย': ['พริกไทย', 'พริกไทยดำ', 'พริกไทยขาว'],
+            'กระเทียม': ['กระเทียม', 'กระเทียมดอง'],
+            'หอม': ['หอม', 'หอมแดง', 'หอมใหญ่', 'ต้นหอม'],
+            'ผักชี': ['ผักชี', 'ผักชีฝรั่ง', 'รากผักชี']
+        }
+        
+        for base, keywords in ingredient_keywords.items():
+            for keyword in keywords:
+                if keyword in ingredient_name:
+                    return base
+                    
+        return None
+    
+    def calculate_nutrition(self, ingredient_name: str, quantity: float, unit: str) -> Dict[str, float]:
+        """
+        คำนวณคุณค่าทางโภชนาการของวัตถุดิบ
+        
+        Args:
+            ingredient_name: ชื่อวัตถุดิบ
+            quantity: ปริมาณ
+            unit: หน่วย
+            
+        Returns:
+            Dictionary ของคุณค่าทางโภชนาการ
+        """
+        # หาวัตถุดิบพื้นฐาน
+        base_ingredient = self.get_base_ingredient(ingredient_name)
+        
+        if base_ingredient and base_ingredient in self.thai_ingredients_nutrition:
+            base_nutrition = self.thai_ingredients_nutrition[base_ingredient].copy()
+            
+            # แปลงหน่วยเป็นกรัม
+            quantity_in_grams = self.convert_to_grams(quantity, unit)
+            
+            # คำนวณคุณค่าทางโภชนาการตามปริมาณ
+            factor = quantity_in_grams / 100  # ข้อมูลพื้นฐานต่อ 100 กรัม
+            
+            nutrition = {}
+            for nutrient, value in base_nutrition.items():
+                nutrition[nutrient] = round(value * factor, 2)
+                
             return nutrition
+        
+        return {}
+    
+    def convert_to_grams(self, quantity: float, unit: str) -> float:
+        """
+        แปลงหน่วยเป็นกรัม
+        
+        Args:
+            quantity: ปริมาณ
+            unit: หน่วย
             
-        # แมปชื่อสารอาหารกับคุณสมบัติ
-        nutrient_mapping = {
-            'Energy': 'calories',
-            'Protein': 'protein',
-            'Carbohydrate, by difference': 'carbohydrates',
-            'Total lipid (fat)': 'fat',
-            'Fiber, total dietary': 'fiber',
-            'Sugars, total including NLEA': 'sugar',
-            'Sodium, Na': 'sodium',
-            'Calcium, Ca': 'calcium',
-            'Iron, Fe': 'iron',
-            'Vitamin A, RAE': 'vitamin_a',
-            'Vitamin C, total ascorbic acid': 'vitamin_c',
-            'Vitamin D (D2 + D3)': 'vitamin_d',
-            'Vitamin E (alpha-tocopherol)': 'vitamin_e',
-            'Vitamin K (phylloquinone)': 'vitamin_k',
-            'Thiamin': 'thiamin',
-            'Riboflavin': 'riboflavin',
-            'Niacin': 'niacin',
-            'Vitamin B-6': 'vitamin_b6',
-            'Folate, total': 'folate',
-            'Vitamin B-12': 'vitamin_b12',
-            'Phosphorus, P': 'phosphorus',
-            'Magnesium, Mg': 'magnesium',
-            'Zinc, Zn': 'zinc',
-            'Potassium, K': 'potassium'
+        Returns:
+            ปริมาณในหน่วยกรัม
+        """
+        # การแปลงหน่วยพื้นฐาน
+        unit_conversions = {
+            'กรัม': 1,
+            'กก.': 1000,
+            'กิโลกรัม': 1000,
+            'ขีด': 100,
+            'ช้อนโต๊ะ': 15,
+            'ช้อนชา': 5,
+            'ถ้วย': 240,
+            'ถ้วยชา': 200,
+            'ฟอง': 50,  # สำหรับไข่
+            'ตัว': 100,  # สำหรับกุ้ง
+            'แผ่น': 50,  # ค่าเฉลี่ย
+            'หัว': 30,   # สำหรับหอม/กระเทียม
+            'กลีบ': 3,   # สำหรับกระเทียม
+            'ต้น': 10,   # สำหรับผักชี/ต้นหอม
+            'ใบ': 1,     # สำหรับใบต่างๆ
+            'ผล': 100,  # ค่าเฉลี่ย
+            'ฝัก': 20,   # ค่าเฉลี่ย
         }
         
-        for nutrient in food_data['foodNutrients']:
-            nutrient_name = nutrient.get('nutrientName', '')
-            value = nutrient.get('value', 0)
-            
-            for api_name, attr_name in nutrient_mapping.items():
-                if api_name.lower() in nutrient_name.lower():
-                    setattr(nutrition, attr_name, float(value))
-                    break
+        # ค้นหาหน่วยที่ตรงกัน
+        for unit_key, factor in unit_conversions.items():
+            if unit_key in unit:
+                return quantity * factor
+                
+        # ถ้าไม่พบหน่วย ใช้ค่าเริ่มต้น 100 กรัม
+        return quantity * 100
+    
+    @lru_cache(maxsize=128)
+    def fetch_nutrition_from_api(self, ingredient_name: str) -> Optional[Dict]:
+        """
+        ดึงข้อมูลคุณค่าทางโภชนาการจาก API ภายนอก (USDA Food Data Central)
         
-        return nutrition
-
+        Args:
+            ingredient_name: ชื่อวัตถุดิบ
+            
+        Returns:
+            Dictionary ของคุณค่าทางโภชนาการ หรือ None ถ้าไม่พบ
+        """
+        # ตรวจสอบแคช
+        if ingredient_name in self.nutrition_cache:
+            return self.nutrition_cache[ingredient_name]
+            
+        # สำหรับ demo จะใช้ข้อมูลจากฐานข้อมูลภายในก่อน
+        # ในการใช้งานจริงสามารถเชื่อมต่อกับ API เช่น USDA Food Data Central
+        # API_KEY = 'YOUR_API_KEY'
+        # url = f"https://api.nal.usda.gov/fdc/v1/foods/search?query={ingredient_name}&api_key={API_KEY}"
+        
+        # ค้นหาชื่อภาษาอังกฤษ
+        english_names = []
+        for thai, eng_list in self.ingredient_mapping.items():
+            if thai in ingredient_name:
+                english_names.extend(eng_list)
+                
+        # จำลองการดึงข้อมูลจาก API
+        # ในการใช้งานจริงจะต้องเรียก API จริง
+        # try:
+        #     response = requests.get(url, timeout=5)
+        #     if response.status_code == 200:
+        #         data = response.json()
+        #         # ประมวลผลข้อมูลจาก API
+        #         # ...
+        # except:
+        #     pass
+        
+        return None
+    
     def analyze_recipe_nutrition(self, ingredients_text: str) -> Dict:
         """
-        วิเคราะห์คุณค่าทางโภชนาการของสูตรอาหาร
+        วิเคราะห์คุณค่าทางโภชนาการทั้งหมดของสูตรอาหาร
         
         Args:
             ingredients_text: ข้อความรายการวัตถุดิบ
             
         Returns:
-            ข้อมูลคุณค่าทางโภชนาการรวมของสูตรอาหาร
+            Dictionary ของคุณค่าทางโภชนาการรวม
         """
+        # แยกวัตถุดิบ
         ingredients = self.extract_ingredients(ingredients_text)
-        total_nutrition = NutritionInfo()
+        
+        # คำนวณคุณค่าทางโภชนาการรวม
+        total_nutrition = {}
         ingredient_details = []
         
-        for ingredient in ingredients:
-            if len(ingredient.strip()) > 2:  # ตรวจสอบว่าชื่อวัตถุดิบมีความยาวเพียงพอ
-                food_data = self.search_usda_food(ingredient)
-                if food_data:
-                    nutrition = self.extract_nutrition_values(food_data)
+        for name, quantity, unit in ingredients:
+            nutrition = self.calculate_nutrition(name, quantity, unit)
+            
+            if nutrition:
+                # เพิ่มคุณค่าทางโภชนาการรวม
+                for nutrient, value in nutrition.items():
+                    if nutrient not in total_nutrition:
+                        total_nutrition[nutrient] = 0
+                    total_nutrition[nutrient] += value
                     
-                    # รวมคุณค่าทางโภชนาการ (ประมาณการ)
-                    total_nutrition.calories += nutrition.calories * 0.1  # สมมติว่าใช้ 10% ของ 100g
-                    total_nutrition.protein += nutrition.protein * 0.1
-                    total_nutrition.carbohydrates += nutrition.carbohydrates * 0.1
-                    total_nutrition.fat += nutrition.fat * 0.1
-                    total_nutrition.fiber += nutrition.fiber * 0.1
-                    total_nutrition.calcium += nutrition.calcium * 0.1
-                    total_nutrition.iron += nutrition.iron * 0.1
-                    total_nutrition.vitamin_a += nutrition.vitamin_a * 0.1
-                    total_nutrition.vitamin_c += nutrition.vitamin_c * 0.1
-                    
-                    ingredient_details.append({
-                        'ingredient': ingredient,
-                        'nutrition': nutrition
-                    })
-                
-                # เพิ่มหน่วงเวลาเพื่อไม่ให้เรียก API บ่อยเกินไป
-                time.sleep(0.1)
+                # เก็บรายละเอียดแต่ละวัตถุดิบ
+                ingredient_details.append({
+                    'name': name,
+                    'quantity': quantity,
+                    'unit': unit,
+                    'nutrition': nutrition
+                })
         
+        # ปัดเศษค่าคุณค่าทางโภชนาการรวม
+        for nutrient in total_nutrition:
+            total_nutrition[nutrient] = round(total_nutrition[nutrient], 2)
+            
         return {
             'total_nutrition': total_nutrition,
-            'ingredient_details': ingredient_details
+            'ingredients': ingredient_details
         }
-
-    def process_csv_file(self, input_file: str, output_file: str = None):
+    
+    def get_nutrition_summary(self, nutrition_data: Dict) -> str:
         """
-        ประมวลผลไฟล์ CSV และเพิ่มข้อมูลคุณค่าทางโภชนาการ
+        สร้างสรุปคุณค่าทางโภชนาการในรูปแบบข้อความ
         
         Args:
-            input_file: ไฟล์ CSV ต้นฉบับ
-            output_file: ไฟล์ CSV ผลลัพธ์ (ถ้าไม่ระบุจะเขียนทับไฟล์เดิม)
+            nutrition_data: ข้อมูลคุณค่าทางโภชนาการ
+            
+        Returns:
+            ข้อความสรุปคุณค่าทางโภชนาการ
         """
-        if output_file is None:
-            output_file = input_file.replace('.csv', '_with_nutrition.csv')
+        total = nutrition_data.get('total_nutrition', {})
         
-        try:
-            # อ่านไฟล์ CSV
-            df = pd.read_csv(input_file)
-            logger.info(f"อ่านข้อมูล {len(df)} รายการจากไฟล์ {input_file}")
+        if not total:
+            return "ไม่มีข้อมูลคุณค่าทางโภชนาการ"
             
-            # เพิ่มคอลัมน์ใหม่สำหรับคุณค่าทางโภชนาการ
-            nutrition_columns = [
-                'calories', 'protein', 'carbohydrates', 'fat', 'fiber',
-                'calcium', 'iron', 'vitamin_a', 'vitamin_c', 'vitamin_d'
-            ]
+        summary = "📊 **คุณค่าทางโภชนาการโดยประมาณ:**\n\n"
+        
+        # สารอาหารหลัก
+        if 'พลังงาน' in total:
+            summary += f"⚡ พลังงาน: {total['พลังงาน']} แคลอรี\n"
+        if 'โปรตีน' in total:
+            summary += f"🥩 โปรตีน: {total['โปรตีน']} กรัม\n"
+        if 'ไขมัน' in total:
+            summary += f"🧈 ไขมัน: {total['ไขมัน']} กรัม\n"
+        if 'คาร์โบไฮเดรต' in total:
+            summary += f"🌾 คาร์โบไฮเดรต: {total['คาร์โบไฮเดรต']} กรัม\n"
             
-            for col in nutrition_columns:
-                df[col] = 0.0
-            
-            df['nutrition_info'] = ''
-            
-            # วิเคราะห์คุณค่าทางโภชนาการสำหรับแต่ละสูตร
-            for idx, row in df.iterrows():
-                logger.info(f"กำลังวิเคราะห์สูตรที่ {idx + 1}: {row['name']}")
+        # แร่ธาตุ
+        summary += "\n**แร่ธาตุ:**\n"
+        minerals = ['แคลเซียม', 'ฟอสฟอรัส', 'เหล็ก', 'โซเดียม']
+        for mineral in minerals:
+            if mineral in total and total[mineral] > 0:
+                summary += f"• {mineral}: {total[mineral]} มก.\n"
                 
-                try:
-                    nutrition_analysis = self.analyze_recipe_nutrition(row['ingredient'])
-                    total_nutrition = nutrition_analysis['total_nutrition']
-                    
-                    # บันทึกข้อมูลคุณค่าทางโภชนาการ
-                    df.at[idx, 'calories'] = round(total_nutrition.calories, 2)
-                    df.at[idx, 'protein'] = round(total_nutrition.protein, 2)
-                    df.at[idx, 'carbohydrates'] = round(total_nutrition.carbohydrates, 2)
-                    df.at[idx, 'fat'] = round(total_nutrition.fat, 2)
-                    df.at[idx, 'fiber'] = round(total_nutrition.fiber, 2)
-                    df.at[idx, 'calcium'] = round(total_nutrition.calcium, 2)
-                    df.at[idx, 'iron'] = round(total_nutrition.iron, 2)
-                    df.at[idx, 'vitamin_a'] = round(total_nutrition.vitamin_a, 2)
-                    df.at[idx, 'vitamin_c'] = round(total_nutrition.vitamin_c, 2)
-                    df.at[idx, 'vitamin_d'] = round(total_nutrition.vitamin_d, 2)
-                    
-                    # บันทึกข้อมูลรายละเอียด
-                    ingredient_summary = []
-                    for detail in nutrition_analysis['ingredient_details']:
-                        ingredient_summary.append(f"{detail['ingredient']}: {detail['nutrition'].calories:.0f} cal")
-                    
-                    df.at[idx, 'nutrition_info'] = '; '.join(ingredient_summary)
-                    
-                except Exception as e:
-                    logger.error(f"ข้อผิดพลาดในการวิเคราะห์สูตร {row['name']}: {e}")
-                    continue
-            
-            # บันทึกไฟล์ผลลัพธ์
-            df.to_csv(output_file, index=False)
-            logger.info(f"บันทึกไฟล์ผลลัพธ์: {output_file}")
-            
-            # แสดงสถิติสรุป
-            self.print_nutrition_summary(df)
-            
-        except Exception as e:
-            logger.error(f"ข้อผิดพลาดในการประมวลผลไฟล์: {e}")
-
-    def print_nutrition_summary(self, df: pd.DataFrame):
+        # วิตามิน
+        summary += "\n**วิตามิน:**\n"
+        vitamins = ['วิตามินเอ', 'วิตามินบี1', 'วิตามินบี2', 'ไนอาซิน', 'วิตามินซี']
+        for vitamin in vitamins:
+            if vitamin in total and total[vitamin] > 0:
+                unit = 'IU' if vitamin == 'วิตามินเอ' else 'มก.'
+                summary += f"• {vitamin}: {total[vitamin]} {unit}\n"
+                
+        return summary
+    
+    def add_new_ingredient_nutrition(self, ingredient_name: str, nutrition_data: Dict):
         """
-        แสดงสถิติสรุปคุณค่าทางโภชนาการ
+        เพิ่มข้อมูลคุณค่าทางโภชนาการของวัตถุดิบใหม่
         
         Args:
-            df: DataFrame ที่มีข้อมูลคุณค่าทางโภชนาการ
+            ingredient_name: ชื่อวัตถุดิบ
+            nutrition_data: ข้อมูลคุณค่าทางโภชนาการ
         """
-        print("\n=== สรุปคุณค่าทางโภชนาการ ===")
-        print(f"จำนวนสูตรอาหาร: {len(df)} สูตร")
-        
-        nutrition_cols = ['calories', 'protein', 'carbohydrates', 'fat', 'calcium', 'iron']
-        for col in nutrition_cols:
-            if col in df.columns:
-                avg_value = df[col].mean()
-                max_value = df[col].max()
-                min_value = df[col].min()
-                print(f"{col.capitalize()}: เฉลี่ย {avg_value:.2f}, สูงสุด {max_value:.2f}, ต่ำสุด {min_value:.2f}")
-
-# ตัวอย่างการใช้งาน
-if __name__ == "__main__":
-    # ตั้งค่า API key สำหรับ USDA FoodData Central
-    # สมัครได้ฟรีที่ https://fdc.nal.usda.gov/api-guide.html
-    API_KEY = "YOUR_USDA_API_KEY_HERE"  # เปลี่ยนเป็น API key ของคุณ
-    
-    # สร้างตัววิเคราะห์คุณค่าทางโภชนาการ
-    analyzer = NutritionAnalyzer(api_key=API_KEY)
-    
-    # ประมวลผลไฟล์ CSV
-    analyzer.process_csv_file("thai_food_processed.csv", "thai_food_with_nutrition.csv")
+        self.thai_ingredients_nutrition[ingredient_name] = nutrition_data
+        self.nutrition_cache[ingredient_name] = nutrition_data
+        self._save_cache()
