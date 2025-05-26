@@ -254,7 +254,7 @@ def main():
                 if analyzer.api_key:
                     analyzer.process_csv_file(DATA_PATH, NUTRITION_DATA_PATH)
                     st.success("วิเคราะห์เสร็จสิ้น! กรุณาโหลดหน้าใหม่เพื่อดูผลลัพธ์")
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("กรุณาตั้งค่า USDA_API_KEY ใน environment variables")
         
