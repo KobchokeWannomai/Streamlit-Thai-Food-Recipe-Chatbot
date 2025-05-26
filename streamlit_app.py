@@ -1,5 +1,3 @@
-import os
-os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
 import streamlit as st
 import pandas as pd
 from sentence_transformers import SentenceTransformer
@@ -256,7 +254,7 @@ def main():
                 if analyzer.api_key:
                     analyzer.process_csv_file(DATA_PATH, NUTRITION_DATA_PATH)
                     st.success("วิเคราะห์เสร็จสิ้น! กรุณาโหลดหน้าใหม่เพื่อดูผลลัพธ์")
-                    st.rerun()
+                    st.experimental_rerun()
                 else:
                     st.error("กรุณาตั้งค่า USDA_API_KEY ใน environment variables")
         
@@ -387,7 +385,7 @@ def main():
         with cols[i % 3]:
             if st.button(query, key=f"example_{i}"):
                 # เพิ่มคำค้นหาตัวอย่างในช่องแชท
-                st.rerun()
+                st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
