@@ -6,6 +6,4 @@ numpy
 torch
 transformers
 requests
-plotly
-python-dotenv
-dataclasses-json
+openpyxl
