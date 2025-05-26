@@ -385,7 +385,7 @@ def main():
         with cols[i % 3]:
             if st.button(query, key=f"example_{i}"):
                 # เพิ่มคำค้นหาตัวอย่างในช่องแชท
-                st.experimental_rerun()
+                st.rerun()
 
 if __name__ == "__main__":
     main()
