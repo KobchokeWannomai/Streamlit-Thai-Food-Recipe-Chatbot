@@ -222,7 +222,7 @@ def search_recipes(query, model, data, embeddings, top_k=3, filters=None):
 def create_nutrition_analyzer():
     """สร้างตัววิเคราะห์คุณค่าทางโภชนาการ"""
     # ใช้ API key จาก environment variable หรือให้ผู้ใช้ใส่
-    api_key = os.getenv('udyaSCqY4F6wN4yzLJL4peSTHlGSxoDq5FoXHJTw')
+    api_key = os.getenv('USDA_API_KEY')
     return NutritionAnalyzer(api_key=api_key)
 
 def main():
