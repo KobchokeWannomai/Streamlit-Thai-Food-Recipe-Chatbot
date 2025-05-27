@@ -234,5 +234,35 @@ def search_recipes_with_nutrition(query, model, data, embeddings,
     
     return results
 
+# เพิ่มตัวเลือกการค้นหา
+search_mode = st.radio(
+    "เลือกวิธีการค้นหา",
+    ["ค้นหาทั่วไป", "ค้นหาตามโภชนาการ"]
+)
+
+if search_mode == "ค้นหาตามโภชนาการ":
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        nutrition_filter = st.selectbox(
+            "เลือกสารอาหาร",
+            ["แคลอรีต่ำ", "โปรตีนสูง", "ไขมันต่ำ", "ไฟเบอร์สูง", "โซเดียมต่ำ"]
+        )
+    
+    with col2:
+        threshold = st.slider(
+            "ระดับ (ต่อ 100 กรัม)",
+            min_value=0,
+            max_value=500,
+            value=100
+        )
+    
+    # ฟิลเตอร์ข้อมูลตามเงื่อนไข
+    if st.button("ค้นหา"):
+        filtered_recipes = filter_by_nutrition(
+            data, nutrition_filter, threshold, fetcher, processor
+        )
+        display_filtered_results(filtered_recipes)
+
 if __name__ == "__main__":
     main()
