@@ -6,6 +6,8 @@ import numpy as np
 import os
 import pickle
 import re
+from nutrition.nutrition_fetcher import NutritionFetcher
+from nutrition.nutrition_processor import NutritionProcessor
 
 # Page config
 st.set_page_config(
@@ -184,6 +186,53 @@ def main():
                     response = "ขออภัย ฉันไม่สามารถค้นหาสูตรอาหารได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง"
                     st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
+
+@st.cache_resource
+def load_nutrition_system():
+    """โหลดระบบข้อมูลโภชนาการ"""
+    fetcher = NutritionFetcher()
+    processor = NutritionProcessor()
+    return fetcher, processor
+
+# เพิ่มฟังก์ชันแสดงข้อมูลโภชนาการ
+def display_nutrition_info(recipe_nutrition):
+    """แสดงข้อมูลโภชนาการในรูปแบบสวยงาม"""
+    st.markdown("#### 📊 คุณค่าทางโภชนาการ (ต่อ 100 กรัม)")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("🔥 แคลอรี", f"{recipe_nutrition['calories']} kcal")
+        st.metric("🥩 โปรตีน", f"{recipe_nutrition['protein']} g")
+        st.metric("🧈 ไขมัน", f"{recipe_nutrition['fat']} g")
+    
+    with col2:
+        st.metric("🍞 คาร์โบไฮเดรต", f"{recipe_nutrition['carbs']} g")
+        st.metric("🌾 ไฟเบอร์", f"{recipe_nutrition['fiber']} g")
+        st.metric("🍯 น้ำตาล", f"{recipe_nutrition['sugar']} g")
+    
+    with col3:
+        st.metric("🧂 โซเดียม", f"{recipe_nutrition['sodium']} mg")
+        st.metric("🥕 วิตามิน A", f"{recipe_nutrition['vitamin_a']} mcg")
+        st.metric("🍊 วิตามิน C", f"{recipe_nutrition['vitamin_c']} mg")
+    
+    with col4:
+        st.metric("🥛 แคลเซียม", f"{recipe_nutrition['calcium']} mg")
+        st.metric("🩸 ธาตุเหล็ก", f"{recipe_nutrition['iron']} mg")
+
+# อัปเดตฟังก์ชัน search_recipes เพิ่มการคำนวณโภชนาการ
+def search_recipes_with_nutrition(query, model, data, embeddings, 
+                                 fetcher, processor, top_k=3):
+    """ค้นหาสูตรอาหารพร้อมข้อมูลโภชนาการ"""
+    results = search_recipes(query, model, data, embeddings, top_k)
+    
+    # เพิ่มข้อมูลโภชนาการ
+    for i, result in enumerate(results):
+        recipe_row = data.iloc[np.where(data['name'] == result['name'])[0][0]]
+        nutrition = processor.calculate_recipe_nutrition(recipe_row, fetcher)
+        results[i]['nutrition'] = nutrition
+    
+    return results
 
 if __name__ == "__main__":
     main()
