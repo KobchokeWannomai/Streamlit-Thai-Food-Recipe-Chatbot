@@ -1,217 +1,184 @@
-# Thai Food Recipe Chatbot with Nutrition Analysis
+# 🍲 Thai Food Recipe Chatbot with Nutrition Analysis
 
-ระบบแชทบอทสำหรับค้นหาและถามเกี่ยวกับสูตรอาหารไทย พร้อมข้อมูลคุณค่าทางโภชนาการ
+แชทบอทสูตรอาหารไทยพร้อมระบบวิเคราะห์คุณค่าทางโภชนาการ
 
-## 🆕 ฟีเจอร์ใหม่ - Nutrition Analysis
+## 🌟 คุณสมบัติ
 
-### คุณสมบัติที่เพิ่มขึ้น
-- 🥗 **วิเคราะห์คุณค่าทางโภชนาการ** - แสดงแคลอรี่, โปรตีน, คาร์โบไฮเดรต, ไขมัน, ใยอาหาร
-- 🧪 **วิตามินและแร่ธาตุ** - ข้อมูลรายละเอียดของวิตามินและแร่ธาตุในแต่ละสูตร
-- 🔍 **ค้นหาตามโภชนาการ** - ค้นหาสูตรอาหารตามเกณฑ์โภชนาการที่ต้องการ
-- 🤖 **การวิเคราะห์อัตโนมัติ** - ระบบวิเคราะห์วัตถุดิบใหม่โดยอัตโนมัติ
-- 💾 **ฐานข้อมูลโภชนาการ** - เก็บข้อมูลโภชนาการในฐานข้อมูลเพื่อการค้นหาที่รวดเร็ว
+- 🔍 **ค้นหาสูตรอาหารไทย** - ค้นหาด้วยชื่อเมนูหรือวัตถุดิบ
+- 📊 **วิเคราะห์โภชนาการ** - ดูข้อมูลแคลอรี่ โปรตีน คาร์โบไฮเดรต ไขมัน วิตามิน และแร่ธาตุ
+- 🎯 **ค้นหาตามเกณฑ์โภชนาการ** - หาเมนูแคลอรี่ต่ำ โปรตีนสูง หรือเหมาะสำหรับลดน้ำหนัก
+- 💬 **อินเตอร์เฟซแบบแชท** - ใช้งานง่ายผ่านการสนทนา
+- 📱 **รองรับทุกอุปกรณ์** - ใช้งานได้ทั้งคอมพิวเตอร์และมือถือ
 
-## 📊 แหล่งข้อมูลโภชนาการ
+## 📋 ความต้องการระบบ
 
-ระบบดึงข้อมูลจากแหล่งที่เชื่อถือได้:
-1. **USDA Food Database (FDC API)** - ฐานข้อมูลอาหารของรัฐบาลสหรัฐอเมริกา
-2. **Nutritionix API** - ฐานข้อมูลโภชนาการที่ครอบคลุม
-3. **Fallback Database** - ข้อมูลพื้นฐานสำหรับวัตถุดิบไทยทั่วไป
+- Python 3.8 หรือสูงกว่า
+- RAM อย่างน้อย 4GB
+- พื้นที่ว่างอย่างน้อย 2GB
 
-## 🚀 การติดตั้งและใช้งาน
+## 🚀 การติดตั้ง
 
-### 1. ติดตั้ง Dependencies
+### Windows
 
+1. โคลนหรือดาวน์โหลดโปรเจค
 ```bash
-pip install -r requirements_enhanced.txt
+git clone https://github.com/your-repo/thai-food-chatbot.git
+cd thai-food-chatbot
 ```
 
-### 2. ตั้งค่า API Keys (ทำได้ภายหลัง)
+2. รันสคริปต์ติดตั้ง
+```batch
+setup.bat
+```
 
-สร้างไฟล์ `.env` และเพิ่ม API keys:
+3. รันแอปพลิเคชัน
+```batch
+run.bat
+```
 
+### macOS/Linux
+
+1. โคลนหรือดาวน์โหลดโปรเจค
+```bash
+git clone https://github.com/your-repo/thai-food-chatbot.git
+cd thai-food-chatbot
+```
+
+2. รันสคริปต์ติดตั้ง
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+3. รันแอปพลิเคชัน
+```bash
+./run.sh
+```
+
+### การติดตั้งแบบ Manual
+
+1. สร้าง virtual environment
+```bash
+python -m venv venv
+```
+
+2. เปิดใช้งาน virtual environment
+- Windows: `venv\Scripts\activate`
+- macOS/Linux: `source venv/bin/activate`
+
+3. ติดตั้ง dependencies
+```bash
+pip install -r requirements.txt
+```
+
+4. รันแอปพลิเคชัน
+```bash
+streamlit run streamlit_app.py
+```
+
+## 🔑 การตั้งค่า API Keys (ทางเลือก)
+
+สำหรับข้อมูลโภชนาการที่แม่นยำขึ้น คุณสามารถเพิ่ม API keys:
+
+1. สร้างไฟล์ `.env` ในโฟลเดอร์โปรเจค
+2. เพิ่ม API keys:
 ```env
-# FDC API (ฟรี) - https://fdc.nal.usda.gov/api-guide.html
-FDC_API_KEY=your_fdc_api_key_here
+# USDA FoodData Central API
+USDA_API_KEY=your_usda_api_key_here
 
-# Nutritionix API (ฟรี) - https://www.nutritionix.com/business/api
-NUTRITIONIX_APP_ID=your_app_id_here
-NUTRITIONIX_APP_KEY=your_app_key_here
+# Nutritionix API
+NUTRITIONIX_API_KEY=your_nutritionix_api_key_here
+NUTRITIONIX_APP_ID=your_nutritionix_app_id_here
 ```
 
-### 3. ประมวลผลข้อมูลโภชนาการ (ครั้งแรก)
+### วิธีขอ API Keys:
+- **USDA API**: https://fdc.nal.usda.gov/api-guide.html
+- **Nutritionix API**: https://www.nutritionix.com/business/api
 
-```bash
-# ประมวลผลทุกสูตรอาหาร
-python batch_nutrition_process.py
+## 💻 การใช้งาน
 
-# หรือประมวลผลแบบ batch ขนาดเล็ก
-python batch_nutrition_process.py --batch-size 3
+### การค้นหาทั่วไป
+- พิมพ์ชื่อเมนู: "ต้มยำกุ้ง", "ผัดไทย", "แกงเขียวหวาน"
+- พิมพ์วัตถุดิบ: "เมนูที่มีกุ้ง", "อาหารที่ใส่กะทิ"
 
-# บังคับประมวลผลใหม่ทั้งหมด
-python batch_nutrition_process.py --force
+### การค้นหาตามโภชนาการ
+- "เมนูแคลอรี่ไม่เกิน 300"
+- "อาหารโปรตีนสูงมากกว่า 20 กรัม"
+- "เมนูลดน้ำหนัก"
+- "อาหารเฮลธ์ตี้"
 
-# สร้างเฉพาะสรุปข้อมูล
-python batch_nutrition_process.py --summary-only
-```
-
-### 4. เรียกใช้แอป
-
-```bash
-# เรียกใช้แอปหลักที่มีฟีเจอร์โภชนาการ
-streamlit run app_enhanced.py
-
-# หรือใช้แอปเดิม (ไม่มีฟีเจอร์โภชนาการ)
-streamlit run app.py
-```
-
-## 📁 โครงสร้างไฟล์ใหม่
+## 📁 โครงสร้างโปรเจค
 
 ```
 thai-food-chatbot/
-├── app.py                          # แอปเดิม
-├── app_enhanced.py                 # แอปใหม่ที่มีฟีเจอร์โภชนาการ
-├── nutrition_analyzer.py           # ระบบวิเคราะห์โภชนาการ
-├── batch_nutrition_process.py      # ประมวลผลข้อมูลแบบ batch
-├── thai_food_processed.csv         # ข้อมูลสูตรอาหารเดิม
-├── thai_food_with_nutrition.csv    # ข้อมูลที่เพิ่มโภชนาการแล้ว (สร้างอัตโนมัติ)
-├── nutrition.db                    # ฐานข้อมูลโภชนาการ (สร้างอัตโนมัติ)
-├── nutrition_results.json          # ผลลัพธ์การวิเคราะห์ (สร้างอัตโนมัติ)
-├── nutrition_summary.json          # สรุปข้อมูลโภชนาการ (สร้างอัตโนมัติ)
-├── requirements.txt                # dependencies เดิม
-├── requirements_enhanced.txt       # dependencies ใหม่
-└── .env                           # API keys (สร้างเอง)
+├── streamlit_app.py        # แอปพลิเคชันหลัก
+├── nutrition_analyzer.py   # ระบบวิเคราะห์โภชนาการ
+├── config.py              # การตั้งค่าระบบ
+├── preprocess.py          # ประมวลผลข้อมูล
+├── batch_nutrition_processor.py  # ประมวลผลแบบ batch
+├── requirements.txt       # รายการ dependencies
+├── setup.sh              # สคริปต์ติดตั้ง (macOS/Linux)
+├── setup.bat             # สคริปต์ติดตั้ง (Windows)
+├── run.sh                # สคริปต์รันแอป (macOS/Linux)
+├── run.bat               # สคริปต์รันแอป (Windows)
+└── thai_food_processed.csv # ข้อมูลสูตรอาหารไทย
 ```
 
-## 🔧 การใช้งานขั้นสูง
+## 🧪 ตัวอย่างการใช้งาน
 
-### การเพิ่มวัตถุดิบใหม่
-
-```python
-from nutrition_analyzer import NutritionAnalyzer
-
-analyzer = NutritionAnalyzer()
-
-# วิเคราะห์วัตถุดิบใหม่
-nutrition = analyzer.analyze_ingredient("มะม่วงดิบ")
-print(f"แคลอรี่: {nutrition.calories} kcal")
-
-# วิเคราะห์สูตรอาหารใหม่
-result = analyzer.analyze_recipe("ต้มยำกุ้ง", """
-- กุ้งนาง 5 ตัว
-- น้ำปลา 2 ช้อนโต๊ะ
-- พริกขี้หนู 3 เม็ด
-""")
+รันตัวอย่าง:
+```bash
+python nutrition_example.py
 ```
 
-### การค้นหาตามโภชนาการ
-
-```python
-# ค้นหาสูตรที่มีแคลอรี่ต่ำ
-criteria = {
-    'max_calories': 300,
-    'min_protein': 15
-}
-results = analyzer.search_recipes_by_nutrition(criteria)
+ประมวลผลโภชนาการแบบ batch:
+```bash
+python batch_nutrition_processor.py --input thai_food_processed.csv
 ```
 
-## 🎯 ตัวอย่างการใช้งาน
+## 🔧 การแก้ปัญหา
 
-### 1. ค้นหาสูตรอาหารทั่วไป
-```
-ผู้ใช้: "สูตรต้มยำกุ้ง"
-ระบบ: [แสดงสูตร + ข้อมูลโภชนาการ]
-- แคลอรี่: 245 kcal
-- โปรตีน: 28.5 g
-- คาร์โบไฮเดรต: 12.3 g
-- ไขมัน: 8.7 g
-```
+### ปัญหา: ModuleNotFoundError
+- ตรวจสอบว่า activate virtual environment แล้ว
+- รัน `pip install -r requirements.txt` อีกครั้ง
 
-### 2. ค้นหาตามเกณฑ์โภชนาการ
-- ค้นหาเมนูที่มีแคลอรี่ต่ำกว่า 400
-- ค้นหาเมนูที่มีโปรตีนสูงกว่า 20g
-- ค้นหาเมนูสำหรับคนลดน้ำหนัก
+### ปัญหา: ข้อมูลโภชนาการไม่แสดง
+- ตรวจสอบไฟล์ `thai_food_processed.csv`
+- รัน `python preprocess.py --analyze-nutrition`
 
-### 3. วิเคราะห์วัตถุดิบรายตัว
-```
-ผู้ใช้: "กุ้งมีคุณค่าทางโภชนาการอย่างไร"
-ระบบ: [แสดงข้อมูลโภชนาการของกุ้ง]
-```
+### ปัญหา: API ไม่ทำงาน
+- ตรวจสอบ API keys ในไฟล์ `.env`
+- ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต
 
-## ⚙️ การปรับแต่ง
+## 📊 ข้อมูลที่ใช้
 
-### เพิ่มการแปลวัตถุดิบ
-แก้ไขใน `nutrition_analyzer.py`:
+- ฐานข้อมูลสูตรอาหารไทยกว่า 100 เมนู
+- ข้อมูลโภชนาการวัตถุดิบไทยพื้นฐาน
+- API ข้อมูลโภชนาการจาก USDA และ Nutritionix
 
-```python
-self.thai_to_english = {
-    "มะม่วง": "mango",
-    "ส้มตำ": "papaya salad",
-    # เพิ่มวัตถุดิบใหม่ที่นี่
-}
-```
+## 🤝 การมีส่วนร่วม
 
-### เพิ่มข้อมูล Fallback
-แก้ไข method `get_fallback_nutrition()`:
+ยินดีรับ Pull Requests! กรุณา:
+1. Fork โปรเจค
+2. สร้าง feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit การเปลี่ยนแปลง (`git commit -m 'Add some AmazingFeature'`)
+4. Push ไปยัง branch (`git push origin feature/AmazingFeature`)
+5. เปิด Pull Request
 
-```python
-fallback_data = {
-    "วัตถุดิบใหม่": NutritionInfo("วัตถุดิบใหม่", calories, protein, carbs, fat, fiber),
-    # เพิ่มข้อมูลใหม่ที่นี่
-}
-```
+## 📝 License
 
-## 🐛 การแก้ไขปัญหา
+โปรเจคนี้เผยแพร่ภายใต้ MIT License
 
-### ปัญหาที่พบบ่อย
+## 👏 กิตติกรรมประกาศ
 
-1. **API Rate Limit**
-   - ลดขนาด batch: `--batch-size 2`
-   - เพิ่มระยะเวลาหน่วง: แก้ไข `time.sleep()` ใน batch processor
+- ข้อมูลสูตรอาหารไทยจากแหล่งต่างๆ
+- USDA FoodData Central สำหรับข้อมูลโภชนาการ
+- Streamlit สำหรับ framework การสร้าง web app
 
-2. **ข้อมูลโภชนาการไม่ถูกต้อง**
-   - ตรวจสอบการแปลวัตถุดิบใน `thai_to_english`
-   - เพิ่มข้อมูล fallback ที่แม่นยำขึ้น
+## 📧 ติดต่อ
 
-3. **ไม่มี API Key**
-   - ระบบจะใช้ข้อมูล fallback อัตโนมัติ
-   - สมัคร API key ฟรีเพื่อความแม่นยำสูงขึ้น
-
-### Log Files
-- `nutrition_processing.log` - บันทึกการประมวลผล
-- ตรวจสอบ error ในไฟล์ log
-
-## 📈 สถิติและการติดตาม
-
-ระบบจะสร้างไฟล์สรุป:
-- `nutrition_summary.json` - สถิติโภชนาการโดยรวม
-- `thai_food_with_nutrition.csv` - ข้อมูลครบถ้วนพร้อมโภชนาการ
-
-## 🤝 การพัฒนาต่อ
-
-### แนวทางการปรับปรุง
-1. **เพิ่มภาษาอื่น** - รองรับการค้นหาภาษาอังกฤษ
-2. **ระบบแนะนำ** - แนะนำเมนูตามเกณฑ์โภชนาการ
-3. **การแชร์** - ส่งออกข้อมูลโภชนาการเป็น PDF
-4. **กราฟและชาร์ต** - แสดงข้อมูลในรูปแบบภาพ
-
-### การพัฒนาร่วมกัน
-1. Fork repository
-2. สร้าง feature branch
-3. เพิ่มฟีเจอร์ใหม่
-4. ส่ง Pull Request
-
-## 📞 การสนับสนุน
-
-หากพบปัญหาหรือต้องการความช่วยเหลือ:
-1. ตรวจสอบ Issues ใน repository
-2. สร้าง Issue ใหม่พร้อมรายละเอียด error
-3. แนบไฟล์ log ประกอบ
-
-## 📄 License
-
-MIT License - ใช้งานได้อย่างอิสระเพื่อการศึกษาและพัฒนา
+หากมีคำถามหรือข้อเสนอแนะ กรุณาเปิด Issue ใน GitHub
 
 ---
 
-**หมายเหตุ:** ข้อมูลโภชนาการที่แสดงเป็นการประมาณและควรใช้เป็นข้อมูลอ้างอิงเท่านั้น สำหรับความแม่นยำสูงสุด ควรปรึกษานักโภชนาการหรือแพทย์
+Made with ❤️ for Thai food lovers
