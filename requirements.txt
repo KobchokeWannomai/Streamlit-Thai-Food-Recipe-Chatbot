@@ -1,30 +1,52 @@
-# Basic dependencies (existing)
-streamlit
-pandas
-sentence-transformers
-scikit-learn
-numpy
-torch
-transformers
+# Core dependencies
+streamlit>=1.28.0
+pandas>=2.0.0
+numpy>=1.24.0
 
-# New dependencies for nutrition analysis
-requests
-sqlite3  # Built-in with Python
-dataclasses  # Built-in with Python 3.7+
-logging  # Built-in with Python
-pathlib  # Built-in with Python 3.4+
-json  # Built-in with Python
+# Machine Learning & NLP
+sentence-transformers>=2.2.0
+scikit-learn>=1.3.0
+torch>=2.0.0
+transformers>=4.30.0
 
-# Optional: for enhanced API capabilities
-aiohttp  # For async HTTP requests
-python-dotenv  # For environment variable management
-plotly  # For nutrition charts and visualization
-matplotlib  # Alternative plotting library
-seaborn  # Statistical visualization
+# Data visualization
+plotly>=5.15.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
 
-# For data validation and processing
-pydantic  # Data validation
-validators  # URL and data validation
+# HTTP requests and APIs
+requests>=2.31.0
+urllib3>=2.0.0
 
-# For better error handling and monitoring
-sentry-sdk  # Error monitoring (optional)
+# Database
+sqlite3  # Built-in with Python, but listed for clarity
+
+# JSON and data processing
+jsonschema>=4.18.0
+
+# Logging and utilities
+python-dateutil>=2.8.0
+pytz>=2023.3
+
+# Optional: For enhanced nutrition APIs
+# Uncomment if you plan to use these services
+# nutritionix>=1.0.0
+# spoonacular>=1.0.0
+
+# Development and testing (optional)
+# pytest>=7.4.0
+# pytest-cov>=4.1.0
+# black>=23.7.0
+# flake8>=6.0.0
+
+# Performance optimization
+# numba>=0.57.0  # For faster numerical computations
+# cachetools>=5.3.0  # Enhanced caching
+
+# Thai language processing (optional)
+# pythainlp>=4.0.0  # For advanced Thai text processing
+# attacut>=1.0.0  # Thai word segmentation
+
+# Additional utilities
+tqdm>=4.65.0  # Progress bars
+python-dotenv>=1.0.0  # Environment variable management
