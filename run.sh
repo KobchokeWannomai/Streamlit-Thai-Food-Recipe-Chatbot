@@ -10,4 +10,4 @@ else
 fi
 
 # Run the Streamlit app
-streamlit run app.py
+streamlit run streamlit_app.py
