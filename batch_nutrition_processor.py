@@ -11,7 +11,7 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 import logging
-from nutrition_analyzer import NutritionAnalyzer, process_all_recipes
+from nutrition_analyzer import NutritionAnalyzer
 
 # ตั้งค่า logging
 logging.basicConfig(
@@ -53,6 +53,54 @@ class BatchNutritionProcessor:
             logger.info(f"Saved {len(self.results)} nutrition results to {output_file}")
         except Exception as e:
             logger.error(f"Error saving results: {e}")
+    
+    def analyze_recipe(self, recipe_name: str, ingredients: str) -> dict:
+        """วิเคราะห์โภชนาการสำหรับสูตรอาหาร"""
+        # วิเคราะห์โภชนาการ
+        nutrition_data = self.analyzer.analyze_ingredients(ingredients)
+        total_nutrition = self.analyzer.calculate_total_nutrition(nutrition_data)
+        
+        # สร้างผลลัพธ์ในรูปแบบ dict
+        result = {
+            'recipe_name': recipe_name,
+            'total_nutrition': {
+                'calories': total_nutrition.calories,
+                'protein': total_nutrition.protein,
+                'carbs': total_nutrition.carbs,
+                'fat': total_nutrition.fat,
+                'fiber': total_nutrition.fiber,
+                'vitamins': {
+                    'vitamin_a': total_nutrition.vitamin_a,
+                    'vitamin_c': total_nutrition.vitamin_c,
+                    'vitamin_d': total_nutrition.vitamin_d,
+                    'vitamin_e': total_nutrition.vitamin_e,
+                    'vitamin_k': total_nutrition.vitamin_k,
+                    'vitamin_b1': total_nutrition.vitamin_b1,
+                    'vitamin_b2': total_nutrition.vitamin_b2,
+                    'vitamin_b6': total_nutrition.vitamin_b6,
+                    'vitamin_b12': total_nutrition.vitamin_b12,
+                },
+                'minerals': {
+                    'calcium': total_nutrition.calcium,
+                    'iron': total_nutrition.iron,
+                    'magnesium': total_nutrition.magnesium,
+                    'phosphorus': total_nutrition.phosphorus,
+                    'potassium': total_nutrition.potassium,
+                    'zinc': total_nutrition.zinc,
+                }
+            },
+            'ingredients': [],
+            'ingredient_count': len(nutrition_data)
+        }
+        
+        # เพิ่มรายละเอียดแต่ละวัตถุดิบ
+        for ingredient, nutrition in nutrition_data.items():
+            result['ingredients'].append({
+                'ingredient': ingredient,
+                'nutrition': nutrition  # NutritionInfo object
+            })
+        
+        return result
     
     def process_recipes_incrementally(self, force_reprocess: bool = False):
         """ประมวลผลสูตรอาหารแบบ incremental (ไม่ประมวลผลซ้ำ)"""
@@ -96,7 +144,7 @@ class BatchNutritionProcessor:
                     
                     try:
                         logger.info(f"  Processing: {recipe_name}")
-                        result = self.analyzer.analyze_recipe(recipe_name, ingredients)
+                        result = self.analyze_recipe(recipe_name, ingredients)
                         
                         # แปลง NutritionInfo objects เป็น dict เพื่อบันทึก JSON
                         serializable_result = self._make_serializable(result)
@@ -149,14 +197,31 @@ class BatchNutritionProcessor:
             ingredient_data = {
                 'ingredient': ingredient_info['ingredient'],
                 'nutrition': {
-                    'ingredient': nutrition.ingredient,
+                    'name': nutrition.name,
                     'calories': nutrition.calories,
                     'protein': nutrition.protein,
                     'carbs': nutrition.carbs,
                     'fat': nutrition.fat,
                     'fiber': nutrition.fiber,
-                    'vitamins': nutrition.vitamins,
-                    'minerals': nutrition.minerals
+                    'vitamins': {
+                        'vitamin_a': nutrition.vitamin_a,
+                        'vitamin_c': nutrition.vitamin_c,
+                        'vitamin_d': nutrition.vitamin_d,
+                        'vitamin_e': nutrition.vitamin_e,
+                        'vitamin_k': nutrition.vitamin_k,
+                        'vitamin_b1': nutrition.vitamin_b1,
+                        'vitamin_b2': nutrition.vitamin_b2,
+                        'vitamin_b6': nutrition.vitamin_b6,
+                        'vitamin_b12': nutrition.vitamin_b12,
+                    },
+                    'minerals': {
+                        'calcium': nutrition.calcium,
+                        'iron': nutrition.iron,
+                        'magnesium': nutrition.magnesium,
+                        'phosphorus': nutrition.phosphorus,
+                        'potassium': nutrition.potassium,
+                        'zinc': nutrition.zinc,
+                    }
                 }
             }
             serializable['ingredients'].append(ingredient_data)
