@@ -1,0 +1,30 @@
+# Basic dependencies (existing)
+streamlit
+pandas
+sentence-transformers
+scikit-learn
+numpy
+torch
+transformers
+
+# New dependencies for nutrition analysis
+requests
+sqlite3  # Built-in with Python
+dataclasses  # Built-in with Python 3.7+
+logging  # Built-in with Python
+pathlib  # Built-in with Python 3.4+
+json  # Built-in with Python
+
+# Optional: for enhanced API capabilities
+aiohttp  # For async HTTP requests
+python-dotenv  # For environment variable management
+plotly  # For nutrition charts and visualization
+matplotlib  # Alternative plotting library
+seaborn  # Statistical visualization
+
+# For data validation and processing
+pydantic  # Data validation
+validators  # URL and data validation
+
+# For better error handling and monitoring
+sentry-sdk  # Error monitoring (optional)
