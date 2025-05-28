@@ -401,6 +401,54 @@ class NutritionAnalyzer:
             total.zinc += nutrition.zinc
         
         return total
+    
+    def analyze_recipe(self, recipe_name: str, ingredients: str) -> dict:
+        """วิเคราะห์โภชนาการสำหรับสูตรอาหาร (สำหรับ streamlit app)"""
+        # วิเคราะห์โภชนาการ
+        nutrition_data = self.analyze_ingredients(ingredients)
+        total_nutrition = self.calculate_total_nutrition(nutrition_data)
+        
+        # สร้างผลลัพธ์ในรูปแบบ dict
+        result = {
+            'recipe_name': recipe_name,
+            'total_nutrition': {
+                'calories': total_nutrition.calories,
+                'protein': total_nutrition.protein,
+                'carbs': total_nutrition.carbs,
+                'fat': total_nutrition.fat,
+                'fiber': total_nutrition.fiber,
+                'vitamins': {
+                    'วิตามิน A': total_nutrition.vitamin_a,
+                    'วิตามิน C': total_nutrition.vitamin_c,
+                    'วิตามิน D': total_nutrition.vitamin_d,
+                    'วิตามิน E': total_nutrition.vitamin_e,
+                    'วิตามิน K': total_nutrition.vitamin_k,
+                    'วิตามิน B1': total_nutrition.vitamin_b1,
+                    'วิตามิน B2': total_nutrition.vitamin_b2,
+                    'วิตามิน B6': total_nutrition.vitamin_b6,
+                    'วิตามิน B12': total_nutrition.vitamin_b12,
+                },
+                'minerals': {
+                    'แคลเซียม': total_nutrition.calcium,
+                    'เหล็ก': total_nutrition.iron,
+                    'แมกนีเซียม': total_nutrition.magnesium,
+                    'ฟอสฟอรัส': total_nutrition.phosphorus,
+                    'โพแทสเซียม': total_nutrition.potassium,
+                    'สังกะสี': total_nutrition.zinc,
+                }
+            },
+            'ingredients': [],
+            'ingredient_count': len(nutrition_data)
+        }
+        
+        # เพิ่มรายละเอียดแต่ละวัตถุดิบ
+        for ingredient, nutrition in nutrition_data.items():
+            result['ingredients'].append({
+                'ingredient': ingredient,
+                'nutrition': nutrition  # NutritionInfo object
+            })
+        
+        return result
 
 # ตัวอย่างการใช้งาน
 if __name__ == "__main__":
