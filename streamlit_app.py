@@ -140,19 +140,98 @@ def format_ingredients(ingredients_text):
     formatted = "<ul style='line-height: 1.8;'>"
     for item in ingredients:
         if item.strip():
-            formatted += f"<li>{item.strip()}</li>"
+            # ลบเครื่องหมาย - ที่อยู่ด้านหน้า
+            cleaned_item = item.strip()
+            if cleaned_item.startswith('- '):
+                cleaned_item = cleaned_item[2:]
+            formatted += f"<li>{cleaned_item}</li>"
     formatted += "</ul>"
     return formatted
 
 def format_cooking_method(method_text):
     """จัดรูปแบบวิธีการทำอาหารเพื่อการแสดงผลที่ดีขึ้น"""
-    # แบ่งเป็นขั้นตอนตามประโยค
-    sentences = re.split(r'(?<=[ๆ.]) ', method_text)
-    formatted = "<ol style='line-height: 1.8;'>"
-    for sentence in sentences:
-        if sentence.strip() and len(sentence.strip()) > 10:
-            formatted += f"<li>{sentence.strip()}</li>"
-    formatted += "</ol>"
+    # ตรวจสอบว่ามีเลขขั้นตอนอยู่แล้วหรือไม่
+    has_numbered_steps = bool(re.search(r'^\s*\d+\.', method_text, re.MULTILINE))
+    
+    # แยกบรรทัดและจัดการกับหัวข้อย่อย
+    lines = method_text.split('\n')
+    formatted = ""
+    current_section = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # ตรวจสอบหัวข้อย่อย (ขึ้นต้นด้วย ## หรือ #)
+        if line.startswith('##'):
+            # ถ้ามีเนื้อหาในส่วนก่อนหน้า ให้จัดรูปแบบก่อน
+            if current_section:
+                formatted += format_section(current_section, has_numbered_steps)
+                current_section = []
+            # เพิ่มหัวข้อย่อย (ลบ ## ออกและใช้ขนาดเท่ากับหัวข้อหลัก)
+            formatted += f"<div class='section-title' style='font-size: 1.0em; margin-top: 15px;'>{line.replace('##', '').strip()}</div>"
+        elif line.startswith('#'):
+            # ถ้ามีเนื้อหาในส่วนก่อนหน้า ให้จัดรูปแบบก่อน
+            if current_section:
+                formatted += format_section(current_section, has_numbered_steps)
+                current_section = []
+            # เพิ่มหัวข้อย่อย
+            formatted += f"<div class='section-title' style='font-size: 1.0em; margin-top: 15px;'>{line.replace('#', '').strip()}</div>"
+        elif line.startswith('**หมายเหตุ'):
+            # ถ้ามีเนื้อหาในส่วนก่อนหน้า ให้จัดรูปแบบก่อน
+            if current_section:
+                formatted += format_section(current_section, has_numbered_steps)
+                current_section = []
+            # เพิ่มหมายเหตุ
+            formatted += f"<div style='margin-top: 15px; padding: 10px; background-color: #f9f9f9; border-left: 3px solid #ffa500;'><strong>หมายเหตุ</strong> {line.replace('**หมายเหตุ**', '').replace('**หมายเหตุ', '').strip()}</div>"
+        else:
+            # เก็บเนื้อหาปกติ
+            current_section.append(line)
+    
+    # จัดรูปแบบส่วนสุดท้าย
+    if current_section:
+        formatted += format_section(current_section, has_numbered_steps)
+    
+    return formatted
+
+def format_section(lines, has_numbered_steps):
+    """จัดรูปแบบส่วนของวิธีทำ"""
+    if not lines:
+        return ""
+    
+    # ถ้ามีเลขขั้นตอนอยู่แล้ว ให้แสดงเป็นลิสต์
+    if has_numbered_steps:
+        formatted = "<ol style='line-height: 1.8;'>"
+        for line in lines:
+            # ตรวจสอบว่าบรรทัดขึ้นต้นด้วยตัวเลขหรือไม่
+            if re.match(r'^\d+\.', line):
+                # ลบตัวเลขออกเพราะ <ol> จะใส่ให้อัตโนมัติ
+                clean_line = re.sub(r'^\d+\.\s*', '', line)
+                formatted += f"<li>{clean_line}</li>"
+            else:
+                # ถ้าไม่มีตัวเลข ให้เป็นส่วนต่อของ item ก่อนหน้า
+                if formatted.endswith("</li>"):
+                    formatted = formatted[:-5] + f" {line}</li>"
+                else:
+                    formatted += f"<li>{line}</li>"
+        formatted += "</ol>"
+    else:
+        # ถ้าไม่มีเลขขั้นตอน ให้แสดงเป็นย่อหน้า
+        # รวมประโยคที่แยกกันด้วยช่องว่างเดียว
+        text = ' '.join(lines)
+        # แบ่งเป็นประโยคตาม ๆ หรือ .
+        sentences = re.split(r'(?<=[ๆ.])\s+', text)
+        
+        formatted = "<div style='line-height: 1.8; text-align: justify;'>"
+        for i, sentence in enumerate(sentences):
+            if sentence.strip():
+                formatted += sentence.strip()
+                # เพิ่มช่องว่างหลังประโยค ยกเว้นประโยคสุดท้าย
+                if i < len(sentences) - 1:
+                    formatted += " "
+        formatted += "</div>"
+    
     return formatted
 
 def display_nutrition_info(nutrition_data):
