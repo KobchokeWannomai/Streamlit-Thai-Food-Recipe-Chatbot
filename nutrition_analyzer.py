@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from ingredient_converter import IngredientConverter
 
 # กำหนดค่า logging
 logging.basicConfig(level=logging.INFO)
@@ -310,16 +311,56 @@ class NutritionAnalyzer:
         self.db = NutritionDatabase()
         self.thai_data = ThaiNutritionData()
         self.usda_api = USDANutritionAPI(usda_api_key) if usda_api_key else None
+        self.converter = IngredientConverter()  # เพิ่มตัวแปลงหน่วย
     
     def analyze_ingredients(self, ingredients_text: str) -> Dict[str, NutritionInfo]:
         """วิเคราะห์คุณค่าทางโภชนาการของวัตถุดิบทั้งหมด"""
         ingredients = self._parse_ingredients(ingredients_text)
         nutrition_data = {}
         
-        for ingredient in ingredients:
-            nutrition = self.get_ingredient_nutrition(ingredient)
-            if nutrition:
-                nutrition_data[ingredient] = nutrition
+        for ingredient_line in ingredients:
+            # ใช้ตัวแปลงหน่วยเพื่อหาน้ำหนักจริง
+            converted = self.converter.parse_and_convert_ingredient(ingredient_line)
+            ingredient_name = converted['name']
+            multiplier = converted['nutrition_multiplier']
+            
+            # ดึงข้อมูลโภชนาการพื้นฐาน (ต่อ 100g)
+            base_nutrition = self.get_ingredient_nutrition(ingredient_name)
+            
+            if base_nutrition:
+                # ปรับค่าโภชนาการตามน้ำหนักจริง
+                adjusted_nutrition = NutritionInfo(
+                    name=ingredient_name,
+                    calories=base_nutrition.calories * multiplier,
+                    protein=base_nutrition.protein * multiplier,
+                    carbs=base_nutrition.carbs * multiplier,
+                    fat=base_nutrition.fat * multiplier,
+                    fiber=base_nutrition.fiber * multiplier,
+                    sugar=base_nutrition.sugar * multiplier,
+                    sodium=base_nutrition.sodium * multiplier,
+                    vitamin_a=base_nutrition.vitamin_a * multiplier,
+                    vitamin_c=base_nutrition.vitamin_c * multiplier,
+                    vitamin_d=base_nutrition.vitamin_d * multiplier,
+                    vitamin_e=base_nutrition.vitamin_e * multiplier,
+                    vitamin_k=base_nutrition.vitamin_k * multiplier,
+                    vitamin_b1=base_nutrition.vitamin_b1 * multiplier,
+                    vitamin_b2=base_nutrition.vitamin_b2 * multiplier,
+                    vitamin_b6=base_nutrition.vitamin_b6 * multiplier,
+                    vitamin_b12=base_nutrition.vitamin_b12 * multiplier,
+                    folate=base_nutrition.folate * multiplier,
+                    niacin=base_nutrition.niacin * multiplier,
+                    calcium=base_nutrition.calcium * multiplier,
+                    iron=base_nutrition.iron * multiplier,
+                    magnesium=base_nutrition.magnesium * multiplier,
+                    phosphorus=base_nutrition.phosphorus * multiplier,
+                    potassium=base_nutrition.potassium * multiplier,
+                    zinc=base_nutrition.zinc * multiplier,
+                    serving_size=f"{converted['weight_grams']:.0f}g ({converted['quantity']} {converted['unit']})"
+                )
+                
+                # เก็บข้อมูลโภชนาการที่ปรับแล้ว
+                key = f"{ingredient_name} ({converted['quantity']} {converted['unit']})"
+                nutrition_data[key] = adjusted_nutrition
         
         return nutrition_data
     
@@ -349,7 +390,7 @@ class NutritionAnalyzer:
         return basic_nutrition
     
     def _parse_ingredients(self, ingredients_text: str) -> List[str]:
-        """แยกวัตถุดิบจากข้อความ"""
+        """แยกวัตถุดิบจากข้อความ (คืนค่าข้อความเต็มพร้อมปริมาณ)"""
         # แยกตามบรรทัด
         lines = ingredients_text.strip().split('\n')
         ingredients = []
@@ -357,16 +398,10 @@ class NutritionAnalyzer:
         for line in lines:
             line = line.strip()
             if line and line.startswith('-'):
-                # ลบ '-' และข้อความที่ไม่จำเป็น
-                ingredient = line[1:].strip()
-                
-                # ลบจำนวนและหน่วย
-                ingredient = re.sub(r'\d+[\s]*[กชฟผลถ้วยช้อนกิโลกรัมกลีบใบเม็ดตัวคู่].*', '', ingredient)
-                ingredient = re.sub(r'\([^)]*\)', '', ingredient)  # ลบข้อความในวงเล็บ
-                
-                ingredient = ingredient.strip()
-                if ingredient and len(ingredient) > 1:
-                    ingredients.append(ingredient)
+                # ลบ '-' แต่เก็บข้อความทั้งหมด
+                ingredient_full = line[1:].strip()
+                if ingredient_full and len(ingredient_full) > 1:
+                    ingredients.append(ingredient_full)
         
         return ingredients
     
@@ -435,6 +470,7 @@ class NutritionAnalyzer:
                     'ฟอสฟอรัส': total_nutrition.phosphorus,
                     'โพแทสเซียม': total_nutrition.potassium,
                     'สังกะสี': total_nutrition.zinc,
+                    'โซเดียม': total_nutrition.sodium,
                 }
             },
             'ingredients': [],
@@ -442,9 +478,15 @@ class NutritionAnalyzer:
         }
         
         # เพิ่มรายละเอียดแต่ละวัตถุดิบ
-        for ingredient, nutrition in nutrition_data.items():
+        for ingredient_key, nutrition in nutrition_data.items():
+            # แยกชื่อวัตถุดิบออกจาก key ที่มีปริมาณ
+            if '(' in ingredient_key:
+                ingredient_name = ingredient_key.split('(')[0].strip()
+            else:
+                ingredient_name = ingredient_key
+            
             result['ingredients'].append({
-                'ingredient': ingredient,
+                'ingredient': ingredient_key,  # แสดงชื่อพร้อมปริมาณ
                 'nutrition': nutrition  # NutritionInfo object
             })
         

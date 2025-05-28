@@ -29,6 +29,8 @@ st.markdown("""
         border-left: 5px solid #4CAF50;
         margin: 15px 0;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        width: 100%;
+        box-sizing: border-box;
     }
     .nutrition-item {
         display: inline-block;
@@ -265,13 +267,40 @@ def display_nutrition_info(nutrition_data):
         st.markdown("**วิตามินและแร่ธาตุ:**")
         
         nutrition_items = []
+        
+        # แสดงวิตามิน
+        vitamin_units = {
+            'วิตามิน A': 'mcg',
+            'วิตามิน C': 'mg',
+            'วิตามิน D': 'mcg',
+            'วิตามิน E': 'mg',
+            'วิตามิน K': 'mcg',
+            'วิตามิน B1': 'mg',
+            'วิตามิน B2': 'mg',
+            'วิตามิน B6': 'mg',
+            'วิตามิน B12': 'mcg'
+        }
+        
         for vitamin, amount in vitamins.items():
             if amount > 0:
-                nutrition_items.append(f"<span class='nutrition-item'>{vitamin}: {amount:.1f}</span>")
+                unit = vitamin_units.get(vitamin, 'mg')
+                nutrition_items.append(f"<span class='nutrition-item'>{vitamin}: {amount:.1f} {unit}</span>")
+        
+        # แสดงแร่ธาตุ
+        mineral_units = {
+            'แคลเซียม': 'mg',
+            'เหล็ก': 'mg',
+            'แมกนีเซียม': 'mg',
+            'ฟอสฟอรัส': 'mg',
+            'โพแทสเซียม': 'mg',
+            'สังกะสี': 'mg',
+            'โซเดียม': 'mg'
+        }
         
         for mineral, amount in minerals.items():
             if amount > 0:
-                nutrition_items.append(f"<span class='nutrition-item'>{mineral}: {amount:.1f}</span>")
+                unit = mineral_units.get(mineral, 'mg')
+                nutrition_items.append(f"<span class='nutrition-item'>{mineral}: {amount:.1f} {unit}</span>")
         
         if nutrition_items:
             st.markdown(f"<div class='vitamin-mineral'>{''.join(nutrition_items)}</div>", unsafe_allow_html=True)
@@ -282,7 +311,13 @@ def display_nutrition_info(nutrition_data):
             ingredient = ingredient_info['ingredient']
             nutrition = ingredient_info['nutrition']
             
-            st.write(f"**{ingredient}** (ต่อ 100g)")
+            # ตรวจสอบว่าเป็นวัตถุดิบของเหลวหรือไม่
+            liquid_ingredients = ['น้ำปลา', 'น้ำมัน', 'กะทิ', 'น้ำ', 'นม', 'น้ำซุป', 'ซอส', 'น้ำจิ้ม', 'น้ำตาล']
+            is_liquid = any(liquid in ingredient.lower() for liquid in liquid_ingredients)
+            
+            unit = "ต่อ 100ml" if is_liquid else "ต่อ 100g"
+            
+            st.write(f"**{ingredient}** ({unit})")
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.write(f"แคลอรี่: {nutrition.calories:.0f} kcal")
@@ -292,6 +327,37 @@ def display_nutrition_info(nutrition_data):
                 st.write(f"คาร์โบไฮเดรต: {nutrition.carbs:.1f} g")
             with col4:
                 st.write(f"ไขมัน: {nutrition.fat:.1f} g")
+            
+            # แสดงวิตามินและแร่ธาตุ
+            vitamin_mineral_text = []
+            
+            # วิตามิน
+            if nutrition.vitamin_a > 0:
+                vitamin_mineral_text.append(f"วิตามิน A: {nutrition.vitamin_a:.1f} mcg")
+            if nutrition.vitamin_c > 0:
+                vitamin_mineral_text.append(f"วิตามิน C: {nutrition.vitamin_c:.1f} mg")
+            if nutrition.vitamin_d > 0:
+                vitamin_mineral_text.append(f"วิตามิน D: {nutrition.vitamin_d:.1f} mcg")
+            if nutrition.vitamin_e > 0:
+                vitamin_mineral_text.append(f"วิตามิน E: {nutrition.vitamin_e:.1f} mg")
+            if nutrition.vitamin_b1 > 0:
+                vitamin_mineral_text.append(f"วิตามิน B1: {nutrition.vitamin_b1:.1f} mg")
+            if nutrition.vitamin_b12 > 0:
+                vitamin_mineral_text.append(f"วิตามิน B12: {nutrition.vitamin_b12:.1f} mcg")
+            
+            # แร่ธาตุ
+            if nutrition.calcium > 0:
+                vitamin_mineral_text.append(f"แคลเซียม: {nutrition.calcium:.1f} mg")
+            if nutrition.iron > 0:
+                vitamin_mineral_text.append(f"เหล็ก: {nutrition.iron:.1f} mg")
+            if nutrition.sodium > 0:
+                vitamin_mineral_text.append(f"โซเดียม: {nutrition.sodium:.0f} mg")
+            if nutrition.potassium > 0:
+                vitamin_mineral_text.append(f"โพแทสเซียม: {nutrition.potassium:.0f} mg")
+            
+            if vitamin_mineral_text:
+                st.write("วิตามินและแร่ธาตุ: " + ", ".join(vitamin_mineral_text))
+            
             st.divider()
     
     st.markdown('</div>', unsafe_allow_html=True)
