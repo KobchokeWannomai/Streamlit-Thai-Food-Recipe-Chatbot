@@ -1,548 +1,435 @@
 import requests
 import json
-import pandas as pd
+import sqlite3
 import re
 import time
 from typing import Dict, List, Optional, Tuple
-import sqlite3
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 
-# ตั้งค่า logging
+# กำหนดค่า logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @dataclass
 class NutritionInfo:
-    """โครงสร้างข้อมูลคุณค่าทางโภชนาการ"""
-    ingredient: str
+    """คลาสสำหรับเก็บข้อมูลโภชนาการ"""
+    name: str
     calories: float = 0.0
     protein: float = 0.0
     carbs: float = 0.0
     fat: float = 0.0
     fiber: float = 0.0
-    vitamins: Dict[str, float] = None
-    minerals: Dict[str, float] = None
-    
-    def __post_init__(self):
-        if self.vitamins is None:
-            self.vitamins = {}
-        if self.minerals is None:
-            self.minerals = {}
+    sugar: float = 0.0
+    sodium: float = 0.0
+    vitamin_a: float = 0.0
+    vitamin_c: float = 0.0
+    vitamin_d: float = 0.0
+    vitamin_e: float = 0.0
+    vitamin_k: float = 0.0
+    vitamin_b1: float = 0.0
+    vitamin_b2: float = 0.0
+    vitamin_b6: float = 0.0
+    vitamin_b12: float = 0.0
+    folate: float = 0.0
+    niacin: float = 0.0
+    calcium: float = 0.0
+    iron: float = 0.0
+    magnesium: float = 0.0
+    phosphorus: float = 0.0
+    potassium: float = 0.0
+    zinc: float = 0.0
+    serving_size: str = "100g"
+    last_updated: str = ""
 
-class NutritionAnalyzer:
-    """คลาสสำหรับวิเคราะห์และจัดการข้อมูลโภชนาการ"""
+class NutritionDatabase:
+    """คลาสสำหรับจัดการฐานข้อมูลโภชนาการ"""
     
-    def __init__(self, db_path: str = "nutrition.db"):
+    def __init__(self, db_path: str = "nutrition_cache.db"):
         self.db_path = db_path
         self.init_database()
-        
-        # Thai ingredient mapping สำหรับแปลงชื่อวัตถุดิบไทยเป็นภาษาอังกฤษ
-        self.thai_to_english = {
-            "กุ้ง": "shrimp",
-            "หมู": "pork", 
-            "ไก่": "chicken",
-            "เนื้อ": "beef",
-            "ปลา": "fish",
-            "ข้าว": "rice",
-            "แป้ง": "flour",
-            "น้ำตาล": "sugar",
-            "เกลือ": "salt",
-            "พริก": "chili",
-            "กระเทียม": "garlic",
-            "หอม": "onion",
-            "ขิง": "ginger",
-            "ข่า": "galangal",
-            "ตะไคร้": "lemongrass",
-            "มะพร้าว": "coconut",
-            "น้ำมัน": "oil",
-            "ถั่ว": "bean",
-            "ผัก": "vegetable",
-            "ใบ": "leaf",
-            "ราก": "root",
-            "เห็ด": "mushroom",
-            "ไข่": "egg",
-            "นม": "milk",
-            "เนย": "butter",
-            "มะเขือเทศ": "tomato",
-            "หน่อไม้": "bamboo shoot",
-            "ฟัก": "gourd",
-            "แตงกวา": "cucumber"
-        }
-        
+    
     def init_database(self):
-        """สร้างฐานข้อมูลสำหรับเก็บข้อมูลโภชนาการ"""
+        """สร้างฐานข้อมูลและตาราง"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        # สร้างตาราง nutrition_data
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS nutrition_data (
+            CREATE TABLE IF NOT EXISTS nutrition_cache (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                ingredient_thai TEXT UNIQUE,
-                ingredient_english TEXT,
-                calories REAL DEFAULT 0,
-                protein REAL DEFAULT 0,
-                carbs REAL DEFAULT 0,
-                fat REAL DEFAULT 0,
-                fiber REAL DEFAULT 0,
-                vitamins TEXT,  -- JSON string
-                minerals TEXT,  -- JSON string
-                source TEXT,
-                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                confidence_score REAL DEFAULT 0.5
+                ingredient_name TEXT UNIQUE NOT NULL,
+                nutrition_data TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         
-        # สร้างตาราง recipe_nutrition สำหรับเก็บข้อมูลโภชนาการของสูตรอาหาร
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS recipe_nutrition (
+            CREATE TABLE IF NOT EXISTS api_usage (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                recipe_name TEXT UNIQUE,
-                total_calories REAL DEFAULT 0,
-                total_protein REAL DEFAULT 0,
-                total_carbs REAL DEFAULT 0,
-                total_fat REAL DEFAULT 0,
-                total_fiber REAL DEFAULT 0,
-                vitamins_total TEXT,  -- JSON string
-                minerals_total TEXT,  -- JSON string
-                serving_size INTEGER DEFAULT 1,
-                last_calculated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                api_name TEXT NOT NULL,
+                calls_count INTEGER DEFAULT 0,
+                last_reset DATE DEFAULT CURRENT_DATE
             )
         ''')
         
         conn.commit()
         conn.close()
-        logger.info("Database initialized successfully")
     
-    def extract_ingredients(self, ingredient_text: str) -> List[str]:
-        """แยกวัตถุดิบจากข้อความ"""
-        if not ingredient_text:
-            return []
+    def get_cached_nutrition(self, ingredient: str) -> Optional[NutritionInfo]:
+        """ดึงข้อมูลโภชนาการจากแคช"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
         
-        # แยกตามบรรทัดและขีด
-        lines = ingredient_text.split('\n')
+        cursor.execute(
+            "SELECT nutrition_data FROM nutrition_cache WHERE ingredient_name = ?",
+            (ingredient.lower(),)
+        )
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result:
+            try:
+                data = json.loads(result[0])
+                return NutritionInfo(**data)
+            except json.JSONDecodeError:
+                return None
+        return None
+    
+    def cache_nutrition(self, ingredient: str, nutrition: NutritionInfo):
+        """บันทึกข้อมูลโภชนาการลงแคช"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        nutrition_dict = nutrition.__dict__.copy()
+        nutrition_dict['last_updated'] = datetime.now().isoformat()
+        
+        cursor.execute('''
+            INSERT OR REPLACE INTO nutrition_cache (ingredient_name, nutrition_data, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        ''', (ingredient.lower(), json.dumps(nutrition_dict, ensure_ascii=False)))
+        
+        conn.commit()
+        conn.close()
+
+class USDANutritionAPI:
+    """คลาสสำหรับดึงข้อมูลจาก USDA FoodData Central API"""
+    
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.base_url = "https://api.nal.usda.gov/fdc/v1"
+        self.session = requests.Session()
+    
+    def search_food(self, query: str) -> Optional[Dict]:
+        """ค้นหาอาหารจาก USDA database"""
+        url = f"{self.base_url}/foods/search"
+        params = {
+            "api_key": self.api_key,
+            "query": query,
+            "pageSize": 5,
+            "dataType": ["Foundation", "SR Legacy"]
+        }
+        
+        try:
+            response = self.session.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            logger.error(f"Error searching USDA API: {e}")
+            return None
+    
+    def get_nutrition_info(self, ingredient: str) -> Optional[NutritionInfo]:
+        """ดึงข้อมูลโภชนาการจาก USDA API"""
+        search_result = self.search_food(ingredient)
+        
+        if not search_result or not search_result.get('foods'):
+            return None
+        
+        # เลือกอาหารที่เหมาะสมที่สุด
+        best_match = search_result['foods'][0]
+        
+        # ดึงข้อมูลโภชนาการแบบละเอียด
+        food_id = best_match['fdcId']
+        url = f"{self.base_url}/food/{food_id}"
+        params = {"api_key": self.api_key}
+        
+        try:
+            response = self.session.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            food_data = response.json()
+            
+            return self._parse_usda_nutrition(food_data, ingredient)
+        except requests.RequestException as e:
+            logger.error(f"Error getting detailed nutrition from USDA: {e}")
+            return None
+    
+    def _parse_usda_nutrition(self, food_data: Dict, ingredient: str) -> NutritionInfo:
+        """แปลงข้อมูลจาก USDA เป็น NutritionInfo"""
+        nutrition = NutritionInfo(name=ingredient)
+        
+        # แมป nutrient ID กับ attribute
+        nutrient_mapping = {
+            1008: 'calories',      # Energy
+            1003: 'protein',       # Protein
+            1005: 'carbs',         # Carbohydrate
+            1004: 'fat',           # Total lipid (fat)
+            1079: 'fiber',         # Fiber
+            2000: 'sugar',         # Sugars
+            1093: 'sodium',        # Sodium
+            1106: 'vitamin_a',     # Vitamin A, RAE
+            1162: 'vitamin_c',     # Vitamin C
+            1114: 'vitamin_d',     # Vitamin D
+            1109: 'vitamin_e',     # Vitamin E
+            1185: 'vitamin_k',     # Vitamin K
+            1165: 'vitamin_b1',    # Thiamin
+            1166: 'vitamin_b2',    # Riboflavin
+            1175: 'vitamin_b6',    # Vitamin B-6
+            1178: 'vitamin_b12',   # Vitamin B-12
+            1186: 'folate',        # Folate, DFE
+            1167: 'niacin',        # Niacin
+            1087: 'calcium',       # Calcium
+            1089: 'iron',          # Iron
+            1090: 'magnesium',     # Magnesium
+            1091: 'phosphorus',    # Phosphorus
+            1092: 'potassium',     # Potassium
+            1095: 'zinc',          # Zinc
+        }
+        
+        # ดึงข้อมูล nutrients
+        for nutrient in food_data.get('foodNutrients', []):
+            nutrient_id = nutrient.get('nutrient', {}).get('id')
+            amount = nutrient.get('amount', 0)
+            
+            if nutrient_id in nutrient_mapping:
+                attr = nutrient_mapping[nutrient_id]
+                setattr(nutrition, attr, float(amount))
+        
+        return nutrition
+
+class ThaiNutritionData:
+    """คลาสสำหรับข้อมูลโภชนาการอาหารไทยที่สร้างขึ้นเอง"""
+    
+    def __init__(self):
+        self.thai_nutrition_db = self._load_thai_nutrition_data()
+    
+    def _load_thai_nutrition_data(self) -> Dict[str, NutritionInfo]:
+        """โหลดข้อมูลโภชนาการอาหารไทยพื้นฐาน"""
+        return {
+            # เนื้อสัตว์
+            "หมู": NutritionInfo(
+                name="หมู", calories=242, protein=27.3, fat=14.0, carbs=0,
+                iron=0.9, zinc=2.4, vitamin_b1=0.7, vitamin_b12=0.7
+            ),
+            "ไก่": NutritionInfo(
+                name="ไก่", calories=239, protein=27.3, fat=13.6, carbs=0,
+                niacin=8.2, vitamin_b6=0.5, phosphorus=182
+            ),
+            "เนื้อ": NutritionInfo(
+                name="เนื้อ", calories=250, protein=26.0, fat=15.0, carbs=0,
+                iron=2.6, zinc=4.8, vitamin_b12=2.6
+            ),
+            "กุ้ง": NutritionInfo(
+                name="กุ้ง", calories=99, protein=18.0, fat=1.7, carbs=0.9,
+                calcium=52, iron=0.5, zinc=1.6
+            ),
+            "ปลา": NutritionInfo(
+                name="ปลา", calories=206, protein=22.0, fat=12.0, carbs=0,
+                calcium=20, iron=1.0, vitamin_d=10.9
+            ),
+            
+            # ผัก
+            "กะหล่ำปลี": NutritionInfo(
+                name="กะหล่ำปลี", calories=25, protein=1.3, carbs=5.8, fat=0.1,
+                vitamin_c=36.6, vitamin_k=76, folate=43, fiber=2.5
+            ),
+            "คะน้า": NutritionInfo(
+                name="คะน้า", calories=22, protein=2.2, carbs=4.2, fat=0.3,
+                vitamin_a=241, vitamin_c=45, calcium=105, iron=1.5
+            ),
+            "ผักบุ้ง": NutritionInfo(
+                name="ผักบุ้ง", calories=19, protein=2.6, carbs=3.1, fat=0.2,
+                vitamin_a=318, vitamin_c=55, iron=2.5, calcium=77
+            ),
+            
+            # เครื่องปรุง
+            "น้ำปลา": NutritionInfo(
+                name="น้ำปลา", calories=10, protein=1.5, carbs=1.0, fat=0,
+                sodium=1413
+            ),
+            "กะทิ": NutritionInfo(
+                name="กะทิ", calories=230, protein=2.3, fat=23.8, carbs=5.5,
+                iron=3.9, magnesium=37
+            ),
+            "น้ำตาล": NutritionInfo(
+                name="น้ำตาล", calories=387, protein=0, fat=0, carbs=100,
+                calcium=1
+            ),
+            
+            # ข้าว/แป้ง
+            "ข้าว": NutritionInfo(
+                name="ข้าว", calories=130, protein=2.7, carbs=28, fat=0.3,
+                niacin=1.6, vitamin_b6=0.1, magnesium=25
+            ),
+            "แป้ง": NutritionInfo(
+                name="แป้ง", calories=364, protein=10.3, carbs=76.3, fat=0.9,
+                iron=1.2, niacin=5.9, folate=26
+            )
+        }
+    
+    def get_nutrition_info(self, ingredient: str) -> Optional[NutritionInfo]:
+        """ดึงข้อมูลโภชนาการจากฐานข้อมูลไทย"""
+        # ทำ fuzzy matching สำหรับวัตถุดิบไทย
+        ingredient_clean = self._clean_thai_ingredient(ingredient)
+        
+        # ค้นหาแบบตรงไปตรงมา
+        if ingredient_clean in self.thai_nutrition_db:
+            return self.thai_nutrition_db[ingredient_clean]
+        
+        # ค้นหาแบบ partial match
+        for key, nutrition in self.thai_nutrition_db.items():
+            if key in ingredient_clean or ingredient_clean in key:
+                return nutrition
+        
+        return None
+    
+    def _clean_thai_ingredient(self, ingredient: str) -> str:
+        """ทำความสะอาดชื่อวัตถุดิบภาษาไทย"""
+        # ลบข้อความที่ไม่จำเป็น
+        unwanted_words = ['ขนาด', 'กลาง', 'เล็ก', 'ใหญ่', 'สด', 'แห้ง', 'ต้ม', '1', '2', '3', '4', '5']
+        result = ingredient
+        for word in unwanted_words:
+            result = result.replace(word, '')
+        
+        return result.strip()
+
+class NutritionAnalyzer:
+    """คลาสหลักสำหรับวิเคราะห์คุณค่าทางโภชนาการ"""
+    
+    def __init__(self, usda_api_key: Optional[str] = None):
+        self.db = NutritionDatabase()
+        self.thai_data = ThaiNutritionData()
+        self.usda_api = USDANutritionAPI(usda_api_key) if usda_api_key else None
+    
+    def analyze_ingredients(self, ingredients_text: str) -> Dict[str, NutritionInfo]:
+        """วิเคราะห์คุณค่าทางโภชนาการของวัตถุดิบทั้งหมด"""
+        ingredients = self._parse_ingredients(ingredients_text)
+        nutrition_data = {}
+        
+        for ingredient in ingredients:
+            nutrition = self.get_ingredient_nutrition(ingredient)
+            if nutrition:
+                nutrition_data[ingredient] = nutrition
+        
+        return nutrition_data
+    
+    def get_ingredient_nutrition(self, ingredient: str) -> Optional[NutritionInfo]:
+        """ดึงข้อมูลโภชนาการของวัตถุดิบ"""
+        # 1. ตรวจสอบแคชก่อน
+        cached = self.db.get_cached_nutrition(ingredient)
+        if cached:
+            return cached
+        
+        # 2. ตรวจสอบฐานข้อมูลไทย
+        thai_nutrition = self.thai_data.get_nutrition_info(ingredient)
+        if thai_nutrition:
+            self.db.cache_nutrition(ingredient, thai_nutrition)
+            return thai_nutrition
+        
+        # 3. ใช้ USDA API (ถ้ามี API key)
+        if self.usda_api:
+            usda_nutrition = self.usda_api.get_nutrition_info(ingredient)
+            if usda_nutrition:
+                self.db.cache_nutrition(ingredient, usda_nutrition)
+                return usda_nutrition
+        
+        # 4. สร้างข้อมูลพื้นฐาน
+        basic_nutrition = NutritionInfo(name=ingredient)
+        self.db.cache_nutrition(ingredient, basic_nutrition)
+        return basic_nutrition
+    
+    def _parse_ingredients(self, ingredients_text: str) -> List[str]:
+        """แยกวัตถุดิบจากข้อความ"""
+        # แยกตามบรรทัด
+        lines = ingredients_text.strip().split('\n')
         ingredients = []
         
         for line in lines:
             line = line.strip()
-            if not line or not line.startswith('-'):
-                continue
+            if line and line.startswith('-'):
+                # ลบ '-' และข้อความที่ไม่จำเป็น
+                ingredient = line[1:].strip()
                 
-            # ลบขีดออก
-            line = line[1:].strip()
-            
-            # แยกชื่อวัตถุดิบจากปริมาณ
-            # ใช้ regex หาชื่อวัตถุดิบก่อนเลขหรือหน่วยวัด
-            ingredient_match = re.match(r'^([^0-9]+?)(?:\s*\d+.*)?$', line)
-            if ingredient_match:
-                ingredient = ingredient_match.group(1).strip()
-                if ingredient:
+                # ลบจำนวนและหน่วย
+                ingredient = re.sub(r'\d+[\s]*[กชฟผลถ้วยช้อนกิโลกรัมกลีบใบเม็ดตัวคู่].*', '', ingredient)
+                ingredient = re.sub(r'\([^)]*\)', '', ingredient)  # ลบข้อความในวงเล็บ
+                
+                ingredient = ingredient.strip()
+                if ingredient and len(ingredient) > 1:
                     ingredients.append(ingredient)
         
         return ingredients
     
-    def translate_ingredient(self, thai_ingredient: str) -> str:
-        """แปลชื่อวัตถุดิบจากไทยเป็นอังกฤษ"""
-        thai_ingredient = thai_ingredient.lower()
+    def calculate_total_nutrition(self, nutrition_data: Dict[str, NutritionInfo]) -> NutritionInfo:
+        """คำนวณคุณค่าทางโภชนาการรวม"""
+        total = NutritionInfo(name="รวม")
         
-        # ค้นหาคำที่ตรงกันในพจนานุกรม
-        for thai, english in self.thai_to_english.items():
-            if thai in thai_ingredient:
-                return english
+        for nutrition in nutrition_data.values():
+            total.calories += nutrition.calories
+            total.protein += nutrition.protein
+            total.carbs += nutrition.carbs
+            total.fat += nutrition.fat
+            total.fiber += nutrition.fiber
+            total.sugar += nutrition.sugar
+            total.sodium += nutrition.sodium
+            total.vitamin_a += nutrition.vitamin_a
+            total.vitamin_c += nutrition.vitamin_c
+            total.vitamin_d += nutrition.vitamin_d
+            total.vitamin_e += nutrition.vitamin_e
+            total.vitamin_k += nutrition.vitamin_k
+            total.vitamin_b1 += nutrition.vitamin_b1
+            total.vitamin_b2 += nutrition.vitamin_b2
+            total.vitamin_b6 += nutrition.vitamin_b6
+            total.vitamin_b12 += nutrition.vitamin_b12
+            total.folate += nutrition.folate
+            total.niacin += nutrition.niacin
+            total.calcium += nutrition.calcium
+            total.iron += nutrition.iron
+            total.magnesium += nutrition.magnesium
+            total.phosphorus += nutrition.phosphorus
+            total.potassium += nutrition.potassium
+            total.zinc += nutrition.zinc
         
-        # ถ้าไม่พบ ส่งคืนคำเดิม
-        return thai_ingredient
-    
-    def get_nutrition_from_api(self, ingredient_english: str) -> Optional[NutritionInfo]:
-        """ดึงข้อมูลโภชนาการจาก API (ตัวอย่างใช้ FDC API)"""
-        try:
-            # FDC API (USDA Food Database) - ฟรี
-            api_key = "YOUR_FDC_API_KEY"  # ต้องสมัคร API key ฟรีจาก https://fdc.nal.usda.gov/api-guide.html
-            
-            # ค้นหาอาหาร
-            search_url = f"https://api.nal.usda.gov/fdc/v1/foods/search"
-            search_params = {
-                "query": ingredient_english,
-                "api_key": api_key,
-                "pageSize": 1
-            }
-            
-            response = requests.get(search_url, params=search_params, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                if data.get('foods') and len(data['foods']) > 0:
-                    food = data['foods'][0]
-                    food_id = food['fdcId']
-                    
-                    # ดึงข้อมูลโภชนาการรายละเอียด
-                    detail_url = f"https://api.nal.usda.gov/fdc/v1/food/{food_id}"
-                    detail_params = {"api_key": api_key}
-                    
-                    detail_response = requests.get(detail_url, params=detail_params, timeout=10)
-                    
-                    if detail_response.status_code == 200:
-                        detail_data = detail_response.json()
-                        return self._parse_fdc_nutrition(ingredient_english, detail_data)
-            
-            # ถ้า FDC ไม่สำเร็จ ลองใช้ Nutritionix API
-            return self._get_nutrition_from_nutritionix(ingredient_english)
-            
-        except Exception as e:
-            logger.error(f"Error getting nutrition from API for {ingredient_english}: {e}")
-            return None
-    
-    def _parse_fdc_nutrition(self, ingredient: str, data: dict) -> NutritionInfo:
-        """แปลงข้อมูลจาก FDC API เป็น NutritionInfo"""
-        nutrition = NutritionInfo(ingredient=ingredient)
-        
-        # วิเคราะห์ข้อมูลโภชนาการ
-        for nutrient in data.get('foodNutrients', []):
-            nutrient_name = nutrient.get('nutrient', {}).get('name', '').lower()
-            amount = nutrient.get('amount', 0)
-            
-            if 'energy' in nutrient_name or 'calorie' in nutrient_name:
-                nutrition.calories = amount
-            elif 'protein' in nutrient_name:
-                nutrition.protein = amount
-            elif 'carbohydrate' in nutrient_name:
-                nutrition.carbs = amount
-            elif 'fat' in nutrient_name and 'fatty' not in nutrient_name:
-                nutrition.fat = amount
-            elif 'fiber' in nutrient_name:
-                nutrition.fiber = amount
-            elif 'vitamin' in nutrient_name:
-                nutrition.vitamins[nutrient_name] = amount
-            elif any(mineral in nutrient_name for mineral in ['calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'sodium', 'zinc']):
-                nutrition.minerals[nutrient_name] = amount
-        
-        return nutrition
-    
-    def _get_nutrition_from_nutritionix(self, ingredient_english: str) -> Optional[NutritionInfo]:
-        """ดึงข้อมูลจาก Nutritionix API (alternative)"""
-        try:
-            app_id = "YOUR_NUTRITIONIX_APP_ID"
-            app_key = "YOUR_NUTRITIONIX_APP_KEY"
-            
-            url = "https://trackapi.nutritionix.com/v2/natural/nutrients"
-            headers = {
-                'x-app-id': app_id,
-                'x-app-key': app_key,
-                'Content-Type': 'application/json'
-            }
-            
-            data = {"query": f"100g {ingredient_english}"}
-            
-            response = requests.post(url, headers=headers, json=data, timeout=10)
-            
-            if response.status_code == 200:
-                result = response.json()
-                if result.get('foods') and len(result['foods']) > 0:
-                    food = result['foods'][0]
-                    
-                    nutrition = NutritionInfo(ingredient=ingredient_english)
-                    nutrition.calories = food.get('nf_calories', 0)
-                    nutrition.protein = food.get('nf_protein', 0)
-                    nutrition.carbs = food.get('nf_total_carbohydrate', 0)
-                    nutrition.fat = food.get('nf_total_fat', 0)
-                    nutrition.fiber = food.get('nf_dietary_fiber', 0)
-                    
-                    return nutrition
-            
-        except Exception as e:
-            logger.error(f"Error getting nutrition from Nutritionix for {ingredient_english}: {e}")
-        
-        return None
-    
-    def get_fallback_nutrition(self, ingredient: str) -> NutritionInfo:
-        """ข้อมูลโภชนาการพื้นฐานสำหรับวัตถุดิบทั่วไป (fallback)"""
-        # ข้อมูลโภชนาการพื้นฐานสำหรับวัตถุดิบไทยทั่วไป (ต่อ 100g)
-        fallback_data = {
-            "ข้าว": NutritionInfo("ข้าว", 130, 2.7, 28.0, 0.3, 0.4),
-            "หมู": NutritionInfo("หมู", 242, 27.0, 0.0, 14.0, 0.0),
-            "ไก่": NutritionInfo("ไก่", 165, 31.0, 0.0, 3.6, 0.0),
-            "เนื้อ": NutritionInfo("เนื้อ", 250, 26.0, 0.0, 15.0, 0.0),
-            "กุ้ง": NutritionInfo("กุ้ง", 99, 18.0, 0.2, 1.4, 0.0),
-            "ปลา": NutritionInfo("ปลา", 206, 22.0, 0.0, 12.0, 0.0),
-            "ไข่": NutritionInfo("ไข่", 155, 13.0, 1.1, 11.0, 0.0),
-            "มะพร้าว": NutritionInfo("มะพร้าว", 354, 3.3, 15.0, 33.0, 9.0),
-            "น้ำมัน": NutritionInfo("น้ำมัน", 884, 0.0, 0.0, 100.0, 0.0),
-            "น้ำตาล": NutritionInfo("น้ำตาล", 387, 0.0, 100.0, 0.0, 0.0),
-            "แป้ง": NutritionInfo("แป้ง", 364, 10.0, 76.0, 1.0, 2.7),
-        }
-        
-        for key, nutrition in fallback_data.items():
-            if key in ingredient:
-                return nutrition
-        
-        # ค่าเริ่มต้นสำหรับวัตถุดิบที่ไม่รู้จัก
-        return NutritionInfo(ingredient, 50, 1.0, 10.0, 0.5, 1.0)
-    
-    def save_nutrition_to_db(self, thai_ingredient: str, nutrition: NutritionInfo, source: str = "api", confidence: float = 0.8):
-        """บันทึกข้อมูลโภชนาการลงฐานข้อมูล"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        try:
-            cursor.execute('''
-                INSERT OR REPLACE INTO nutrition_data 
-                (ingredient_thai, ingredient_english, calories, protein, carbs, fat, fiber, vitamins, minerals, source, confidence_score)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                thai_ingredient,
-                nutrition.ingredient,
-                nutrition.calories,
-                nutrition.protein,
-                nutrition.carbs,
-                nutrition.fat,
-                nutrition.fiber,
-                json.dumps(nutrition.vitamins, ensure_ascii=False),
-                json.dumps(nutrition.minerals, ensure_ascii=False),
-                source,
-                confidence
-            ))
-            
-            conn.commit()
-            logger.info(f"Saved nutrition data for {thai_ingredient}")
-            
-        except Exception as e:
-            logger.error(f"Error saving nutrition data for {thai_ingredient}: {e}")
-        finally:
-            conn.close()
-    
-    def get_nutrition_from_db(self, thai_ingredient: str) -> Optional[NutritionInfo]:
-        """ดึงข้อมูลโภชนาการจากฐานข้อมูล"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        try:
-            cursor.execute('''
-                SELECT ingredient_english, calories, protein, carbs, fat, fiber, vitamins, minerals
-                FROM nutrition_data 
-                WHERE ingredient_thai = ?
-            ''', (thai_ingredient,))
-            
-            result = cursor.fetchone()
-            if result:
-                nutrition = NutritionInfo(
-                    ingredient=result[0],
-                    calories=result[1],
-                    protein=result[2],
-                    carbs=result[3],
-                    fat=result[4],
-                    fiber=result[5],
-                    vitamins=json.loads(result[6]) if result[6] else {},
-                    minerals=json.loads(result[7]) if result[7] else {}
-                )
-                return nutrition
-                
-        except Exception as e:
-            logger.error(f"Error getting nutrition from DB for {thai_ingredient}: {e}")
-        finally:
-            conn.close()
-        
-        return None
-    
-    def analyze_ingredient(self, thai_ingredient: str) -> NutritionInfo:
-        """วิเคราะห์วัตถุดิบ 1 ชนิด - ตรวจสอบ DB ก่อน แล้วค่อยไป API"""
-        # ตรวจสอบในฐานข้อมูลก่อน
-        nutrition = self.get_nutrition_from_db(thai_ingredient)
-        if nutrition:
-            logger.info(f"Found nutrition data in DB for {thai_ingredient}")
-            return nutrition
-        
-        # ถ้าไม่มีในฐานข้อมูล ค้นหาจาก API
-        english_ingredient = self.translate_ingredient(thai_ingredient)
-        nutrition = self.get_nutrition_from_api(english_ingredient)
-        
-        if nutrition:
-            # บันทึกลงฐานข้อมูล
-            self.save_nutrition_to_db(thai_ingredient, nutrition, "api", 0.8)
-            logger.info(f"Got nutrition data from API for {thai_ingredient}")
-        else:
-            # ใช้ข้อมูล fallback
-            nutrition = self.get_fallback_nutrition(thai_ingredient)
-            self.save_nutrition_to_db(thai_ingredient, nutrition, "fallback", 0.3)
-            logger.info(f"Using fallback nutrition data for {thai_ingredient}")
-        
-        return nutrition
-    
-    def analyze_recipe(self, recipe_name: str, ingredients_text: str) -> Dict:
-        """วิเคราะห์คุณค่าทางโภชนาการของสูตรอาหารทั้งหมด"""
-        ingredients = self.extract_ingredients(ingredients_text)
-        
-        total_nutrition = {
-            'calories': 0,
-            'protein': 0,
-            'carbs': 0,
-            'fat': 0,
-            'fiber': 0,
-            'vitamins': {},
-            'minerals': {}
-        }
-        
-        ingredient_details = []
-        
-        for ingredient in ingredients:
-            nutrition = self.analyze_ingredient(ingredient)
-            
-            # สะสมค่าโภชนาการรวม
-            total_nutrition['calories'] += nutrition.calories
-            total_nutrition['protein'] += nutrition.protein
-            total_nutrition['carbs'] += nutrition.carbs
-            total_nutrition['fat'] += nutrition.fat
-            total_nutrition['fiber'] += nutrition.fiber
-            
-            # สะสมวิตามิน
-            for vitamin, amount in nutrition.vitamins.items():
-                if vitamin in total_nutrition['vitamins']:
-                    total_nutrition['vitamins'][vitamin] += amount
-                else:
-                    total_nutrition['vitamins'][vitamin] = amount
-            
-            # สะสมแร่ธาตุ
-            for mineral, amount in nutrition.minerals.items():
-                if mineral in total_nutrition['minerals']:
-                    total_nutrition['minerals'][mineral] += amount
-                else:
-                    total_nutrition['minerals'][mineral] = amount
-            
-            ingredient_details.append({
-                'ingredient': ingredient,
-                'nutrition': nutrition
-            })
-        
-        # บันทึกข้อมูลโภชนาการของสูตรอาหาร
-        self.save_recipe_nutrition(recipe_name, total_nutrition)
-        
-        return {
-            'recipe_name': recipe_name,
-            'total_nutrition': total_nutrition,
-            'ingredients': ingredient_details,
-            'ingredient_count': len(ingredients)
-        }
-    
-    def save_recipe_nutrition(self, recipe_name: str, nutrition: Dict):
-        """บันทึกข้อมูลโภชนาการของสูตรอาหารลงฐานข้อมูล"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        try:
-            cursor.execute('''
-                INSERT OR REPLACE INTO recipe_nutrition 
-                (recipe_name, total_calories, total_protein, total_carbs, total_fat, total_fiber, vitamins_total, minerals_total)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                recipe_name,
-                nutrition['calories'],
-                nutrition['protein'],
-                nutrition['carbs'],
-                nutrition['fat'],
-                nutrition['fiber'],
-                json.dumps(nutrition['vitamins'], ensure_ascii=False),
-                json.dumps(nutrition['minerals'], ensure_ascii=False)
-            ))
-            
-            conn.commit()
-            logger.info(f"Saved recipe nutrition data for {recipe_name}")
-            
-        except Exception as e:
-            logger.error(f"Error saving recipe nutrition for {recipe_name}: {e}")
-        finally:
-            conn.close()
-    
-    def search_recipes_by_nutrition(self, nutrition_criteria: Dict) -> List[Dict]:
-        """ค้นหาสูตรอาหารตามเกณฑ์โภชนาการ"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        conditions = []
-        params = []
-        
-        if 'min_calories' in nutrition_criteria:
-            conditions.append("total_calories >= ?")
-            params.append(nutrition_criteria['min_calories'])
-        
-        if 'max_calories' in nutrition_criteria:
-            conditions.append("total_calories <= ?")  
-            params.append(nutrition_criteria['max_calories'])
-        
-        if 'min_protein' in nutrition_criteria:
-            conditions.append("total_protein >= ?")
-            params.append(nutrition_criteria['min_protein'])
-        
-        where_clause = " AND ".join(conditions) if conditions else "1=1"
-        
-        try:
-            cursor.execute(f'''
-                SELECT recipe_name, total_calories, total_protein, total_carbs, total_fat, total_fiber
-                FROM recipe_nutrition 
-                WHERE {where_clause}
-                ORDER BY total_calories
-            ''', params)
-            
-            results = cursor.fetchall()
-            
-            return [
-                {
-                    'recipe_name': row[0],
-                    'calories': row[1],
-                    'protein': row[2],
-                    'carbs': row[3],
-                    'fat': row[4],
-                    'fiber': row[5]
-                }
-                for row in results
-            ]
-            
-        except Exception as e:
-            logger.error(f"Error searching recipes by nutrition: {e}")
-            return []
-        finally:
-            conn.close()
+        return total
 
-
-def process_all_recipes(csv_path: str = "thai_food_processed.csv"):
-    """ประมวลผลข้อมูลโภชนาการสำหรับทุกสูตรอาหารในไฟล์"""
-    analyzer = NutritionAnalyzer()
-    
-    try:
-        df = pd.read_csv(csv_path)
-        results = []
-        
-        for index, row in df.iterrows():
-            recipe_name = row['name']
-            ingredients = row['ingredient']
-            
-            logger.info(f"Processing recipe {index + 1}/{len(df)}: {recipe_name}")
-            
-            result = analyzer.analyze_recipe(recipe_name, ingredients)
-            results.append(result)
-            
-            # หน่วงเวลาเพื่อไม่ให้ API rate limit
-            time.sleep(1)
-        
-        logger.info(f"Completed processing {len(results)} recipes")
-        return results
-        
-    except Exception as e:
-        logger.error(f"Error processing recipes: {e}")
-        return []
-
-
+# ตัวอย่างการใช้งาน
 if __name__ == "__main__":
-    # ตัวอย่างการใช้งาน
+    # สร้าง analyzer (ใส่ USDA API key ถ้ามี)
     analyzer = NutritionAnalyzer()
     
-    # วิเคราะห์สูตรอาหารเดียว
-    ingredients_text = """- กุ้งนาง 4 ตัว
-- พริกไทย 5 เม็ด
-- กระเทียมกลีบใหญ่ 2 กลีบ
-- รากผักชี 5 ราก
-- น้ำปลา 2 ช้อนโต๊ะ
-- น้ำมันหมู 1 ช้อนโต๊ะ"""
+    # ตัวอย่างวัตถุดิบ
+    ingredients_text = """
+    - กุ้งนาง 4 ตัว
+    - พริกไทย 5 เม็ด
+    - กระเทียมกลีบใหญ่ 2 กลีบ
+    - รากผักชี 5 ราก
+    - น้ำปลา 2 ช้อนโต๊ะ
+    - น้ำมันหมู 1 ช้อนโต๊ะ
+    """
     
-    result = analyzer.analyze_recipe("กุ้งทาพริกไทยกระเทียม", ingredients_text)
-    print(json.dumps(result, indent=2, ensure_ascii=False))
+    # วิเคราะห์โภชนาการ
+    nutrition_data = analyzer.analyze_ingredients(ingredients_text)
+    
+    # แสดงผล
+    for ingredient, nutrition in nutrition_data.items():
+        print(f"\n{ingredient}:")
+        print(f"  พลังงาน: {nutrition.calories:.1f} แคลอรี่")
+        print(f"  โปรตีน: {nutrition.protein:.1f} กรัม")
+        print(f"  คาร์โบไฮเดรต: {nutrition.carbs:.1f} กรัม")
+        print(f"  ไขมัน: {nutrition.fat:.1f} กรัม")
+    
+    # คำนวณรวม
+    total = analyzer.calculate_total_nutrition(nutrition_data)
+    print(f"\nรวมทั้งหมด:")
+    print(f"  พลังงาน: {total.calories:.1f} แคลอรี่")
+    print(f"  โปรตีน: {total.protein:.1f} กรัม")
