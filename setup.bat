@@ -9,6 +9,16 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: Check Python version (requires Python 3.8+)
+python -c "import sys; exit(0 if sys.version_info >= (3, 8) else 1)"
+if %errorlevel% neq 0 (
+    echo Error: Python 3.8+ is required.
+    echo Please upgrade your Python version.
+    exit /b 1
+)
+
+echo Python version is compatible.
+
 :: Create virtual environment
 echo Creating virtual environment...
 python -m venv venv
