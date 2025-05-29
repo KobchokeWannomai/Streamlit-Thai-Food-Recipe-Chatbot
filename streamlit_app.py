@@ -248,7 +248,6 @@ def display_nutrition_info(nutrition_data):
     
     total_nutrition = nutrition_data.get('total_nutrition', {})
     
-    st.markdown('<div class="nutrition-card">', unsafe_allow_html=True)
     st.markdown("### 🥗 ข้อมูลโภชนาการ (ต่อหนึ่งที่)")
     
     # สารอาหารหลัก
@@ -562,7 +561,6 @@ def main():
             if message["role"] == "assistant" and "recipe" in message:
                 # แสดงสูตรพร้อมโภชนาการ
                 recipe = message["recipe"]
-                st.markdown(f'<div class="recipe-card">', unsafe_allow_html=True)
                 st.markdown(f'<div class="recipe-title">{recipe["name"]}</div>', unsafe_allow_html=True)
                 
                 # แสดงข้อมูลโภชนาการ
@@ -674,7 +672,6 @@ def main():
                             st.markdown(response)
                             
                             # แสดงสูตรพร้อมโภชนาการ
-                            st.markdown(f'<div class="recipe-card">', unsafe_allow_html=True)
                             st.markdown(f'<div class="recipe-title">{best_match["name"]}</div>', unsafe_allow_html=True)
                             
                             # แสดงข้อมูลโภชนาการ
