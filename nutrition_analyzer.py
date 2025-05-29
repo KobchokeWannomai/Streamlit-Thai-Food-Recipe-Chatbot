@@ -215,94 +215,359 @@ class ThaiNutritionData:
         self.thai_nutrition_db = self._load_thai_nutrition_data()
     
     def _load_thai_nutrition_data(self) -> Dict[str, NutritionInfo]:
-        """โหลดข้อมูลโภชนาการอาหารไทยพื้นฐาน"""
+        """โหลดข้อมูลโภชนาการอาหารไทยพื้นฐาน (ต่อ 100g)"""
         return {
-            # เนื้อสัตว์
+            # เนื้อสัตว์ - ปรับค่าให้สมจริงมากขึ้น
             "หมู": NutritionInfo(
-                name="หมู", calories=242, protein=27.3, fat=14.0, carbs=0,
+                name="หมู", calories=242, protein=14.5, fat=20.0, carbs=0,
+                iron=0.9, zinc=2.4, vitamin_b1=0.7, vitamin_b12=0.7,
+                phosphorus=180, potassium=290
+            ),
+            "เนื้อหมู": NutritionInfo(
+                name="เนื้อหมู", calories=242, protein=14.5, fat=20.0, carbs=0,
                 iron=0.9, zinc=2.4, vitamin_b1=0.7, vitamin_b12=0.7
             ),
+            "หมูสับ": NutritionInfo(
+                name="หมูสับ", calories=263, protein=17.0, fat=21.0, carbs=0,
+                iron=1.0, zinc=2.5, vitamin_b12=0.8
+            ),
             "ไก่": NutritionInfo(
-                name="ไก่", calories=239, protein=27.3, fat=13.6, carbs=0,
-                niacin=8.2, vitamin_b6=0.5, phosphorus=182
+                name="ไก่", calories=215, protein=18.6, fat=15.1, carbs=0,
+                niacin=6.8, vitamin_b6=0.35, phosphorus=147, iron=0.9
+            ),
+            "เนื้อไก่": NutritionInfo(
+                name="เนื้อไก่", calories=215, protein=18.6, fat=15.1, carbs=0,
+                niacin=6.8, vitamin_b6=0.35, phosphorus=147
             ),
             "เนื้อ": NutritionInfo(
                 name="เนื้อ", calories=250, protein=26.0, fat=15.0, carbs=0,
+                iron=2.6, zinc=4.8, vitamin_b12=2.6, phosphorus=175
+            ),
+            "เนื้อโค": NutritionInfo(
+                name="เนื้อโค", calories=250, protein=26.0, fat=15.0, carbs=0,
+                iron=2.6, zinc=4.8, vitamin_b12=2.6
+            ),
+            "เนื้อวัว": NutritionInfo(
+                name="เนื้อวัว", calories=250, protein=26.0, fat=15.0, carbs=0,
                 iron=2.6, zinc=4.8, vitamin_b12=2.6
             ),
             "กุ้ง": NutritionInfo(
-                name="กุ้ง", calories=99, protein=18.0, fat=1.7, carbs=0.9,
-                calcium=52, iron=0.5, zinc=1.6
+                name="กุ้ง", calories=85, protein=20.0, fat=0.5, carbs=0,
+                calcium=52, iron=0.3, zinc=1.1, phosphorus=205
+            ),
+            "กุ้งนาง": NutritionInfo(
+                name="กุ้งนาง", calories=85, protein=20.0, fat=0.5, carbs=0,
+                calcium=52, iron=0.3, zinc=1.1
+            ),
+            "กุ้งแห้ง": NutritionInfo(
+                name="กุ้งแห้ง", calories=300, protein=65.0, fat=2.0, carbs=0,
+                calcium=800, iron=3.0, sodium=2500
             ),
             "ปลา": NutritionInfo(
-                name="ปลา", calories=206, protein=22.0, fat=12.0, carbs=0,
-                calcium=20, iron=1.0, vitamin_d=10.9
+                name="ปลา", calories=124, protein=22.0, fat=3.0, carbs=0,
+                calcium=20, iron=0.8, vitamin_d=10.9, phosphorus=200
+            ),
+            "หอยแมลงภู่": NutritionInfo(
+                name="หอยแมลงภู่", calories=86, protein=12.0, fat=2.2, carbs=3.7,
+                iron=6.7, zinc=2.3, vitamin_b12=24.0
+            ),
+            "ปลาหมึก": NutritionInfo(
+                name="ปลาหมึก", calories=92, protein=15.6, fat=1.4, carbs=3.1,
+                iron=0.7, zinc=1.5, phosphorus=221
+            ),
+            "ปู": NutritionInfo(
+                name="ปู", calories=97, protein=19.0, fat=1.5, carbs=0,
+                calcium=89, iron=0.7, zinc=6.5
             ),
             
-            # ผัก
+            # ไข่ - ค่าที่ถูกต้องต่อ 100g
+            "ไข่": NutritionInfo(
+                name="ไข่", calories=155, protein=13.0, fat=11.0, carbs=1.1,
+                vitamin_a=140, vitamin_d=2.0, iron=1.8, phosphorus=200
+            ),
+            "ไข่ไก่": NutritionInfo(
+                name="ไข่ไก่", calories=155, protein=13.0, fat=11.0, carbs=1.1,
+                vitamin_a=140, vitamin_d=2.0, iron=1.8
+            ),
+            "ไข่เป็ด": NutritionInfo(
+                name="ไข่เป็ด", calories=185, protein=13.0, fat=14.0, carbs=1.5,
+                vitamin_a=180, iron=3.8, calcium=64
+            ),
+            "ไข่เค็ม": NutritionInfo(
+                name="ไข่เค็ม", calories=190, protein=13.6, fat=13.0, carbs=1.8,
+                sodium=1400, calcium=120, iron=3.2
+            ),
+            
+            # ผัก - ปรับค่าให้สมจริง
             "กะหล่ำปลี": NutritionInfo(
                 name="กะหล่ำปลี", calories=25, protein=1.3, carbs=5.8, fat=0.1,
-                vitamin_c=36.6, vitamin_k=76, folate=43, fiber=2.5
+                vitamin_c=36.6, vitamin_k=76, fiber=2.5
             ),
             "คะน้า": NutritionInfo(
-                name="คะน้า", calories=22, protein=2.2, carbs=4.2, fat=0.3,
-                vitamin_a=241, vitamin_c=45, calcium=105, iron=1.5
+                name="คะน้า", calories=26, protein=2.8, carbs=4.7, fat=0.4,
+                vitamin_a=241, vitamin_c=120, calcium=105, iron=0.6
             ),
             "ผักบุ้ง": NutritionInfo(
                 name="ผักบุ้ง", calories=19, protein=2.6, carbs=3.1, fat=0.2,
-                vitamin_a=318, vitamin_c=55, iron=2.5, calcium=77
+                vitamin_a=318, vitamin_c=55, iron=1.7, calcium=77
+            ),
+            "ผักกาด": NutritionInfo(
+                name="ผักกาด", calories=16, protein=1.5, carbs=3.2, fat=0.2,
+                vitamin_c=27, calcium=105, fiber=1.2
+            ),
+            "ผักกาดขาว": NutritionInfo(
+                name="ผักกาดขาว", calories=16, protein=1.5, carbs=3.2, fat=0.2,
+                vitamin_c=27, calcium=105
+            ),
+            "ถั่วฝักยาว": NutritionInfo(
+                name="ถั่วฝักยาว", calories=47, protein=2.8, carbs=8.4, fat=0.4,
+                vitamin_c=18.8, folate=62, fiber=2.6
+            ),
+            "ถั่วพู": NutritionInfo(
+                name="ถั่วพู", calories=47, protein=2.8, carbs=8.4, fat=0.4,
+                vitamin_c=18.8, fiber=2.6
+            ),
+            "ถั่วงอก": NutritionInfo(
+                name="ถั่วงอก", calories=30, protein=3.0, carbs=6.0, fat=0.2,
+                vitamin_c=13.2, folate=61
+            ),
+            "แตงกวา": NutritionInfo(
+                name="แตงกวา", calories=16, protein=0.7, carbs=3.6, fat=0.1,
+                vitamin_k=16.4, vitamin_c=2.8
+            ),
+            "มะเขือเทศ": NutritionInfo(
+                name="มะเขือเทศ", calories=18, protein=0.9, carbs=3.9, fat=0.2,
+                vitamin_c=14, vitamin_a=42, potassium=237
+            ),
+            "มะเขือ": NutritionInfo(
+                name="มะเขือ", calories=25, protein=1.0, carbs=5.9, fat=0.2,
+                fiber=3.0, potassium=229
             ),
             
             # เครื่องปรุง
+            "หอมใหญ่": NutritionInfo(
+                name="หอมใหญ่", calories=40, protein=1.1, carbs=9.3, fat=0.1,
+                vitamin_c=7.4, fiber=1.7
+            ),
+            "หอมแดง": NutritionInfo(
+                name="หอมแดง", calories=72, protein=2.5, carbs=16.8, fat=0.1,
+                fiber=2.6
+            ),
+            "หัวหอม": NutritionInfo(
+                name="หัวหอม", calories=72, protein=2.5, carbs=16.8, fat=0.1
+            ),
+            "กระเทียม": NutritionInfo(
+                name="กระเทียม", calories=149, protein=6.4, carbs=33.1, fat=0.5,
+                vitamin_c=31.2, calcium=181
+            ),
+            "พริก": NutritionInfo(
+                name="พริก", calories=40, protein=1.9, carbs=8.8, fat=0.4,
+                vitamin_c=144, vitamin_a=48
+            ),
+            "พริกขี้หนู": NutritionInfo(
+                name="พริกขี้หนู", calories=40, protein=1.9, carbs=8.8, fat=0.4,
+                vitamin_c=144, vitamin_a=48
+            ),
+            "พริกแห้ง": NutritionInfo(
+                name="พริกแห้ง", calories=324, protein=10.6, carbs=69.9, fat=5.8,
+                vitamin_a=1483, iron=7.8
+            ),
+            "พริกไทย": NutritionInfo(
+                name="พริกไทย", calories=251, protein=10.4, carbs=63.9, fat=3.3,
+                iron=9.7, calcium=443
+            ),
+            "ขิง": NutritionInfo(
+                name="ขิง", calories=80, protein=1.8, carbs=17.8, fat=0.8,
+                potassium=415, magnesium=43
+            ),
+            "ข่า": NutritionInfo(
+                name="ข่า", calories=71, protein=1.8, carbs=15.0, fat=0.7,
+                fiber=2.0
+            ),
+            "ตะไคร้": NutritionInfo(
+                name="ตะไคร้", calories=99, protein=1.8, carbs=25.3, fat=0.5,
+                iron=8.2, calcium=65
+            ),
+            "ใบมะกรูด": NutritionInfo(
+                name="ใบมะกรูด", calories=70, protein=3.0, carbs=14.0, fat=0.7,
+                calcium=830, vitamin_c=8.5
+            ),
+            "ผักชี": NutritionInfo(
+                name="ผักชี", calories=23, protein=2.1, carbs=3.7, fat=0.5,
+                vitamin_a=337, vitamin_c=27, vitamin_k=310
+            ),
+            "ต้นหอม": NutritionInfo(
+                name="ต้นหอม", calories=32, protein=1.8, carbs=7.3, fat=0.2,
+                vitamin_a=52, vitamin_c=18.8, vitamin_k=207
+            ),
+            "โหระพา": NutritionInfo(
+                name="โหระพา", calories=23, protein=3.2, carbs=2.7, fat=0.6,
+                vitamin_k=415, calcium=177, iron=3.2
+            ),
+            "ใบโหระพา": NutritionInfo(
+                name="ใบโหระพา", calories=23, protein=3.2, carbs=2.7, fat=0.6,
+                vitamin_k=415
+            ),
+            "กะเพรา": NutritionInfo(
+                name="กะเพรา", calories=23, protein=3.2, carbs=2.7, fat=0.6,
+                vitamin_k=415, calcium=177
+            ),
+            "ใบกะเพรา": NutritionInfo(
+                name="ใบกะเพรา", calories=23, protein=3.2, carbs=2.7, fat=0.6,
+                vitamin_k=415
+            ),
+            "รากผักชี": NutritionInfo(
+                name="รากผักชี", calories=23, protein=2.1, carbs=3.7, fat=0.5,
+                calcium=67
+            ),
+            "กะปิ": NutritionInfo(
+                name="กะปิ", calories=174, protein=20.0, fat=10.0, carbs=3.0,
+                sodium=3500, calcium=300
+            ),
+            
+            # เครื่องปรุงของเหลว
             "น้ำปลา": NutritionInfo(
-                name="น้ำปลา", calories=10, protein=1.5, carbs=1.0, fat=0,
-                sodium=1413
+                name="น้ำปลา", calories=35, protein=6.0, carbs=3.0, fat=0,
+                sodium=7720
+            ),
+            "ซีอิ้ว": NutritionInfo(
+                name="ซีอิ้ว", calories=53, protein=8.0, carbs=4.9, fat=0.1,
+                sodium=5490
+            ),
+            "ซีอิ๊ว": NutritionInfo(
+                name="ซีอิ๊ว", calories=53, protein=8.0, carbs=4.9, fat=0.1,
+                sodium=5490
+            ),
+            "น้ำมันพืช": NutritionInfo(
+                name="น้ำมันพืช", calories=884, protein=0, fat=100, carbs=0,
+                vitamin_e=14.4
+            ),
+            "น้ำมันหมู": NutritionInfo(
+                name="น้ำมันหมู", calories=902, protein=0, fat=100, carbs=0,
+                vitamin_e=0.6
+            ),
+            "น้ำมัน": NutritionInfo(
+                name="น้ำมัน", calories=884, protein=0, fat=100, carbs=0
             ),
             "กะทิ": NutritionInfo(
                 name="กะทิ", calories=230, protein=2.3, fat=23.8, carbs=5.5,
-                iron=3.9, magnesium=37
+                iron=1.6, magnesium=37
+            ),
+            "หัวกะทิ": NutritionInfo(
+                name="หัวกะทิ", calories=330, protein=3.3, fat=35.0, carbs=6.0,
+                iron=1.9
+            ),
+            "หางกะทิ": NutritionInfo(
+                name="หางกะทิ", calories=180, protein=1.8, fat=17.0, carbs=4.0,
+                iron=1.3
             ),
             "น้ำตาล": NutritionInfo(
-                name="น้ำตาล", calories=387, protein=0, fat=0, carbs=100,
+                name="น้ำตาล", calories=387, protein=0, fat=0, carbs=99.8,
                 calcium=1
+            ),
+            "น้ำตาลทราย": NutritionInfo(
+                name="น้ำตาลทราย", calories=387, protein=0, fat=0, carbs=99.8
+            ),
+            "น้ำตาลปึก": NutritionInfo(
+                name="น้ำตาลปึก", calories=377, protein=0.4, fat=0, carbs=97.3,
+                calcium=85, iron=4.6
+            ),
+            "เกลือ": NutritionInfo(
+                name="เกลือ", calories=0, protein=0, fat=0, carbs=0,
+                sodium=38758
+            ),
+            "น้ำ": NutritionInfo(
+                name="น้ำ", calories=0, protein=0, fat=0, carbs=0
             ),
             
             # ข้าว/แป้ง
             "ข้าว": NutritionInfo(
-                name="ข้าว", calories=130, protein=2.7, carbs=28, fat=0.3,
-                niacin=1.6, vitamin_b6=0.1, magnesium=25
+                name="ข้าว", calories=130, protein=2.7, carbs=28.2, fat=0.3,
+                niacin=1.6, magnesium=25, phosphorus=68
+            ),
+            "ข้าวสาร": NutritionInfo(
+                name="ข้าวสาร", calories=365, protein=7.1, carbs=80.0, fat=0.7,
+                iron=0.8, niacin=4.3
+            ),
+            "ข้าวเหนียว": NutritionInfo(
+                name="ข้าวเหนียว", calories=370, protein=6.8, carbs=81.7, fat=0.6,
+                iron=0.8
             ),
             "แป้ง": NutritionInfo(
-                name="แป้ง", calories=364, protein=10.3, carbs=76.3, fat=0.9,
-                iron=1.2, niacin=5.9, folate=26
-            )
+                name="แป้ง", calories=364, protein=10.3, carbs=76.3, fat=1.0,
+                iron=1.2, niacin=1.3
+            ),
+            "แป้งข้าวเจ้า": NutritionInfo(
+                name="แป้งข้าวเจ้า", calories=366, protein=5.9, carbs=80.1, fat=1.4,
+                iron=0.4
+            ),
+            "แป้งสาลี": NutritionInfo(
+                name="แป้งสาลี", calories=364, protein=10.3, carbs=76.3, fat=1.0,
+                iron=1.2, folate=26
+            ),
+            "แป้งมัน": NutritionInfo(
+                name="แป้งมัน", calories=338, protein=0.2, carbs=83.1, fat=0.1,
+                calcium=20
+            ),
+            
+            # ถั่วและธัญพืช
+            "ถั่วลิสง": NutritionInfo(
+                name="ถั่วลิสง", calories=567, protein=25.8, carbs=16.1, fat=49.2,
+                vitamin_e=8.3, niacin=12.1, magnesium=168
+            ),
+            "ถั่วเขียว": NutritionInfo(
+                name="ถั่วเขียว", calories=347, protein=23.9, carbs=62.6, fat=1.2,
+                iron=6.7, folate=625
+            ),
+            "ถั่วเหลือง": NutritionInfo(
+                name="ถั่วเหลือง", calories=446, protein=36.5, carbs=30.2, fat=19.9,
+                calcium=277, iron=15.7, folate=375
+            ),
+            "งา": NutritionInfo(
+                name="งา", calories=573, protein=17.7, carbs=23.5, fat=49.7,
+                calcium=975, iron=14.6, magnesium=351
+            ),
+            
+            # ผลไม้
+            "มะนาว": NutritionInfo(
+                name="มะนาว", calories=29, protein=1.1, carbs=9.3, fat=0.3,
+                vitamin_c=53, fiber=2.8
+            ),
+            "มะพร้าว": NutritionInfo(
+                name="มะพร้าว", calories=354, protein=3.3, carbs=15.2, fat=33.5,
+                fiber=9.0, potassium=356
+            ),
+            "มะพร้าวขูด": NutritionInfo(
+                name="มะพร้าวขูด", calories=660, protein=6.9, carbs=23.7, fat=64.5,
+                fiber=16.3, iron=3.3
+            ),
+            
+            # อื่นๆ
+            "เต้าหู้": NutritionInfo(
+                name="เต้าหู้", calories=76, protein=8.1, carbs=1.9, fat=4.8,
+                calcium=350, iron=5.4
+            ),
+            "เต้าหู้เหลือง": NutritionInfo(
+                name="เต้าหู้เหลือง", calories=76, protein=8.1, carbs=1.9, fat=4.8,
+                calcium=350
+            ),
+            "วุ้นเส้น": NutritionInfo(
+                name="วุ้นเส้น", calories=351, protein=0.2, carbs=86.1, fat=0.1,
+                iron=1.5
+            ),
+            "ข้าวคั่ว": NutritionInfo(
+                name="ข้าวคั่ว", calories=382, protein=8.0, carbs=82.0, fat=2.0,
+                iron=1.0
+            ),
+            "น้ำพริกเผา": NutritionInfo(
+                name="น้ำพริกเผา", calories=210, protein=8.5, carbs=15.0, fat=12.0,
+                sodium=1200
+            ),
+            "ปลาร้า": NutritionInfo(
+                name="ปลาร้า", calories=133, protein=15.0, fat=8.0, carbs=2.0,
+                sodium=4000, calcium=200
+            ),
         }
-    
-    def get_nutrition_info(self, ingredient: str) -> Optional[NutritionInfo]:
-        """ดึงข้อมูลโภชนาการจากฐานข้อมูลไทย"""
-        # ทำ fuzzy matching สำหรับวัตถุดิบไทย
-        ingredient_clean = self._clean_thai_ingredient(ingredient)
-        
-        # ค้นหาแบบตรงไปตรงมา
-        if ingredient_clean in self.thai_nutrition_db:
-            return self.thai_nutrition_db[ingredient_clean]
-        
-        # ค้นหาแบบ partial match
-        for key, nutrition in self.thai_nutrition_db.items():
-            if key in ingredient_clean or ingredient_clean in key:
-                return nutrition
-        
-        return None
-    
-    def _clean_thai_ingredient(self, ingredient: str) -> str:
-        """ทำความสะอาดชื่อวัตถุดิบภาษาไทย"""
-        # ลบข้อความที่ไม่จำเป็น
-        unwanted_words = ['ขนาด', 'กลาง', 'เล็ก', 'ใหญ่', 'สด', 'แห้ง', 'ต้ม', '1', '2', '3', '4', '5']
-        result = ingredient
-        for word in unwanted_words:
-            result = result.replace(word, '')
-        
-        return result.strip()
 
 class NutritionAnalyzer:
     """คลาสหลักสำหรับวิเคราะห์คุณค่าทางโภชนาการ"""
