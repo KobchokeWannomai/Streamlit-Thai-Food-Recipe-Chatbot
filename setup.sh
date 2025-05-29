@@ -50,17 +50,21 @@ echo "✅ Dependencies installed successfully"
 # Check if the dataset exists
 if [ ! -f "thai_food_processed.csv" ]; then
     echo "⚠️  thai_food_processed.csv not found in the current directory."
-    echo "Checking for raw data file..."
+    echo "Checking for alternative data files..."
     
     if [ -f "thai_food_raw.csv" ]; then
         echo "Found thai_food_raw.csv. Processing with nutrition analysis..."
         python preprocess.py --input thai_food_raw.csv --output thai_food_processed.csv --analyze-nutrition
+    elif [ -f "thai_food_sample.csv" ]; then
+        echo "Found thai_food_sample.csv. Processing sample data..."
+        python preprocess.py --input thai_food_sample.csv --output thai_food_processed.csv --analyze-nutrition
     else
-        echo "❌ No data file found. Please ensure you have either:"
+        echo "❌ No data file found. Please ensure you have one of:"
         echo "   - thai_food_processed.csv (processed data)"
         echo "   - thai_food_raw.csv (raw data for processing)"
+        echo "   - thai_food_sample.csv (sample data for testing)"
         echo ""
-        echo "You can download the data from the repository or create your own dataset."
+        echo "You can download the data from the repository or use the sample data provided."
         exit 1
     fi
 else
