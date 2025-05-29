@@ -263,7 +263,7 @@ def display_nutrition_info(nutrition_data):
     with col5:
         st.metric("ใยอาหาร", f"{total_nutrition.get('fiber', 0):.1f} g")
     
-    # วิตามินและแร่ธาตุ
+    # วิตามินและแร่ธาตุ - แสดงเฉพาะที่มีค่า
     vitamins = total_nutrition.get('vitamins', {})
     minerals = total_nutrition.get('minerals', {})
     
@@ -273,7 +273,7 @@ def display_nutrition_info(nutrition_data):
         # แสดงวิตามิน
         vitamin_units = {
             'วิตามิน A': 'mcg',
-            'วิตามิน C': 'mg',
+            'วิตามิน C': 'mg', 
             'วิตามิน D': 'mcg',
             'วิตามิน E': 'mg',
             'วิตามิน K': 'mcg',
@@ -283,8 +283,9 @@ def display_nutrition_info(nutrition_data):
             'วิตามิน B12': 'mcg'
         }
         
+        # แสดงเฉพาะวิตามินที่มีค่ามากกว่า 0.1
         for vitamin, amount in vitamins.items():
-            if amount > 0:
+            if amount > 0.1:
                 unit = vitamin_units.get(vitamin, 'mg')
                 nutrition_items.append(f"<span class='nutrition-item'>{vitamin}: {amount:.1f} {unit}</span>")
         
@@ -299,31 +300,30 @@ def display_nutrition_info(nutrition_data):
             'โซเดียม': 'mg'
         }
         
+        # แสดงเฉพาะแร่ธาตุที่มีค่ามากกว่า 0.1
         for mineral, amount in minerals.items():
-            if amount > 0:
+            if amount > 0.1:
                 unit = mineral_units.get(mineral, 'mg')
-                nutrition_items.append(f"<span class='nutrition-item'>{mineral}: {amount:.1f} {unit}</span>")
+                # ถ้าเป็นโซเดียม แสดงเป็นจำนวนเต็ม
+                if mineral == 'โซเดียม':
+                    nutrition_items.append(f"<span class='nutrition-item'>{mineral}: {amount:.0f} {unit}</span>")
+                else:
+                    nutrition_items.append(f"<span class='nutrition-item'>{mineral}: {amount:.1f} {unit}</span>")
         
         if nutrition_items:
-            # แก้ไขให้แสดงในบรรทัดเดียวกัน
             st.markdown(f"<div><span class='vitamin-mineral-label'>วิตามินและแร่ธาตุ:</span><span class='vitamin-mineral'>{''.join(nutrition_items)}</span></div>", unsafe_allow_html=True)
     
     # รายละเอียดวัตถุดิบ
     with st.expander("📋 รายละเอียดโภชนาการแต่ละวัตถุดิบ"):
         for ingredient_info in nutrition_data.get('ingredients', []):
-            # แก้ไขการแสดงชื่อวัตถุดิบ
-            ingredient_name = ingredient_info.get('name', ingredient_info['ingredient'])
-            ingredient_text = ingredient_info['ingredient']
+            # แสดงชื่อวัตถุดิบแบบเต็ม (ใช้ key ที่มีปริมาณ)
+            ingredient_full_name = ingredient_info['ingredient']
             nutrition = ingredient_info['nutrition']
             
-            # ตรวจสอบว่าเป็นวัตถุดิบของเหลวหรือไม่
-            liquid_ingredients = ['น้ำปลา', 'น้ำมัน', 'กะทิ', 'น้ำ', 'นม', 'น้ำซุป', 'ซอส', 'น้ำจิ้ม', 'น้ำตาล']
-            is_liquid = any(liquid in ingredient_text.lower() for liquid in liquid_ingredients)
+            # แสดงชื่อและขนาดที่ใช้
+            st.write(f"**{ingredient_full_name}**")
             
-            unit = "ต่อ 100ml" if is_liquid else "ต่อ 100g"
-            
-            # แสดงชื่อวัตถุดิบแบบเต็ม
-            st.write(f"**{ingredient_text}** ({unit})")
+            # แสดงข้อมูลพื้นฐาน
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.write(f"แคลอรี่: {nutrition.calories:.0f} kcal")
@@ -334,36 +334,54 @@ def display_nutrition_info(nutrition_data):
             with col4:
                 st.write(f"ไขมัน: {nutrition.fat:.1f} g")
             
-            # แสดงวิตามินและแร่ธาตุ
+            # แสดงวิตามินและแร่ธาตุที่มีค่ามากกว่า 0.1
             vitamin_mineral_text = []
             
             # วิตามิน
-            if nutrition.vitamin_a > 0:
+            if hasattr(nutrition, 'vitamin_a') and nutrition.vitamin_a > 0.1:
                 vitamin_mineral_text.append(f"วิตามิน A: {nutrition.vitamin_a:.1f} mcg")
-            if nutrition.vitamin_c > 0:
+            if hasattr(nutrition, 'vitamin_c') and nutrition.vitamin_c > 0.1:
                 vitamin_mineral_text.append(f"วิตามิน C: {nutrition.vitamin_c:.1f} mg")
-            if nutrition.vitamin_d > 0:
+            if hasattr(nutrition, 'vitamin_d') and nutrition.vitamin_d > 0.1:
                 vitamin_mineral_text.append(f"วิตามิน D: {nutrition.vitamin_d:.1f} mcg")
-            if nutrition.vitamin_e > 0:
+            if hasattr(nutrition, 'vitamin_e') and nutrition.vitamin_e > 0.1:
                 vitamin_mineral_text.append(f"วิตามิน E: {nutrition.vitamin_e:.1f} mg")
-            if nutrition.vitamin_b1 > 0:
+            if hasattr(nutrition, 'vitamin_k') and nutrition.vitamin_k > 0.1:
+                vitamin_mineral_text.append(f"วิตามิน K: {nutrition.vitamin_k:.1f} mcg")
+            if hasattr(nutrition, 'vitamin_b1') and nutrition.vitamin_b1 > 0.1:
                 vitamin_mineral_text.append(f"วิตามิน B1: {nutrition.vitamin_b1:.1f} mg")
-            if nutrition.vitamin_b12 > 0:
+            if hasattr(nutrition, 'vitamin_b6') and nutrition.vitamin_b6 > 0.1:
+                vitamin_mineral_text.append(f"วิตามิน B6: {nutrition.vitamin_b6:.1f} mg")
+            if hasattr(nutrition, 'vitamin_b12') and nutrition.vitamin_b12 > 0.1:
                 vitamin_mineral_text.append(f"วิตามิน B12: {nutrition.vitamin_b12:.1f} mcg")
             
             # แร่ธาตุ
-            if nutrition.calcium > 0:
+            if hasattr(nutrition, 'calcium') and nutrition.calcium > 0.1:
                 vitamin_mineral_text.append(f"แคลเซียม: {nutrition.calcium:.1f} mg")
-            if nutrition.iron > 0:
+            if hasattr(nutrition, 'iron') and nutrition.iron > 0.1:
                 vitamin_mineral_text.append(f"เหล็ก: {nutrition.iron:.1f} mg")
-            if nutrition.sodium > 0:
+            if hasattr(nutrition, 'sodium') and nutrition.sodium > 0.1:
                 vitamin_mineral_text.append(f"โซเดียม: {nutrition.sodium:.0f} mg")
-            if nutrition.potassium > 0:
+            if hasattr(nutrition, 'potassium') and nutrition.potassium > 0.1:
                 vitamin_mineral_text.append(f"โพแทสเซียม: {nutrition.potassium:.0f} mg")
+            if hasattr(nutrition, 'zinc') and nutrition.zinc > 0.1:
+                vitamin_mineral_text.append(f"สังกะสี: {nutrition.zinc:.1f} mg")
+            if hasattr(nutrition, 'phosphorus') and nutrition.phosphorus > 0.1:
+                vitamin_mineral_text.append(f"ฟอสฟอรัส: {nutrition.phosphorus:.0f} mg")
+            if hasattr(nutrition, 'magnesium') and nutrition.magnesium > 0.1:
+                vitamin_mineral_text.append(f"แมกนีเซียม: {nutrition.magnesium:.0f} mg")
+            
+            # แสดงใยอาหารถ้ามี
+            if hasattr(nutrition, 'fiber') and nutrition.fiber > 0.1:
+                vitamin_mineral_text.append(f"ใยอาหาร: {nutrition.fiber:.1f} g")
             
             if vitamin_mineral_text:
-                st.write("วิตามินและแร่ธาตุ: " + ", ".join(vitamin_mineral_text))
+                st.write("สารอาหารอื่นๆ: " + ", ".join(vitamin_mineral_text))
             
+            # แสดงหมายเหตุสำหรับวัตถุดิบที่มีโซเดียมสูง
+            if hasattr(nutrition, 'sodium') and nutrition.sodium > 500:
+                st.caption("⚠️ มีโซเดียมสูง")
+                
             st.divider()
     
     st.markdown('</div>', unsafe_allow_html=True)
