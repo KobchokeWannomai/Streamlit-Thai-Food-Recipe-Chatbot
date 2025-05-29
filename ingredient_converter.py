@@ -37,26 +37,32 @@ class IngredientConverter:
             # หน่วยครัว
             'ถ้วย': 240,  # ml
             'ถ้วยตวง': 240,
+            'ถ้วยชา': 240,
             'ช้อนโต๊ะ': 15,  # ml
             'ช้อนชา': 5,  # ml
             'ช้อนกาแฟ': 2.5,  # ml
+            'ช้อนหวาน': 10,  # ml
         }
         
         # น้ำหนักโดยประมาณของวัตถุดิบต่างๆ (กรัมต่อหน่วย)
         self.ingredient_weights = {
             # เนื้อสัตว์
-            'หมู': {'ชิ้น': 30, 'แผ่น': 50, 'ตัว': 200},
+            'หมู': {'ชิ้น': 30, 'แผ่น': 50, 'ตัว': 200, 'ก้อน': 100},
+            'เนื้อหมู': {'ชิ้น': 30, 'แผ่น': 50, 'ตัว': 200},
             'ไก่': {'ชิ้น': 40, 'ตัว': 1500, 'น่อง': 150, 'สะโพก': 200, 'อก': 250},
+            'เนื้อไก่': {'ชิ้น': 40, 'ถ้วย': 140},
             'เนื้อ': {'ชิ้น': 35, 'แผ่น': 60},
-            'กุ้ง': {'ตัว': 20, 'ตัวกลาง': 15, 'ตัวใหญ่': 25, 'ตัวเล็ก': 10},
+            'เนื้อโค': {'ชิ้น': 35, 'แผ่น': 60},
+            'กุ้ง': {'ตัว': 20, 'ตัวกลาง': 15, 'ตัวใหญ่': 25, 'ตัวเล็ก': 10, 'ถ้วย': 100},
+            'กุ้งนาง': {'ตัว': 25},
             'ปลา': {'ตัว': 300, 'ชิ้น': 80, 'แผ่น': 100},
             'หอย': {'ตัว': 5, 'ถ้วย': 150},
             'ปลาหมึก': {'ตัว': 200, 'วง': 20},
             
-            # ไข่
-            'ไข่': {'ฟอง': 60, 'ฟองเล็ก': 50, 'ฟองใหญ่': 70},
-            'ไข่ไก่': {'ฟอง': 60},
-            'ไข่เป็ด': {'ฟอง': 70},
+            # ไข่ - แก้ไขให้ถูกต้อง
+            'ไข่': {'ฟอง': 50, 'ฟองเล็ก': 40, 'ฟองใหญ่': 60},
+            'ไข่ไก่': {'ฟอง': 50},
+            'ไข่เป็ด': {'ฟอง': 60},
             
             # ผัก
             'กะหล่ำปลี': {'หัว': 1000, 'ใบ': 30, 'ถ้วย': 70},
@@ -70,9 +76,11 @@ class IngredientConverter:
             'ถั่วงอก': {'ถ้วย': 50, 'กำมือ': 30},
             'หอมใหญ่': {'หัว': 150, 'หัวเล็ก': 100, 'หัวใหญ่': 200},
             'หอมแดง': {'หัว': 10, 'ถ้วย': 80},
+            'หัวหอม': {'หัว': 10, 'กลีบ': 5},
+            'ต้นหอม': {'ต้น': 5, 'ถ้วย': 30},
             
             # เครื่องปรุง
-            'กระเทียม': {'กลีบ': 5, 'หัว': 40, 'ช้อนโต๊ะ': 10},
+            'กระเทียม': {'กลีบ': 3, 'หัว': 30, 'ช้อนโต๊ะ': 10},
             'พริก': {'เม็ด': 2, 'ถ้วย': 40},
             'พริกขี้หนู': {'เม็ด': 1, 'ถ้วย': 30},
             'พริกแห้ง': {'เม็ด': 0.5, 'ถ้วย': 20},
@@ -109,37 +117,47 @@ class IngredientConverter:
             'ซอส': 1.1,
             'น้ำส้ม': 1.05,
             'น้ำมะนาว': 1.03,
+            'ซีอิ้ว': 1.2,
+            'น้ำจิ้ม': 1.1,
         }
     
     def extract_quantity_and_unit(self, ingredient_text: str) -> Tuple[float, str, str]:
         """แยกปริมาณ หน่วย และชื่อวัตถุดิบ"""
         # ลองหาตัวเลขและหน่วย
         patterns = [
-            r'(\d+\.?\d*)\s*([^\s]+)',  # ตัวเลข + หน่วย
-            r'(\d+)\s+(\d+/\d+)\s*([^\s]+)',  # เลขผสมเศษส่วน
-            r'(\d+/\d+)\s*([^\s]+)',  # เศษส่วน
+            r'(\d+\.?\d*)\s*([^\s]+)\s+(.+)',  # ตัวเลข + หน่วย + ชื่อ
+            r'(\d+)\s+(\d+/\d+)\s*([^\s]+)\s+(.+)',  # เลขผสมเศษส่วน
+            r'(\d+/\d+)\s*([^\s]+)\s+(.+)',  # เศษส่วน
+            r'(.+?)\s+(\d+\.?\d*)\s*([^\s]+)$',  # ชื่อ + ตัวเลข + หน่วย
         ]
         
         for pattern in patterns:
             match = re.search(pattern, ingredient_text)
             if match:
-                if len(match.groups()) == 3:  # เลขผสมเศษส่วน
+                if len(match.groups()) == 4:  # เลขผสมเศษส่วน
                     whole = float(match.group(1))
                     frac_parts = match.group(2).split('/')
                     fraction = float(frac_parts[0]) / float(frac_parts[1])
                     quantity = whole + fraction
                     unit = match.group(3)
-                elif '/' in match.group(1):  # เศษส่วน
+                    ingredient_name = match.group(4)
+                elif '/' in match.group(1) and len(match.groups()) == 3:  # เศษส่วน
                     frac_parts = match.group(1).split('/')
                     quantity = float(frac_parts[0]) / float(frac_parts[1])
                     unit = match.group(2)
-                else:  # ตัวเลขธรรมดา
+                    ingredient_name = match.group(3)
+                elif len(match.groups()) == 3 and match.group(1)[0].isdigit():  # ตัวเลขธรรมดา
                     quantity = float(match.group(1))
                     unit = match.group(2)
+                    ingredient_name = match.group(3)
+                elif len(match.groups()) == 3:  # ชื่อ + ตัวเลข + หน่วย
+                    ingredient_name = match.group(1)
+                    quantity = float(match.group(2))
+                    unit = match.group(3)
+                else:
+                    continue
                 
-                # หาชื่อวัตถุดิบ
-                ingredient_name = ingredient_text[match.end():].strip()
-                return quantity, unit, ingredient_name
+                return quantity, unit, ingredient_name.strip()
         
         # ถ้าไม่พบตัวเลข ให้ถือว่าเป็น 1 หน่วย
         return 1.0, '', ingredient_text.strip()
@@ -152,7 +170,7 @@ class IngredientConverter:
         # ตรวจสอบว่าเป็นหน่วยน้ำหนักหรือไม่
         if unit.lower() in self.unit_conversions:
             base_value = self.unit_conversions[unit.lower()]
-            if unit.lower() in ['ถ้วย', 'ช้อนโต๊ะ', 'ช้อนชา', 'ช้อนกาแฟ', 'ลิตร', 'ล.', 'l', 'มิลลิลิตร', 'มล.', 'ml']:
+            if unit.lower() in ['ถ้วย', 'ถ้วยชา', 'ช้อนโต๊ะ', 'ช้อนชา', 'ช้อนกาแฟ', 'ช้อนหวาน', 'ลิตร', 'ล.', 'l', 'มิลลิลิตร', 'มล.', 'ml']:
                 # หน่วยปริมาตร - ต้องคูณกับความหนาแน่น
                 density = self._get_density(clean_name)
                 return quantity * base_value * density
@@ -162,7 +180,7 @@ class IngredientConverter:
         
         # ตรวจสอบน้ำหนักจากพจนานุกรม
         for key, weights in self.ingredient_weights.items():
-            if key in clean_name:
+            if key in clean_name or key in ingredient_name:
                 if unit in weights:
                     return quantity * weights[unit]
                 # ลองหาหน่วยที่ใกล้เคียง
@@ -193,13 +211,13 @@ class IngredientConverter:
         """ประมาณน้ำหนักเมื่อไม่มีข้อมูล"""
         # ประมาณการตามประเภทวัตถุดิบ
         default_weights = {
-            'ตัว': 100,
+            'ตัว': 50,  # ลดจาก 100 เป็น 50
             'ชิ้น': 30,
             'แผ่น': 40,
             'ผล': 100,
             'ลูก': 80,
-            'หัว': 150,
-            'ต้น': 50,
+            'หัว': 100,  # ลดจาก 150 เป็น 100
+            'ต้น': 30,   # ลดจาก 50 เป็น 30
             'ใบ': 5,
             'กลีบ': 5,
             'เม็ด': 2,
@@ -208,13 +226,14 @@ class IngredientConverter:
             'กำมือ': 50,
             'มัด': 100,
             'ห่อ': 200,
+            'ฟอง': 50,  # เพิ่มสำหรับไข่
         }
         
         if unit in default_weights:
             return quantity * default_weights[unit]
         
         # ถ้าไม่มีหน่วย ให้ถือว่าเป็นกรัม
-        return quantity * 100  # ประมาณ 100 กรัมต่อหน่วย
+        return quantity * 50  # ลดจาก 100 เป็น 50
     
     def parse_and_convert_ingredient(self, ingredient_text: str) -> Dict[str, any]:
         """แยกวิเคราะห์และแปลงหน่วยวัตถุดิบ"""
@@ -243,9 +262,11 @@ if __name__ == "__main__":
     
     # ทดสอบการแปลงหน่วย
     test_ingredients = [
+        "ไข่ไก่ 1 ฟอง",      # ควรได้ 50 กรัม
+        "ไข่เป็ด 1 ฟอง",     # ควรได้ 60 กรัม
+        "น้ำมันหมู 1 ช้อนโต๊ะ",  # ควรได้ 13.5 กรัม (15ml * 0.9)
         "กุ้ง 200 กรัม",
         "หมูสับ 1/2 กิโลกรัม",
-        "ไข่ไก่ 2 ฟอง",
         "น้ำปลา 2 ช้อนโต๊ะ",
         "กะทิ 1 ถ้วย",
         "พริกขี้หนู 5 เม็ด",
