@@ -34,15 +34,30 @@ pip install -r requirements.txt
 :: Check if the dataset exists
 if not exist thai_food_processed.csv (
     echo Error: thai_food_processed.csv not found in the current directory.
-    echo Please make sure the data file is in the project directory.
-    exit /b 1
+    echo Checking for alternative data files...
+    
+    if exist thai_food_raw.csv (
+        echo Found thai_food_raw.csv. Processing with nutrition analysis...
+        python preprocess.py --input thai_food_raw.csv --output thai_food_processed.csv --analyze-nutrition
+    ) else if exist thai_food_sample.csv (
+        echo Found thai_food_sample.csv. Processing sample data...
+        python preprocess.py --input thai_food_sample.csv --output thai_food_processed.csv --analyze-nutrition
+    ) else (
+        echo Error: No data file found. Please ensure you have one of:
+        echo    - thai_food_processed.csv ^(processed data^)
+        echo    - thai_food_raw.csv ^(raw data for processing^)
+        echo    - thai_food_sample.csv ^(sample data for testing^)
+        echo.
+        echo You can download the data from the repository or use the sample data provided.
+        exit /b 1
+    )
 )
 
 echo.
 echo Setup completed successfully!
 echo.
 echo To run the chatbot, use the following command:
-echo streamlit run app.py
+echo streamlit run streamlit_app.py
 echo.
 echo Thank you for using Thai Food Recipe Chatbot!
 pause
