@@ -214,6 +214,17 @@ class ThaiNutritionData:
     def __init__(self):
         self.thai_nutrition_db = self._load_thai_nutrition_data()
     
+    def get_nutrition_info(self, ingredient: str) -> Optional[NutritionInfo]:
+        """ดึงข้อมูลโภชนาการของวัตถุดิบจากฐานข้อมูลไทย"""
+        ingredient_lower = ingredient.lower()
+        
+        # ค้นหาจากฐานข้อมูล
+        for key, nutrition in self.thai_nutrition_db.items():
+            if key.lower() == ingredient_lower or key.lower() in ingredient_lower:
+                return nutrition
+        
+        return None
+    
     def _load_thai_nutrition_data(self) -> Dict[str, NutritionInfo]:
         """โหลดข้อมูลโภชนาการอาหารไทยพื้นฐาน (ต่อ 100g)"""
         return {
