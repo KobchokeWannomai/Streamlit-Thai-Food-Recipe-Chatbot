@@ -86,10 +86,6 @@ st.markdown("""
         border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    /* ซ่อน sidebar */
-    section[data-testid="stSidebar"] {
-        display: none;
-    }
 </style>
 """, unsafe_allow_html=True)
 
