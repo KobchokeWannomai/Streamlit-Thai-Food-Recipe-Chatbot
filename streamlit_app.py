@@ -24,7 +24,7 @@ st.markdown("""
     }
     .nutrition-card {
         background-color: #f0f8ff;
-        padding: 1.5rem;
+        padding: 1rem;  /* แก้จาก 1.5rem เป็น 1rem ให้ตรงกับ stChatMessage */
         border-radius: 12px;
         border-left: 5px solid #4CAF50;
         margin: 15px 0;
@@ -42,14 +42,19 @@ st.markdown("""
         font-weight: 500;
     }
     .vitamin-mineral {
-        font-size: 0.85em;
+        display: inline;  /* แก้จาก font-size เป็น display: inline */
         color: #555;
         margin-top: 10px;
         line-height: 1.8;
     }
+    .vitamin-mineral-label {
+        display: inline;
+        font-weight: 600;
+        margin-right: 10px;
+    }
     .recipe-card {
         background-color: #f9f9f9;
-        padding: 20px;
+        padding: 1rem;  /* แก้จาก 20px เป็น 1rem ให้ตรงกับ stChatMessage */
         border-radius: 10px;
         margin: 10px 0;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -264,8 +269,6 @@ def display_nutrition_info(nutrition_data):
     minerals = total_nutrition.get('minerals', {})
     
     if vitamins or minerals:
-        st.markdown("**วิตามินและแร่ธาตุ:**")
-        
         nutrition_items = []
         
         # แสดงวิตามิน
@@ -303,21 +306,25 @@ def display_nutrition_info(nutrition_data):
                 nutrition_items.append(f"<span class='nutrition-item'>{mineral}: {amount:.1f} {unit}</span>")
         
         if nutrition_items:
-            st.markdown(f"<div class='vitamin-mineral'>{''.join(nutrition_items)}</div>", unsafe_allow_html=True)
+            # แก้ไขให้แสดงในบรรทัดเดียวกัน
+            st.markdown(f"<div><span class='vitamin-mineral-label'>วิตามินและแร่ธาตุ:</span><span class='vitamin-mineral'>{''.join(nutrition_items)}</span></div>", unsafe_allow_html=True)
     
     # รายละเอียดวัตถุดิบ
     with st.expander("📋 รายละเอียดโภชนาการแต่ละวัตถุดิบ"):
         for ingredient_info in nutrition_data.get('ingredients', []):
-            ingredient = ingredient_info['ingredient']
+            # แก้ไขการแสดงชื่อวัตถุดิบ
+            ingredient_name = ingredient_info.get('name', ingredient_info['ingredient'])
+            ingredient_text = ingredient_info['ingredient']
             nutrition = ingredient_info['nutrition']
             
             # ตรวจสอบว่าเป็นวัตถุดิบของเหลวหรือไม่
             liquid_ingredients = ['น้ำปลา', 'น้ำมัน', 'กะทิ', 'น้ำ', 'นม', 'น้ำซุป', 'ซอส', 'น้ำจิ้ม', 'น้ำตาล']
-            is_liquid = any(liquid in ingredient.lower() for liquid in liquid_ingredients)
+            is_liquid = any(liquid in ingredient_text.lower() for liquid in liquid_ingredients)
             
             unit = "ต่อ 100ml" if is_liquid else "ต่อ 100g"
             
-            st.write(f"**{ingredient}** ({unit})")
+            # แสดงชื่อวัตถุดิบแบบเต็ม
+            st.write(f"**{ingredient_text}** ({unit})")
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.write(f"แคลอรี่: {nutrition.calories:.0f} kcal")
