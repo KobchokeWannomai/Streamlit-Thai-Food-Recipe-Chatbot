@@ -19,48 +19,122 @@ st.set_page_config(
     layout="wide"
 )
 
-# JavaScript สำหรับ auto-scroll และปุ่มเลื่อน
+# JavaScript ปรับปรุงแล้วสำหรับ auto-scroll และปุ่มเลื่อน
 scroll_js = """
 <script>
+let isScrollingProgrammatically = false;
+
 function scrollToBottom() {
-    window.scrollTo(0, document.body.scrollHeight);
+    isScrollingProgrammatically = true;
+    window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+    });
+    setTimeout(() => {
+        isScrollingProgrammatically = false;
+    }, 1000);
 }
 
 function scrollToLatestMessage() {
+    isScrollingProgrammatically = true;
     const messages = document.querySelectorAll('[data-testid="stChatMessage"]');
     if (messages.length > 0) {
         const lastMessage = messages[messages.length - 1];
-        lastMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        lastMessage.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+        });
+    } else {
+        // ถ้าไม่มี chat message ให้เลื่อนไปด้านล่าง
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth'
+        });
     }
+    setTimeout(() => {
+        isScrollingProgrammatically = false;
+    }, 1000);
 }
 
-// Auto-scroll หลังจาก DOM อัปเดต
-const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-            setTimeout(scrollToLatestMessage, 100);
+// Auto-scroll ที่ปรับปรุงแล้ว
+function setupAutoScroll() {
+    const observer = new MutationObserver(function(mutations) {
+        if (isScrollingProgrammatically) return;
+        
+        let shouldScroll = false;
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                // ตรวจสอบว่ามีการเพิ่ม chat message ใหม่หรือไม่
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) { // Element node
+                        if (node.querySelector && node.querySelector('[data-testid="stChatMessage"]')) {
+                            shouldScroll = true;
+                        }
+                    }
+                });
+            }
+        });
+        
+        if (shouldScroll) {
+            setTimeout(() => {
+                if (!isScrollingProgrammatically) {
+                    scrollToLatestMessage();
+                }
+            }, 300);
         }
     });
-});
 
-observer.observe(document.body, {
-    childList: true,
-    subtree: true
-});
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+}
 
-// เก็บตำแหน่งก่อนเปิด expander
+// เรียกใช้ setup เมื่อหน้าโหลดเสร็จ
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupAutoScroll);
+} else {
+    setupAutoScroll();
+}
+
+// เก็บตำแหน่งสำหรับ expander
 let scrollPosition = 0;
 function saveScrollPosition() {
     scrollPosition = window.pageYOffset;
 }
 
 function restoreScrollPosition() {
-    window.scrollTo(0, scrollPosition);
+    if (!isScrollingProgrammatically) {
+        window.scrollTo(0, scrollPosition);
+    }
 }
+
+// เพิ่มการจัดการ scroll button
+function createScrollButton() {
+    // ลบปุ่มเก่าถ้ามี
+    const existingButton = document.getElementById('scroll-to-latest-btn');
+    if (existingButton) {
+        existingButton.remove();
+    }
+    
+    // สร้างปุ่มใหม่
+    const button = document.createElement('button');
+    button.id = 'scroll-to-latest-btn';
+    button.className = 'scroll-to-bottom';
+    button.innerHTML = '↓';
+    button.title = 'เลื่อนไปข้อความล่าสุด';
+    button.onclick = scrollToLatestMessage;
+    
+    document.body.appendChild(button);
+}
+
+// สร้างปุ่มเมื่อหน้าโหลดเสร็จ
+setTimeout(createScrollButton, 1000);
 </script>
 """
 
-# ตั้งค่าฟอนต์ไทยและ CSS
+# ตั้งค่าฟอนต์ไทยและ CSS ปรับปรุงแล้ว
 st.markdown(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
@@ -135,22 +209,36 @@ st.markdown(f"""
         background-color: #ff9800;
     }}
     .scroll-to-bottom {{
-        position: fixed;
-        bottom: 100px;
-        right: 20px;
-        z-index: 999;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 50px;
-        height: 50px;
-        cursor: pointer;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        font-size: 20px;
+        position: fixed !important;
+        bottom: 100px !important;
+        right: 20px !important;
+        z-index: 9999 !important;
+        background-color: #4CAF50 !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 50% !important;
+        width: 50px !important;
+        height: 50px !important;
+        cursor: pointer !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+        font-size: 20px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.3s ease !important;
     }}
     .scroll-to-bottom:hover {{
-        background-color: #45a049;
+        background-color: #45a049 !important;
+        transform: scale(1.1) !important;
+    }}
+    .similarity-score {{
+        background-color: #e3f2fd;
+        color: #1976d2;
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 0.85em;
+        font-weight: 600;
+        margin-left: 10px;
     }}
     /* ปรับปรุงการแสดงผลรายการ */
     ul, ol {{
@@ -219,8 +307,6 @@ class APIManager:
     
     def get_external_recipe_data(self, recipe_name):
         """ดึงข้อมูลสูตรอาหารจาก API ภายนอก (จำลอง)"""
-        # จำลองการดึงข้อมูลจาก API ภายนอก
-        # ในการใช้งานจริง ให้เชื่อมต่อกับ API จริง
         external_recipes = {
             "ไข่เจียว": {
                 "ingredients": [
@@ -230,7 +316,7 @@ class APIManager:
                     {"name": "พริกไทย", "amount": 0.25, "unit": "ช้อนชา"}
                 ],
                 "nutrition_adjustments": {
-                    "oil_absorption": 0.1  # ดูดซับน้ำมัน 10% จากปริมาณที่ใช้ทอด
+                    "oil_absorption": 0.1
                 }
             },
             "ไข่ดาว": {
@@ -270,13 +356,11 @@ class EnhancedNutritionAnalyzer(NutritionAnalyzer):
         
     def analyze_recipe_enhanced(self, recipe_name, ingredients_text, use_external_data=False):
         """วิเคราะห์โภชนาการแบบปรับปรุง"""
-        # ใช้ข้อมูลจาก API ภายนอกถ้าเปิดใช้งาน
         if use_external_data and self.api_manager:
             external_data = self.api_manager.get_external_recipe_data(recipe_name)
             if external_data:
                 return self._analyze_with_external_data(recipe_name, external_data)
         
-        # วิเคราะห์แบบปกติ
         return self.analyze_recipe(recipe_name, ingredients_text)
     
     def _analyze_with_external_data(self, recipe_name, external_data):
@@ -288,26 +372,20 @@ class EnhancedNutritionAnalyzer(NutritionAnalyzer):
             amount = ingredient_info['amount']
             unit = ingredient_info['unit']
             
-            # ตรวจสอบว่าเป็นวัตถุดิบที่ใช้ในการทำอาหารเท่านั้นหรือไม่
             is_cooking_only = ingredient_info.get('cooking_only', False)
             consumed_ratio = ingredient_info.get('consumed', 1.0)
             
-            # ดึงข้อมูลโภชนาการพื้นฐาน
             base_nutrition = self.get_ingredient_nutrition(ingredient_name)
             
             if base_nutrition:
-                # คำนวณปริมาณที่บริโภคจริง
                 if is_cooking_only:
-                    # สำหรับวัตถุดิบที่ใช้ในการทำอาหาร เช่น น้ำมันทอด
                     effective_amount = amount * consumed_ratio
                 else:
                     effective_amount = amount
                 
-                # แปลงหน่วยเป็นกรัม
                 weight_grams = self.converter.convert_to_grams(effective_amount, unit, ingredient_name)
                 multiplier = weight_grams / 100.0
                 
-                # สร้างข้อมูลโภชนาการที่ปรับแล้ว
                 adjusted_nutrition = self._create_adjusted_nutrition(
                     ingredient_name, base_nutrition, multiplier, amount, unit, is_cooking_only
                 )
@@ -318,7 +396,6 @@ class EnhancedNutritionAnalyzer(NutritionAnalyzer):
                 
                 nutrition_data[key] = adjusted_nutrition
         
-        # คำนวณโภชนาการรวม
         total_nutrition = self.calculate_total_nutrition(nutrition_data)
         
         return {
@@ -420,23 +497,20 @@ def get_embeddings(_model, data):
         with open(EMBEDDINGS_PATH, 'rb') as f:
             return pickle.load(f)
     else:
-        # รวมข้อความทั้งหมดสำหรับแต่ละสูตร
         texts = []
         for _, row in data.iterrows():
             combined_text = f"{row['name']} {row['ingredient']} {row['method']}"
             texts.append(combined_text)
         
-        # สร้าง embeddings
         embeddings = _model.encode(texts)
         
-        # บันทึก embeddings
         with open(EMBEDDINGS_PATH, 'wb') as f:
             pickle.dump(embeddings, f)
         
         return embeddings
 
 def create_settings_sidebar():
-    """สร้างแถบการตั้งค่า"""
+    """สร้างแถบการตั้งค่าปรับปรุงแล้ว"""
     with st.sidebar:
         st.title("⚙️ การตั้งค่า")
         
@@ -467,7 +541,6 @@ def create_settings_sidebar():
                         st.error("❌ การเชื่อมต่อล้มเหลว")
                         st.session_state.usda_status = False
             
-            # แสดงสถานะ
             status_usda = st.session_state.get("usda_status", False)
             status_class = "status-connected" if status_usda else "status-disconnected"
             status_text = "เชื่อมต่อแล้ว" if status_usda else "ไม่ได้เชื่อมต่อ"
@@ -505,7 +578,6 @@ def create_settings_sidebar():
                         st.error("❌ การเชื่อมต่อล้มเหลว")
                         st.session_state.nutritionix_status = False
             
-            # แสดงสถานะ
             status_nutritionix = st.session_state.get("nutritionix_status", False)
             status_class = "status-connected" if status_nutritionix else "status-disconnected"
             status_text = "เชื่อมต่อแล้ว" if status_nutritionix else "ไม่ได้เชื่อมต่อ"
@@ -513,26 +585,14 @@ def create_settings_sidebar():
         
         st.divider()
         
-        # ตัวเลือกเพิ่มเติม
-        st.subheader("🧪 ตัวเลือกขั้นสูง")
+        # ตัวเลือกที่รวมแล้ว
+        st.subheader("⚡ การปรับปรุงคุณภาพ")
         
-        use_external_recipe_data = st.checkbox(
-            "ใช้ข้อมูลสูตรอาหารจาก API ภายนอก",
-            help="ปรับปรุงการคำนวณโภชนาการด้วยข้อมูลเพิ่มเติม เช่น ปริมาณน้ำมันที่บริโภคจริงในการทอด",
-            key="use_external_recipe_data"
-        )
-        
-        accurate_cooking_calculation = st.checkbox(
-            "คำนวณการบริโภควัตถุดิบในการทำอาหารอย่างแม่นยำ",
-            help="ปรับปรุงการคำนวณสำหรับวัตถุดิบที่ใช้ในการปรุงอาหาร เช่น น้ำมันทอด",
-            key="accurate_cooking_calculation"
-        )
-        
-        enhanced_search = st.checkbox(
-            "เพิ่มขอบเขตการค้นหา",
-            help="ค้นหาอาหารในขอบเขตที่กว้างขึ้น รวมถึงวัตถุดิบและคำอธิบาย",
+        enhanced_nutrition_calculation = st.checkbox(
+            "ใช้การคำนวณโภชนาการขั้นสูง",
+            help="รวมข้อมูลจาก API ภายนอกและคำนวณการบริโภควัตถุดิบอย่างแม่นยำ เช่น ปริมาณน้ำมันที่บริโภคจริงในการทอด",
             value=True,
-            key="enhanced_search"
+            key="enhanced_nutrition_calculation"
         )
         
         st.divider()
@@ -546,7 +606,6 @@ def create_settings_sidebar():
         with col2:
             st.metric("ฐานข้อมูลโภชนาการ", "150+ วัตถุดิบ")
         
-        # ข้อมูลการใช้งาน
         if "search_count" not in st.session_state:
             st.session_state.search_count = 0
         
@@ -574,9 +633,10 @@ def create_settings_sidebar():
             "usda_api_key": st.session_state.get("usda_api_key", ""),
             "nutritionix_app_id": st.session_state.get("nutritionix_app_id", ""),
             "nutritionix_api_key": st.session_state.get("nutritionix_api_key", ""),
-            "use_external_recipe_data": use_external_recipe_data,
-            "accurate_cooking_calculation": accurate_cooking_calculation,
-            "enhanced_search": enhanced_search
+            "enhanced_nutrition_calculation": enhanced_nutrition_calculation,
+            "use_external_recipe_data": enhanced_nutrition_calculation,
+            "accurate_cooking_calculation": enhanced_nutrition_calculation,
+            "enhanced_search": True  # เปิดใช้งานเสมอ
         }
 
 def format_ingredients(ingredients_text):
@@ -585,7 +645,6 @@ def format_ingredients(ingredients_text):
     formatted = "<ul style='line-height: 1.8;'>"
     for item in ingredients:
         if item.strip():
-            # ลบเครื่องหมาย - ที่อยู่ด้านหน้า
             cleaned_item = item.strip()
             if cleaned_item.startswith('- '):
                 cleaned_item = cleaned_item[2:]
@@ -595,10 +654,8 @@ def format_ingredients(ingredients_text):
 
 def format_cooking_method(method_text):
     """จัดรูปแบบวิธีการทำอาหารเพื่อการแสดงผลที่ดีขึ้น"""
-    # ตรวจสอบว่ามีเลขขั้นตอนอยู่แล้วหรือไม่
     has_numbered_steps = bool(re.search(r'^\s*\d+\.', method_text, re.MULTILINE))
     
-    # แยกบรรทัดและจัดการกับหัวข้อย่อย
     lines = method_text.split('\n')
     formatted = ""
     current_section = []
@@ -608,33 +665,24 @@ def format_cooking_method(method_text):
         if not line:
             continue
             
-        # ตรวจสอบหัวข้อย่อย (ขึ้นต้นด้วย ## หรือ #)
         if line.startswith('##'):
-            # ถ้ามีเนื้อหาในส่วนก่อนหน้า ให้จัดรูปแบบก่อน
             if current_section:
                 formatted += format_section(current_section, has_numbered_steps)
                 current_section = []
-            # เพิ่มหัวข้อย่อย (ลบ ## ออกและใช้ขนาดเท่ากับหัวข้อหลัก)
             formatted += f"<div class='section-title' style='font-size: 1.0em; margin-top: 15px;'>{line.replace('##', '').strip()}</div>"
         elif line.startswith('#'):
-            # ถ้ามีเนื้อหาในส่วนก่อนหน้า ให้จัดรูปแบบก่อน
             if current_section:
                 formatted += format_section(current_section, has_numbered_steps)
                 current_section = []
-            # เพิ่มหัวข้อย่อย
             formatted += f"<div class='section-title' style='font-size: 1.0em; margin-top: 15px;'>{line.replace('#', '').strip()}</div>"
         elif line.startswith('**หมายเหตุ'):
-            # ถ้ามีเนื้อหาในส่วนก่อนหน้า ให้จัดรูปแบบก่อน
             if current_section:
                 formatted += format_section(current_section, has_numbered_steps)
                 current_section = []
-            # เพิ่มหมายเหตุ
             formatted += f"<div style='margin-top: 15px; padding: 10px; background-color: #f9f9f9; border-left: 3px solid #ffa500;'><strong>หมายเหตุ</strong> {line.replace('**หมายเหตุ**', '').replace('**หมายเหตุ', '').strip()}</div>"
         else:
-            # เก็บเนื้อหาปกติ
             current_section.append(line)
     
-    # จัดรูปแบบส่วนสุดท้าย
     if current_section:
         formatted += format_section(current_section, has_numbered_steps)
     
@@ -645,34 +693,26 @@ def format_section(lines, has_numbered_steps):
     if not lines:
         return ""
     
-    # ถ้ามีเลขขั้นตอนอยู่แล้ว ให้แสดงเป็นลิสต์
     if has_numbered_steps:
         formatted = "<ol style='line-height: 1.8;'>"
         for line in lines:
-            # ตรวจสอบว่าบรรทัดขึ้นต้นด้วยตัวเลขหรือไม่
             if re.match(r'^\d+\.', line):
-                # ลบตัวเลขออกเพราะ <ol> จะใส่ให้อัตโนมัติ
                 clean_line = re.sub(r'^\d+\.\s*', '', line)
                 formatted += f"<li>{clean_line}</li>"
             else:
-                # ถ้าไม่มีตัวเลข ให้เป็นส่วนต่อของ item ก่อนหน้า
                 if formatted.endswith("</li>"):
                     formatted = formatted[:-5] + f" {line}</li>"
                 else:
                     formatted += f"<li>{line}</li>"
         formatted += "</ol>"
     else:
-        # ถ้าไม่มีเลขขั้นตอน ให้แสดงเป็นย่อหน้า
-        # รวมประโยคที่แยกกันด้วยช่องว่างเดียว
         text = ' '.join(lines)
-        # แบ่งเป็นประโยคตาม ๆ หรือ .
         sentences = re.split(r'(?<=[ๆ.])\s+', text)
         
         formatted = "<div style='line-height: 1.8; text-align: justify;'>"
         for i, sentence in enumerate(sentences):
             if sentence.strip():
                 formatted += sentence.strip()
-                # เพิ่มช่องว่างหลังประโยค ยกเว้นประโยคสุดท้าย
                 if i < len(sentences) - 1:
                     formatted += " "
         formatted += "</div>"
@@ -690,7 +730,7 @@ def display_nutrition_info(nutrition_data):
     st.markdown("### 🥗 ข้อมูลโภชนาการ (ต่อหนึ่งที่)")
     
     if is_enhanced:
-        st.info("📈 ข้อมูลที่ปรับปรุงแล้วด้วย API ภายนอก - คำนวณปริมาณการบริโภคจริงแล้ว")
+        st.info("📈 ข้อมูลที่ปรับปรุงแล้วด้วยการคำนวณขั้นสูง - คำนวณปริมาณการบริโภคจริงแล้ว")
     
     # สารอาหารหลัก
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -705,48 +745,32 @@ def display_nutrition_info(nutrition_data):
     with col5:
         st.metric("ใยอาหาร", f"{total_nutrition.get('fiber', 0):.1f} g")
     
-    # วิตามินและแร่ธาตุ - แสดงเฉพาะที่มีค่า
+    # วิตามินและแร่ธาตุ
     vitamins = total_nutrition.get('vitamins', {})
     minerals = total_nutrition.get('minerals', {})
     
     if vitamins or minerals:
         nutrition_items = []
         
-        # แสดงวิตามิน
         vitamin_units = {
-            'วิตามิน A': 'mcg',
-            'วิตามิน C': 'mg', 
-            'วิตามิน D': 'mcg',
-            'วิตามิน E': 'mg',
-            'วิตามิน K': 'mcg',
-            'วิตามิน B1': 'mg',
-            'วิตามิน B2': 'mg',
-            'วิตามิน B6': 'mg',
-            'วิตามิน B12': 'mcg'
+            'วิตามิน A': 'mcg', 'วิตามิน C': 'mg', 'วิตามิน D': 'mcg',
+            'วิตามิน E': 'mg', 'วิตามิน K': 'mcg', 'วิตามิน B1': 'mg',
+            'วิตามิน B2': 'mg', 'วิตามิน B6': 'mg', 'วิตามิน B12': 'mcg'
         }
         
-        # แสดงเฉพาะวิตามินที่มีค่ามากกว่า 0.1
         for vitamin, amount in vitamins.items():
             if amount > 0.1:
                 unit = vitamin_units.get(vitamin, 'mg')
                 nutrition_items.append(f"<span class='nutrition-item'>{vitamin}: {amount:.1f} {unit}</span>")
         
-        # แสดงแร่ธาตุ
         mineral_units = {
-            'แคลเซียม': 'mg',
-            'เหล็ก': 'mg',
-            'แมกนีเซียม': 'mg',
-            'ฟอสฟอรัส': 'mg',
-            'โพแทสเซียม': 'mg',
-            'สังกะสี': 'mg',
-            'โซเดียม': 'mg'
+            'แคลเซียม': 'mg', 'เหล็ก': 'mg', 'แมกนีเซียม': 'mg',
+            'ฟอสฟอรัส': 'mg', 'โพแทสเซียม': 'mg', 'สังกะสี': 'mg', 'โซเดียม': 'mg'
         }
         
-        # แสดงเฉพาะแร่ธาตุที่มีค่ามากกว่า 0.1
         for mineral, amount in minerals.items():
             if amount > 0.1:
                 unit = mineral_units.get(mineral, 'mg')
-                # ถ้าเป็นโซเดียม แสดงเป็นจำนวนเต็ม
                 if mineral == 'โซเดียม':
                     nutrition_items.append(f"<span class='nutrition-item'>{mineral}: {amount:.0f} {unit}</span>")
                 else:
@@ -755,42 +779,14 @@ def display_nutrition_info(nutrition_data):
         if nutrition_items:
             st.markdown(f"<div><span class='vitamin-mineral-label'>วิตามินและแร่ธาตุ:</span><span class='vitamin-mineral'>{''.join(nutrition_items)}</span></div>", unsafe_allow_html=True)
     
-    # รายละเอียดวัตถุดิบ - เพิ่ม JavaScript สำหรับจดจำตำแหน่ง
+    # รายละเอียดวัตถุดิบ
     with st.expander("📋 รายละเอียดโภชนาการแต่ละวัตถุดิบ"):
-        st.markdown("""
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // หาปุ่ม expander ทั้งหมด
-            const expanders = document.querySelectorAll('[data-testid="stExpander"]');
-            expanders.forEach(function(expander) {
-                const button = expander.querySelector('button');
-                if (button) {
-                    button.addEventListener('click', function() {
-                        setTimeout(function() {
-                            if (expander.getAttribute('aria-expanded') === 'false') {
-                                // ปิด expander - กลับไปตำแหน่งเดิม
-                                restoreScrollPosition();
-                            } else {
-                                // เปิด expander - บันทึกตำแหน่ง
-                                saveScrollPosition();
-                            }
-                        }, 100);
-                    });
-                }
-            });
-        });
-        </script>
-        """, unsafe_allow_html=True)
-        
         for ingredient_info in nutrition_data.get('ingredients', []):
-            # แสดงชื่อวัตถุดิบแบบเต็ม (ใช้ key ที่มีปริมาณ)
             ingredient_full_name = ingredient_info['ingredient']
             nutrition = ingredient_info['nutrition']
             
-            # แสดงชื่อและขนาดที่ใช้
             st.write(f"**{ingredient_full_name}**")
             
-            # แสดงข้อมูลพื้นฐาน
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.write(f"แคลอรี่: {nutrition.calories:.0f} kcal")
@@ -804,7 +800,7 @@ def display_nutrition_info(nutrition_data):
             # แสดงวิตามินและแร่ธาตุที่มีค่ามากกว่า 0.1
             vitamin_mineral_text = []
             
-            # วิตามิน
+            # เช็ควิตามิน
             if hasattr(nutrition, 'vitamin_a') and nutrition.vitamin_a > 0.1:
                 vitamin_mineral_text.append(f"วิตามิน A: {nutrition.vitamin_a:.1f} mcg")
             if hasattr(nutrition, 'vitamin_c') and nutrition.vitamin_c > 0.1:
@@ -822,7 +818,7 @@ def display_nutrition_info(nutrition_data):
             if hasattr(nutrition, 'vitamin_b12') and nutrition.vitamin_b12 > 0.1:
                 vitamin_mineral_text.append(f"วิตามิน B12: {nutrition.vitamin_b12:.1f} mcg")
             
-            # แร่ธาตุ
+            # เช็คแร่ธาตุ
             if hasattr(nutrition, 'calcium') and nutrition.calcium > 0.1:
                 vitamin_mineral_text.append(f"แคลเซียม: {nutrition.calcium:.1f} mg")
             if hasattr(nutrition, 'iron') and nutrition.iron > 0.1:
@@ -838,26 +834,23 @@ def display_nutrition_info(nutrition_data):
             if hasattr(nutrition, 'magnesium') and nutrition.magnesium > 0.1:
                 vitamin_mineral_text.append(f"แมกนีเซียม: {nutrition.magnesium:.0f} mg")
             
-            # แสดงใยอาหารถ้ามี
             if hasattr(nutrition, 'fiber') and nutrition.fiber > 0.1:
                 vitamin_mineral_text.append(f"ใยอาหาร: {nutrition.fiber:.1f} g")
             
             if vitamin_mineral_text:
                 st.write("สารอาหารอื่นๆ: " + ", ".join(vitamin_mineral_text))
             
-            # แสดงหมายเหตุสำหรับวัตถุดิบที่มีโซเดียมสูง
             if hasattr(nutrition, 'sodium') and nutrition.sodium > 500:
                 st.caption("⚠️ มีโซเดียมสูง")
                 
-            # แสดงหมายเหตุสำหรับวัตถุดิบที่ปรับปรุงแล้ว
             if is_enhanced and "(ใช้" in ingredient_full_name:
                 st.caption("🔧 ปรับปรุงการคำนวณปริมาณการบริโภคแล้ว")
                 
             st.divider()
 
 def search_recipes_enhanced(query, model, data, embeddings, nutrition_analyzer, settings, top_k=5):
-    """ค้นหาสูตรอาหารตามคำค้นหา - ปรับปรุงขอบเขตการค้นหา"""
-    query_lower = query.lower()
+    """ฟังก์ชันค้นหาสูตรอาหารที่ปรับปรุงแล้วให้แม่นยำขึ้น"""
+    query_lower = query.lower().strip()
     
     # ขยายคำค้นหาด้วยคำที่เกี่ยวข้อง
     query_expansions = {
@@ -873,91 +866,95 @@ def search_recipes_enhanced(query, model, data, embeddings, nutrition_analyzer, 
         'ลาบ': ['ลาบหมู', 'ลาบไก่', 'ลาบเนื้อ']
     }
     
-    # ขยายคำค้นหาถ้าเปิดใช้งาน enhanced search
-    expanded_query = query_lower
-    if settings.get('enhanced_search', True):
-        for key, expansions in query_expansions.items():
-            if key in query_lower:
-                expanded_query += ' ' + ' '.join(expansions)
+    # เพิ่มการขยายคำค้นหา
+    expanded_terms = [query_lower]
+    for key, expansions in query_expansions.items():
+        if key in query_lower:
+            expanded_terms.extend(expansions)
     
-    # ค้นหาแบบตรงตัวก่อน (exact match)
+    # ค้นหาแบบตรงตัวก่อน (exact match) - เน้นความแม่นยำ
     exact_matches = []
+    
     for idx, row in data.iterrows():
         recipe_name = row['name'].lower()
         ingredients = row['ingredient'].lower()
         method = row['method'].lower()
         
-        # ตรวจสอบการตรงกันในหลายส่วน
-        name_match = query_lower in recipe_name or recipe_name in query_lower
-        ingredient_match = any(word in ingredients for word in query_lower.split())
-        method_match = any(word in method for word in query_lower.split())
-        
-        if name_match:
-            # ให้คะแนนสูงสุดสำหรับการตรงกันของชื่อ
-            score = 1.0 if query_lower == recipe_name else 0.9
-            exact_matches.append({'index': idx, 'score': score})
-        elif ingredient_match and method_match:
-            # คะแนนกลางสำหรับการตรงกันทั้งวัตถุดิบและวิธีทำ
-            exact_matches.append({'index': idx, 'score': 0.7})
-        elif ingredient_match:
-            # คะแนนต่ำกว่าสำหรับการตรงกันเฉพาะวัตถุดิบ
-            exact_matches.append({'index': idx, 'score': 0.5})
+        # ให้คะแนนสูงสุดสำหรับการตรงกันของชื่อเมนูทุกคำ
+        if query_lower == recipe_name:
+            exact_matches.append({'index': idx, 'score': 1.0, 'match_type': 'exact_name'})
+        # การตรงกันบางส่วนของชื่อเมนู
+        elif query_lower in recipe_name or any(term in recipe_name for term in query_lower.split()):
+            # คำนวณคะแนนตามจำนวนคำที่ตรงกัน
+            query_words = query_lower.split()
+            matching_words = sum(1 for word in query_words if word in recipe_name)
+            score = 0.9 * (matching_words / len(query_words))
+            exact_matches.append({'index': idx, 'score': score, 'match_type': 'partial_name'})
+        # การตรงกันในส่วนผสม (ลดคะแนนลง)
+        elif any(term in ingredients for term in expanded_terms):
+            ingredient_words = ingredients.split()
+            matching_ingredients = sum(1 for term in expanded_terms if term in ingredients)
+            score = 0.7 * (matching_ingredients / len(expanded_terms))
+            exact_matches.append({'index': idx, 'score': score, 'match_type': 'ingredient'})
     
-    # ค้นหาแบบ semantic search
-    search_text = expanded_query if settings.get('enhanced_search', True) else query
+    # ค้นหาแบบ semantic search เพื่อเติมเต็ม
+    search_text = ' '.join(expanded_terms)
     query_embedding = model.encode([search_text])
     similarities = cosine_similarity(query_embedding, embeddings)[0]
     
-    # รวมผลลัพธ์
+    # รวมผลลัพธ์โดยให้ exact match มีความสำคัญสูงกว่า
     results = []
     used_indices = set()
     
-    # เพิ่ม exact matches ก่อน
+    # เพิ่ม exact matches ก่อน (เรียงตามคะแนน)
     for match in sorted(exact_matches, key=lambda x: x['score'], reverse=True):
+        if len(results) >= top_k:
+            break
+            
         idx = match['index']
         if idx not in used_indices:
             recipe_name = data.iloc[idx]['name']
             ingredients = data.iloc[idx]['ingredient']
             
-            # วิเคราะห์โภชนาการด้วยการตั้งค่าที่เลือก
-            if hasattr(nutrition_analyzer, 'analyze_recipe_enhanced'):
-                nutrition_data = nutrition_analyzer.analyze_recipe_enhanced(
-                    recipe_name, ingredients, 
-                    use_external_data=settings.get('use_external_recipe_data', False)
-                )
-            else:
-                nutrition_data = nutrition_analyzer.analyze_recipe(recipe_name, ingredients)
+            # วิเคราะห์โภชนาการ
+            nutrition_data = nutrition_analyzer.analyze_recipe_enhanced(
+                recipe_name, ingredients,
+                use_external_data=settings.get('use_external_recipe_data', False)
+            ) if hasattr(nutrition_analyzer, 'analyze_recipe_enhanced') else nutrition_analyzer.analyze_recipe(recipe_name, ingredients)
             
             results.append({
                 'name': recipe_name,
                 'similarity': match['score'],
+                'match_type': match['match_type'],
                 'ingredients': ingredients,
                 'method': data.iloc[idx]['method'],
                 'nutrition': nutrition_data
             })
             used_indices.add(idx)
     
-    # เพิ่มผลลัพธ์จาก semantic search
-    threshold = 0.25 if settings.get('enhanced_search', True) else 0.3
-    top_indices = np.argsort(-similarities)
-    for idx in top_indices:
-        if idx not in used_indices and len(results) < top_k:
-            if similarities[idx] > threshold:
+    # เพิ่มผลลัพธ์จาก semantic search ถ้าต้องการเพิ่มเติม
+    if len(results) < top_k:
+        # ใช้ threshold ที่สูงขึ้นเพื่อความแม่นยำ
+        threshold = 0.4
+        top_indices = np.argsort(-similarities)
+        
+        for idx in top_indices:
+            if len(results) >= top_k:
+                break
+                
+            if idx not in used_indices and similarities[idx] > threshold:
                 recipe_name = data.iloc[idx]['name']
                 ingredients = data.iloc[idx]['ingredient']
                 
-                # วิเคราะห์โภชนาการด้วยการตั้งค่าที่เลือก
-                if hasattr(nutrition_analyzer, 'analyze_recipe_enhanced'):
-                    nutrition_data = nutrition_analyzer.analyze_recipe_enhanced(
-                        recipe_name, ingredients,
-                        use_external_data=settings.get('use_external_recipe_data', False)
-                    )
-                else:
-                    nutrition_data = nutrition_analyzer.analyze_recipe(recipe_name, ingredients)
+                nutrition_data = nutrition_analyzer.analyze_recipe_enhanced(
+                    recipe_name, ingredients,
+                    use_external_data=settings.get('use_external_recipe_data', False)
+                ) if hasattr(nutrition_analyzer, 'analyze_recipe_enhanced') else nutrition_analyzer.analyze_recipe(recipe_name, ingredients)
                 
                 results.append({
                     'name': recipe_name,
                     'similarity': similarities[idx],
+                    'match_type': 'semantic',
                     'ingredients': ingredients,
                     'method': data.iloc[idx]['method'],
                     'nutrition': nutrition_data
@@ -974,14 +971,10 @@ def search_by_nutrition_criteria(data, nutrition_analyzer, criteria, settings):
         recipe_name = row['name']
         ingredients = row['ingredient']
         
-        # วิเคราะห์โภชนาการด้วยการตั้งค่าที่เลือก
-        if hasattr(nutrition_analyzer, 'analyze_recipe_enhanced'):
-            nutrition_data = nutrition_analyzer.analyze_recipe_enhanced(
-                recipe_name, ingredients,
-                use_external_data=settings.get('use_external_recipe_data', False)
-            )
-        else:
-            nutrition_data = nutrition_analyzer.analyze_recipe(recipe_name, ingredients)
+        nutrition_data = nutrition_analyzer.analyze_recipe_enhanced(
+            recipe_name, ingredients,
+            use_external_data=settings.get('use_external_recipe_data', False)
+        ) if hasattr(nutrition_analyzer, 'analyze_recipe_enhanced') else nutrition_analyzer.analyze_recipe(recipe_name, ingredients)
         
         total_nutrition = nutrition_data.get('total_nutrition', {})
         
@@ -1007,7 +1000,6 @@ def search_by_nutrition_criteria(data, nutrition_analyzer, criteria, settings):
                 'nutrition': nutrition_data
             })
     
-    # เรียงลำดับตามแคลอรี่
     results.sort(key=lambda x: x['calories'])
     return results
 
@@ -1015,16 +1007,10 @@ def detect_nutrition_search(query):
     """ตรวจจับว่าการค้นหาเป็นการค้นหาตามโภชนาการหรือไม่"""
     nutrition_keywords = [
         'แคลอรี่', 'แคลอรี', 'calorie', 'cal', 'kcal',
-        'โปรตีน', 'protein',
-        'คาร์โบ', 'คาร์โบไฮเดรต', 'carb', 'carbohydrate',
-        'ไขมัน', 'fat',
-        'ใยอาหาร', 'fiber',
-        'ลดน้ำหนัก', 'diet', 'healthy', 'เฮลธ์ตี้',
-        'โภชนาการ', 'nutrition',
-        'วิตามิน', 'vitamin',
-        'แร่ธาตุ', 'mineral',
-        'ต่ำ', 'สูง', 'น้อย', 'เยอะ', 'มาก',
-        'ไม่เกิน', 'มากกว่า', 'น้อยกว่า'
+        'โปรตีน', 'protein', 'คาร์โบ', 'คาร์โบไฮเดรต', 'carb', 'carbohydrate',
+        'ไขมัน', 'fat', 'ใยอาหาร', 'fiber', 'ลดน้ำหนัก', 'diet', 'healthy', 'เฮลธ์ตี้',
+        'โภชนาการ', 'nutrition', 'วิตามิน', 'vitamin', 'แร่ธาตุ', 'mineral',
+        'ต่ำ', 'สูง', 'น้อย', 'เยอะ', 'มาก', 'ไม่เกิน', 'มากกว่า', 'น้อยกว่า'
     ]
     
     query_lower = query.lower()
@@ -1037,12 +1023,9 @@ def extract_nutrition_criteria_from_text(query):
     
     # ค้นหาแคลอรี่
     calorie_patterns = [
-        r'แคลอรี่.*?ไม่เกิน.*?(\d+)',
-        r'ไม่เกิน.*?(\d+).*?แคลอรี่',
-        r'แคลอรี่.*?น้อยกว่า.*?(\d+)',
-        r'น้อยกว่า.*?(\d+).*?แคลอรี่',
-        r'แคลอรี.*?ไม่เกิน.*?(\d+)',
-        r'ไม่เกิน.*?(\d+).*?แคลอรี'
+        r'แคลอรี่.*?ไม่เกิน.*?(\d+)', r'ไม่เกิน.*?(\d+).*?แคลอรี่',
+        r'แคลอรี่.*?น้อยกว่า.*?(\d+)', r'น้อยกว่า.*?(\d+).*?แคลอรี่',
+        r'แคลอรี.*?ไม่เกิน.*?(\d+)', r'ไม่เกิน.*?(\d+).*?แคลอรี'
     ]
     
     for pattern in calorie_patterns:
@@ -1053,11 +1036,8 @@ def extract_nutrition_criteria_from_text(query):
     
     # ค้นหาโปรตีน
     protein_patterns = [
-        r'โปรตีน.*?มากกว่า.*?(\d+)',
-        r'มากกว่า.*?(\d+).*?โปรตีน',
-        r'โปรตีน.*?สูง.*?(\d+)',
-        r'โปรตีน.*?เยอะ.*?(\d+)',
-        r'โปรตีน.*?อย่างน้อย.*?(\d+)'
+        r'โปรตีน.*?มากกว่า.*?(\d+)', r'มากกว่า.*?(\d+).*?โปรตีน',
+        r'โปรตีน.*?สูง.*?(\d+)', r'โปรตีน.*?เยอะ.*?(\d+)', r'โปรตีน.*?อย่างน้อย.*?(\d+)'
     ]
     
     for pattern in protein_patterns:
@@ -1066,7 +1046,7 @@ def extract_nutrition_criteria_from_text(query):
             criteria['min_protein'] = int(match.group(1))
             break
     
-    # เกณฑ์พื้นฐานสำหรับคำค้นหาทั่วไป
+    # เกณฑ์พื้นฐาน
     if 'ลดน้ำหนัก' in query_lower or 'diet' in query_lower:
         criteria.update({'max_calories': 400, 'min_protein': 15})
     elif 'แคลอรี่ต่ำ' in query_lower or 'แคลอรีต่ำ' in query_lower:
@@ -1078,14 +1058,6 @@ def extract_nutrition_criteria_from_text(query):
     
     return criteria
 
-def create_scroll_to_bottom_button():
-    """สร้างปุ่มเลื่อนไปข้อความล่าสุด"""
-    st.markdown("""
-    <button class="scroll-to-bottom" onclick="scrollToLatestMessage()" title="เลื่อนไปข้อความล่าสุด">
-        ↓
-    </button>
-    """, unsafe_allow_html=True)
-
 def main():
     # สร้างแถบการตั้งค่า
     settings = create_settings_sidebar()
@@ -1096,7 +1068,7 @@ def main():
     embeddings = get_embeddings(model, data)
     api_manager = load_api_manager()
     
-    # สร้าง nutrition analyzer ที่ปรับปรุงแล้ว
+    # สร้าง nutrition analyzer
     usda_api_key = settings.get('usda_api_key') if settings.get('usda_enabled') else None
     nutrition_analyzer = EnhancedNutritionAnalyzer(
         usda_api_key=usda_api_key,
@@ -1106,7 +1078,7 @@ def main():
     
     # แอปหลัก
     st.title("🍲 แชทบอทสูตรอาหารไทย")
-    st.markdown("**ค้นหาสูตรอาหารไทยพร้อมข้อมูลโภชนาการ** - ถามเกี่ยวกับวิธีทำอาหารไทยหรือค้นหาตามโภชนาการได้เลย!")
+    st.markdown("**ค้นหาสูตรอาหารไทยพร้อมข้อมูลโภชนาการขั้นสูง** - ถามเกี่ยวกับวิธีทำอาหารไทยหรือค้นหาตามโภชนาการได้เลย!")
     
     # ตัวอย่างการค้นหา
     example_queries = [
@@ -1121,6 +1093,7 @@ def main():
             with cols[i % 5]:
                 if st.button(query, key=f"example_{i}"):
                     st.session_state.example_query = query
+                    st.rerun()
     
     # เริ่มต้นประวัติการสนทนา
     if "messages" not in st.session_state:
@@ -1130,11 +1103,19 @@ def main():
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             if message["role"] == "assistant" and "recipe" in message:
-                # แสดงสูตรพร้อมโภชนาการ
                 recipe = message["recipe"]
-                st.markdown(f'<div class="recipe-title">{recipe["name"]}</div>', unsafe_allow_html=True)
                 
-                # แสดงข้อมูลโภชนาการ
+                # แสดงชื่อเมนูพร้อมค่าความเกี่ยวข้อง
+                similarity_score = recipe.get('similarity', 0)
+                match_type = recipe.get('match_type', 'semantic')
+                
+                title_html = f'<div class="recipe-title">{recipe["name"]}'
+                if similarity_score > 0:
+                    title_html += f'<span class="similarity-score">ความเกี่ยวข้อง: {similarity_score:.2f}</span>'
+                title_html += '</div>'
+                
+                st.markdown(title_html, unsafe_allow_html=True)
+                
                 display_nutrition_info(recipe['nutrition'])
                 
                 st.markdown('<div class="section-title">📝 วัตถุดิบ</div>', unsafe_allow_html=True)
@@ -1143,10 +1124,7 @@ def main():
                 st.markdown('<div class="section-title">👩‍🍳 วิธีทำ</div>', unsafe_allow_html=True)
                 st.markdown(format_cooking_method(recipe["method"]), unsafe_allow_html=True)
                 
-                st.markdown('</div>', unsafe_allow_html=True)
-                
             elif message["role"] == "assistant" and "nutrition_results" in message:
-                # แสดงผลลัพธ์การค้นหาตามโภชนาการ
                 results = message["nutrition_results"]
                 st.markdown(f"พบ **{len(results)}** สูตรอาหารที่ตรงเกณฑ์:")
                 
@@ -1171,45 +1149,34 @@ def main():
                 if len(results) > 5:
                     st.markdown(f"*และอีก {len(results) - 5} สูตร...*")
             else:
-                # แสดงข้อความธรรมดา
                 st.markdown(message["content"])
     
-    # สร้างปุ่มเลื่อนไปข้อความล่าสุด
-    create_scroll_to_bottom_button()
-    
-    # ตรวจสอบและประมวลผลตัวอย่างการค้นหาที่ถูกคลิก
+    # ตรวจสอบตัวอย่างการค้นหาที่ถูกคลิก
     if "example_query" in st.session_state and st.session_state.example_query:
         prompt = st.session_state.example_query
-        st.session_state.pop("example_query", None)  # ลบค่าออกหลังใช้
+        st.session_state.pop("example_query", None)
         
-        # เพิ่มข้อความของผู้ใช้ลงในประวัติการสนทนา
         st.session_state.messages.append({"role": "user", "content": prompt})
         
-        # แสดงข้อความของผู้ใช้
         with st.chat_message("user"):
             st.markdown(prompt)
     else:
         prompt = None
     
-    # ช่องใส่ข้อความสำหรับแชท
+    # ช่องใส่ข้อความ
     if user_input := st.chat_input("ค้นหาสูตรอาหารไทย..."):
         prompt = user_input
-        # เพิ่มข้อความของผู้ใช้ลงในประวัติการสนทนา
         st.session_state.messages.append({"role": "user", "content": prompt})
         
-        # แสดงข้อความของผู้ใช้
         with st.chat_message("user"):
             st.markdown(prompt)
     
-    # ประมวลผลคำค้นหา (จากตัวอย่างหรือจากการพิมพ์)
+    # ประมวลผลคำค้นหา
     if prompt:
-        # นับการค้นหา
         st.session_state.search_count += 1
         
-        # รับการตอบสนอง
         with st.chat_message("assistant"):
-            with st.spinner("กำลังค้นหาและวิเคราะห์..."):
-                # ตรวจสอบว่าเป็นการค้นหาตามโภชนาการหรือไม่
+            with st.spinner("🔍 กำลังค้นหาและวิเคราะห์..."):
                 if detect_nutrition_search(prompt):
                     # การค้นหาตามโภชนาการ
                     criteria = extract_nutrition_criteria_from_text(prompt)
@@ -1221,7 +1188,6 @@ def main():
                             response = f"พบ {len(nutrition_results)} สูตรอาหารที่ตรงกับเกณฑ์โภชนาการที่ต้องการ"
                             st.markdown(response)
                             
-                            # แสดงผลลัพธ์
                             st.markdown("### 🔍 ผลการค้นหา")
                             for i, result in enumerate(nutrition_results[:5], 1):
                                 with st.expander(f"{i}. {result['recipe_name']} ({result['calories']:.0f} kcal)"):
@@ -1238,7 +1204,6 @@ def main():
                             if len(nutrition_results) > 5:
                                 st.markdown(f"*และอีก {len(nutrition_results) - 5} สูตร...*")
                             
-                            # เพิ่มการตอบสนองของแอสซิสแตนต์ลงในประวัติการสนทนา
                             st.session_state.messages.append({
                                 "role": "assistant",
                                 "content": response,
@@ -1249,7 +1214,6 @@ def main():
                             st.markdown(response)
                             st.session_state.messages.append({"role": "assistant", "content": response})
                     else:
-                        # ถ้าตรวจพบคีย์เวิร์ดโภชนาการแต่แยกเกณฑ์ไม่ได้
                         response = "กรุณาระบุเกณฑ์โภชนาการให้ชัดเจนขึ้น เช่น 'เมนูแคลอรี่ไม่เกิน 300' หรือ 'อาหารโปรตีนสูงมากกว่า 20 กรัม'"
                         st.markdown(response)
                         st.session_state.messages.append({"role": "assistant", "content": response})
@@ -1260,16 +1224,21 @@ def main():
                     if results:
                         best_match = results[0]
                         
-                        # ตรวจสอบว่ามีผลลัพธ์ที่ดี
-                        threshold = 0.25 if settings.get('enhanced_search', True) else 0.3
-                        if best_match["similarity"] > threshold:
+                        # ตรวจสอบคุณภาพของผลลัพธ์
+                        if best_match["similarity"] > 0.3:
+                            similarity_score = best_match["similarity"]
+                            match_type = best_match.get("match_type", "semantic")
+                            
                             response = f"พบสูตรอาหารที่คุณค้นหา: **{best_match['name']}**"
                             st.markdown(response)
                             
-                            # แสดงสูตรพร้อมโภชนาการ
-                            st.markdown(f'<div class="recipe-title">{best_match["name"]}</div>', unsafe_allow_html=True)
+                            # แสดงชื่อเมนูพร้อมค่าความเกี่ยวข้อง
+                            title_html = f'<div class="recipe-title">{best_match["name"]}'
+                            title_html += f'<span class="similarity-score">ความเกี่ยวข้อง: {similarity_score:.2f}</span>'
+                            title_html += '</div>'
                             
-                            # แสดงข้อมูลโภชนาการ
+                            st.markdown(title_html, unsafe_allow_html=True)
+                            
                             display_nutrition_info(best_match['nutrition'])
                             
                             st.markdown('<div class="section-title">📝 วัตถุดิบ</div>', unsafe_allow_html=True)
@@ -1278,15 +1247,13 @@ def main():
                             st.markdown('<div class="section-title">👩‍🍳 วิธีทำ</div>', unsafe_allow_html=True)
                             st.markdown(format_cooking_method(best_match["method"]), unsafe_allow_html=True)
                             
-                            st.markdown('</div>', unsafe_allow_html=True)
-                            
                             # แสดงเมนูที่เกี่ยวข้อง
                             if len(results) > 1:
                                 st.markdown("### 🍽️ เมนูที่เกี่ยวข้อง")
                                 for i, related in enumerate(results[1:4], 1):
-                                    st.markdown(f"{i}. **{related['name']}** (ความเกี่ยวข้อง: {related['similarity']:.2f})")
+                                    similarity = related['similarity']
+                                    st.markdown(f"{i}. **{related['name']}** (ความเกี่ยวข้อง: {similarity:.2f})")
                             
-                            # เพิ่มการตอบสนองของแอสซิสแตนต์ลงในประวัติการสนทนาพร้อมข้อมูลสูตร
                             st.session_state.messages.append({
                                 "role": "assistant", 
                                 "content": response, 
@@ -1308,12 +1275,12 @@ def main():
                         st.markdown(response)
                         st.session_state.messages.append({"role": "assistant", "content": response})
                 
-                # Auto-scroll หลังการตอบสนอง
+                # ทริกเกอร์ auto-scroll
                 st.markdown("""
                 <script>
                 setTimeout(function() {
                     scrollToLatestMessage();
-                }, 500);
+                }, 800);
                 </script>
                 """, unsafe_allow_html=True)
 
