@@ -197,7 +197,7 @@ class USDANutritionAPI:
             self.rate_limit_calls += 1
             return response.json()
         except requests.RequestException as e:
-            logger.error(f"Error searching USDA API: {e}")
+            logger.error(f"เกิดข้อผิดพลาดในการค้นหา USDA API: {e}")
             return None
     
     def get_nutrition_info(self, ingredient: str) -> Optional[NutritionInfo]:
@@ -224,7 +224,7 @@ class USDANutritionAPI:
             
             return self._parse_usda_nutrition(food_data, ingredient)
         except requests.RequestException as e:
-            logger.error(f"Error getting detailed nutrition from USDA: {e}")
+            logger.error(f"เกิดข้อผิดพลาดในการดึงข้อมูลโภชนาการจาก USDA: {e}")
             return None
     
     def _parse_usda_nutrition(self, food_data: Dict, ingredient: str) -> NutritionInfo:
@@ -233,30 +233,30 @@ class USDANutritionAPI:
         
         # แมป nutrient ID กับ attribute
         nutrient_mapping = {
-            1008: 'calories',      # Energy
-            1003: 'protein',       # Protein
-            1005: 'carbs',         # Carbohydrate
-            1004: 'fat',           # Total lipid (fat)
-            1079: 'fiber',         # Fiber
-            2000: 'sugar',         # Sugars
-            1093: 'sodium',        # Sodium
-            1106: 'vitamin_a',     # Vitamin A, RAE
-            1162: 'vitamin_c',     # Vitamin C
-            1114: 'vitamin_d',     # Vitamin D
-            1109: 'vitamin_e',     # Vitamin E
-            1185: 'vitamin_k',     # Vitamin K
-            1165: 'vitamin_b1',    # Thiamin
-            1166: 'vitamin_b2',    # Riboflavin
-            1175: 'vitamin_b6',    # Vitamin B-6
-            1178: 'vitamin_b12',   # Vitamin B-12
-            1186: 'folate',        # Folate, DFE
-            1167: 'niacin',        # Niacin
-            1087: 'calcium',       # Calcium
-            1089: 'iron',          # Iron
-            1090: 'magnesium',     # Magnesium
-            1091: 'phosphorus',    # Phosphorus
-            1092: 'potassium',     # Potassium
-            1095: 'zinc',          # Zinc
+            1008: 'calories',      # พลังงาน
+            1003: 'protein',       # โปรตีน
+            1005: 'carbs',         # คาร์โบไฮเดรต
+            1004: 'fat',           # ไขมันรวม
+            1079: 'fiber',         # ใยอาหาร
+            2000: 'sugar',         # น้ำตาล
+            1093: 'sodium',        # โซเดียม
+            1106: 'vitamin_a',     # วิตามิน A, RAE
+            1162: 'vitamin_c',     # วิตามิน C
+            1114: 'vitamin_d',     # วิตามิน D
+            1109: 'vitamin_e',     # วิตามิน E
+            1185: 'vitamin_k',     # วิตามิน K
+            1165: 'vitamin_b1',    # ไทอะมิน
+            1166: 'vitamin_b2',    # ไรโบฟลาวิน
+            1175: 'vitamin_b6',    # วิตามิน B-6
+            1178: 'vitamin_b12',   # วิตามิน B-12
+            1186: 'folate',        # โฟเลต, DFE
+            1167: 'niacin',        # ไนอะซิน
+            1087: 'calcium',       # แคลเซียม
+            1089: 'iron',          # เหล็ก
+            1090: 'magnesium',     # แมกนีเซียม
+            1091: 'phosphorus',    # ฟอสฟอรัส
+            1092: 'potassium',     # โพแทสเซียม
+            1095: 'zinc',          # สังกะสี
         }
         
         # ดึงข้อมูล nutrients
@@ -289,7 +289,7 @@ class NutritionixAPI:
             self.last_reset = today
         
         if self.daily_calls >= 200:  # Free plan limit
-            raise Exception("Daily API limit reached")
+            raise Exception("เกินขีดจำกัด API รายวัน")
     
     def get_nutrition_info(self, ingredient: str) -> Optional[NutritionInfo]:
         """ดึงข้อมูลโภชนาการจาก Nutritionix API"""
@@ -317,7 +317,7 @@ class NutritionixAPI:
                 food = result['foods'][0]
                 return self._parse_nutritionix_data(food, ingredient)
         except requests.RequestException as e:
-            logger.error(f"Error getting nutrition from Nutritionix: {e}")
+            logger.error(f"เกิดข้อผิดพลาดในการดึงข้อมูลจาก Nutritionix: {e}")
         
         return None
     
@@ -780,7 +780,7 @@ class CookingAdjustmentHelper:
                 has_ingredient = any(missing["name"] in key for key in adjusted_data.keys())
                 
                 if not has_ingredient:
-                    # เพิ่มวัตถุดิบที่ขาดหายไป
+                    # เพิ่มวัตถุดิบที่ขาดหายไง
                     from ingredient_converter import IngredientConverter
                     converter = IngredientConverter()
                     
@@ -921,7 +921,7 @@ class NutritionAnalyzer:
                     self.db.cache_nutrition(ingredient, usda_nutrition)
                     return usda_nutrition
             except Exception as e:
-                logger.warning(f"USDA API error for {ingredient}: {e}")
+                logger.warning(f"เกิดข้อผิดพลาด USDA API สำหรับ {ingredient}: {e}")
         
         # 4. ใช้ Nutritionix API (ถ้ามี API key)
         if self.nutritionix_api:
@@ -931,7 +931,7 @@ class NutritionAnalyzer:
                     self.db.cache_nutrition(ingredient, nutritionix_nutrition)
                     return nutritionix_nutrition
             except Exception as e:
-                logger.warning(f"Nutritionix API error for {ingredient}: {e}")
+                logger.warning(f"เกิดข้อผิดพลาด Nutritionix API สำหรับ {ingredient}: {e}")
         
         # 5. สร้างข้อมูลพื้นฐาน
         basic_nutrition = NutritionInfo(name=ingredient)
