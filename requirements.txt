@@ -2,145 +2,145 @@
 # Requirements file with API integration support
 
 # Core dependencies
-streamlit>=1.28.0
-pandas>=1.5.0
-numpy>=1.21.0
+streamlit
+pandas
+numpy
 
 # Machine Learning & NLP (Enhanced)
-sentence-transformers>=2.2.0
-scikit-learn>=1.1.0
-torch>=1.12.0
-transformers>=4.20.0
+sentence-transformers
+scikit-learn
+torch
+transformers
 
 # Data visualization (Enhanced)
-plotly>=5.10.0
-matplotlib>=3.5.0
-seaborn>=0.11.0
-altair>=4.2.0  # Additional visualization library
+plotly
+matplotlib
+seaborn
+altair  # Additional visualization library
 
 # HTTP requests and APIs (Enhanced for API integration)
-requests>=2.28.0
-urllib3>=1.26.0
-httpx>=0.24.0  # Modern HTTP client with async support
-aiohttp>=3.8.0  # Async HTTP client
+requests
+urllib3
+httpx  # Modern HTTP client with async support
+aiohttp  # Async HTTP client
 
 # Database (Enhanced)
 # sqlite3 is built-in with Python, but adding related tools
-sqlalchemy>=1.4.0  # Advanced database toolkit
-alembic>=1.8.0     # Database migration tool
+sqlalchemy  # Advanced database toolkit
+alembic     # Database migration tool
 
 # JSON and data processing (Enhanced)
-jsonschema>=4.0.0
-pydantic>=1.10.0   # Data validation and settings management
-orjson>=3.8.0      # Fast JSON library
+jsonschema
+pydantic   # Data validation and settings management
+orjson      # Fast JSON library
 
 # Logging and utilities (Enhanced)
-python-dateutil>=2.8.0
-pytz>=2022.1
-loguru>=0.6.0      # Advanced logging
-rich>=12.0.0       # Rich text and beautiful formatting
+python-dateutil
+pytz
+loguru      # Advanced logging
+rich       # Rich text and beautiful formatting
 
 # API Integration Dependencies
 # USDA FoodData Central API
-fdc-api>=0.2.0     # USDA FoodData Central Python client (optional)
+fdc-api     # USDA FoodData Central Python client (optional)
 
 # Nutritionix API (optional)
-# nutritionix>=1.0.0  # Nutritionix Python client (uncomment if available)
+# nutritionix  # Nutritionix Python client (uncomment if available)
 
 # Enhanced nutrition APIs (optional)
 # Uncomment if you plan to use these services
-# spoonacular>=1.0.0  # Spoonacular API client
-# edamam>=1.0.0       # Edamam API client
+# spoonacular  # Spoonacular API client
+# edamam       # Edamam API client
 
 # Async and Performance (New)
-asyncio-throttle>=1.0.0  # Rate limiting for async operations
-tenacity>=8.0.0          # Retry library
-backoff>=2.2.0           # Exponential backoff
+asyncio-throttle  # Rate limiting for async operations
+tenacity          # Retry library
+backoff           # Exponential backoff
 
 # Caching (Enhanced)
-redis>=4.3.0        # Redis client for advanced caching (optional)
-diskcache>=5.4.0    # Disk-based caching
-cachetools>=5.2.0   # Memory caching utilities
+redis        # Redis client for advanced caching (optional)
+diskcache    # Disk-based caching
+cachetools   # Memory caching utilities
 
 # Development and testing (Enhanced)
-pytest>=7.0.0
-pytest-cov>=4.0.0
-pytest-asyncio>=0.21.0  # Async testing support
-black>=22.0.0
-flake8>=5.0.0
-mypy>=0.991         # Type checking
-pre-commit>=2.20.0  # Git hooks
+pytest
+pytest-cov
+pytest-asyncio  # Async testing support
+black
+flake8
+mypy         # Type checking
+pre-commit  # Git hooks
 
 # Performance optimization (Enhanced)
-numba>=0.56.0       # JIT compiler for numerical computations
-cython>=0.29.0      # C extensions for Python
-psutil>=5.9.0       # System and process utilities
+numba       # JIT compiler for numerical computations
+cython      # C extensions for Python
+psutil       # System and process utilities
 
 # Thai language processing (Enhanced)
-pythainlp>=3.0.0    # Thai natural language processing
-attacut>=1.0.0      # Thai word segmentation
-thai-segmenter>=0.4.0  # Alternative Thai segmentation
+pythainlp    # Thai natural language processing
+attacut      # Thai word segmentation
+thai-segmenter  # Alternative Thai segmentation
 
 # Additional utilities (New)
-tqdm>=4.64.0        # Progress bars
-python-dotenv>=0.20.0  # Environment variable management
-click>=8.1.0           # Command line interface creation
-tabulate>=0.9.0        # Pretty-print tabular data
-colorama>=0.4.0        # Cross-platform colored terminal text
+tqdm        # Progress bars
+python-dotenv  # Environment variable management
+click           # Command line interface creation
+tabulate        # Pretty-print tabular data
+colorama        # Cross-platform colored terminal text
 
 # Web scraping (for potential recipe data collection)
-beautifulsoup4>=4.11.0
-lxml>=4.9.0
-selenium>=4.5.0     # Web browser automation (optional)
+beautifulsoup4
+lxml
+selenium     # Web browser automation (optional)
 
 # Image processing (for potential recipe image analysis)
-Pillow>=9.2.0       # Python Imaging Library
-opencv-python>=4.6.0  # Computer vision library (optional)
+Pillow       # Python Imaging Library
+opencv-python  # Computer vision library (optional)
 
 # Data export and reporting (Enhanced)
-openpyxl>=3.0.0     # Excel file handling
-xlsxwriter>=3.0.0   # Excel file creation
-reportlab>=3.6.0    # PDF generation
-jinja2>=3.1.0       # Template engine
+openpyxl     # Excel file handling
+xlsxwriter   # Excel file creation
+reportlab    # PDF generation
+jinja2       # Template engine
 
 # Machine Learning enhancements (Optional)
-xgboost>=1.6.0      # Gradient boosting framework
-lightgbm>=3.3.0     # Gradient boosting framework
-catboost>=1.1.0     # Gradient boosting framework
+xgboost      # Gradient boosting framework
+lightgbm     # Gradient boosting framework
+catboost     # Gradient boosting framework
 
 # API documentation and testing
-swagger-ui>=0.1.0   # API documentation
-httpie>=3.2.0       # HTTP client for API testing
+swagger-ui   # API documentation
+httpie       # HTTP client for API testing
 
 # Deployment and production (Optional)
-gunicorn>=20.1.0    # WSGI HTTP Server
-uvicorn>=0.18.0     # ASGI server
-fastapi>=0.85.0     # Modern web framework (for potential API)
+gunicorn    # WSGI HTTP Server
+uvicorn     # ASGI server
+fastapi     # Modern web framework (for potential API)
 
 # Monitoring and observability (Optional)
-prometheus-client>=0.14.0  # Metrics collection
-structlog>=22.1.0          # Structured logging
+prometheus-client  # Metrics collection
+structlog          # Structured logging
 
 # Security (Enhanced)
-cryptography>=37.0.0       # Cryptographic library
-pyjwt>=2.4.0              # JSON Web Token implementation
-bcrypt>=4.0.0             # Password hashing
+cryptography       # Cryptographic library
+pyjwt              # JSON Web Token implementation
+bcrypt             # Password hashing
 
 # Configuration management (Enhanced)
-hydra-core>=1.2.0         # Configuration management framework
-omegaconf>=2.2.0          # Configuration management
+hydra-core         # Configuration management framework
+omegaconf          # Configuration management
 
 # Type hints and validation (Enhanced)
-typing-extensions>=4.3.0  # Extended type hints
-pydantic-settings>=1.0.0  # Settings management with Pydantic
+typing-extensions  # Extended type hints
+pydantic-settings  # Settings management with Pydantic
 
 # Database migrations and management (Optional)
-yoyo-migrations>=8.0.0    # Database migrations
+yoyo-migrations    # Database migrations
 
 # Specialized nutrition libraries (Research/Optional)
-# nutrition>=0.1.0        # Basic nutrition calculations
-# food-composition>=0.1.0 # Food composition databases
-# recipe-scrapers>=14.0.0 # Recipe scraping from websites
+# nutrition        # Basic nutrition calculations
+# food-composition # Food composition databases
+# recipe-scrapers # Recipe scraping from websites
 
 # Note: Some packages marked as "optional" can be installed based on specific needs
 # To install all optional packages:
