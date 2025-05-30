@@ -224,7 +224,7 @@ class USDANutritionAPI:
             
             return self._parse_usda_nutrition(food_data, ingredient)
         except requests.RequestException as e:
-            logger.error(f"เกิดข้อผิดพลาดในการดึงข้อมูลโภชนาการรายละเอียดจาก USDA: {e}")
+            logger.error(f"เกิดข้อผิดพลาดในการดึงข้อมูลโภชนาการจาก USDA: {e}")
             return None
     
     def _parse_usda_nutrition(self, food_data: Dict, ingredient: str) -> NutritionInfo:
@@ -236,7 +236,7 @@ class USDANutritionAPI:
             1008: 'calories',      # พลังงาน
             1003: 'protein',       # โปรตีน
             1005: 'carbs',         # คาร์โบไฮเดรต
-            1004: 'fat',           # ไขมันรวม (ไขมัน)
+            1004: 'fat',           # ไขมันรวม
             1079: 'fiber',         # ใยอาหาร
             2000: 'sugar',         # น้ำตาล
             1093: 'sodium',        # โซเดียม
@@ -245,12 +245,12 @@ class USDANutritionAPI:
             1114: 'vitamin_d',     # วิตามิน D
             1109: 'vitamin_e',     # วิตามิน E
             1185: 'vitamin_k',     # วิตามิน K
-            1165: 'vitamin_b1',    # ไทอามีน
-            1166: 'vitamin_b2',    # ริโบฟลาวิน
+            1165: 'vitamin_b1',    # ไทอะมิน
+            1166: 'vitamin_b2',    # ไรโบฟลาวิน
             1175: 'vitamin_b6',    # วิตามิน B-6
             1178: 'vitamin_b12',   # วิตามิน B-12
             1186: 'folate',        # โฟเลต, DFE
-            1167: 'niacin',        # ไนอาซิน
+            1167: 'niacin',        # ไนอะซิน
             1087: 'calcium',       # แคลเซียม
             1089: 'iron',          # เหล็ก
             1090: 'magnesium',     # แมกนีเซียม
@@ -288,7 +288,7 @@ class NutritionixAPI:
             self.daily_calls = 0
             self.last_reset = today
         
-        if self.daily_calls >= 200:  # ขำกัด Free plan
+        if self.daily_calls >= 200:  # จำกัด Free plan
             raise Exception("ถึงขีดจำกัดการใช้ API รายวันแล้ว")
     
     def get_nutrition_info(self, ingredient: str) -> Optional[NutritionInfo]:
@@ -317,7 +317,7 @@ class NutritionixAPI:
                 food = result['foods'][0]
                 return self._parse_nutritionix_data(food, ingredient)
         except requests.RequestException as e:
-            logger.error(f"เกิดข้อผิดพลาดในการดึงข้อมูลโภชนาการจาก Nutritionix: {e}")
+            logger.error(f"เกิดข้อผิดพลาดในการดึงข้อมูลจาก Nutritionix: {e}")
         
         return None
     
