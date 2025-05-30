@@ -14,7 +14,7 @@ from config import Config
 
 # การกำหนดค่าหน้าเว็บ
 st.set_page_config(
-    page_title="Thai Food Recipe Chatbot",
+    page_title="แชทบอทสูตรอาหารไทย",
     page_icon="🍲",
     layout="wide"
 )
@@ -359,7 +359,7 @@ class EnhancedNutritionAnalyzer(NutritionAnalyzer):
             phosphorus=base_nutrition.phosphorus * multiplier,
             potassium=base_nutrition.potassium * multiplier,
             zinc=base_nutrition.zinc * multiplier,
-            serving_size=f"{amount} {unit}" + (" (ส่วนบริโภค)" if is_cooking_only else "")
+            serving_size=f"{amount} {unit}" + (" (ใช้ในการทำอาหาร)" if is_cooking_only else "")
         )
     
     def _nutrition_to_dict(self, nutrition):
@@ -415,7 +415,7 @@ def load_data():
 
 @st.cache_data
 def get_embeddings(_model, data):
-    """รับหือคำนวณ embeddings สำหรับสูตรอาหารทั้งหมด"""
+    """รับหรือคำนวณ embeddings สำหรับสูตรอาหารทั้งหมด"""
     if os.path.exists(EMBEDDINGS_PATH):
         with open(EMBEDDINGS_PATH, 'rb') as f:
             return pickle.load(f)
@@ -880,7 +880,7 @@ def search_recipes_enhanced(query, model, data, embeddings, nutrition_analyzer, 
             if key in query_lower:
                 expanded_query += ' ' + ' '.join(expansions)
     
-    # ค้นหาแบบตรงตัวก่อน (exact match)
+    # ค้นหาแบบตরงตัวก่อน (exact match)
     exact_matches = []
     for idx, row in data.iterrows():
         recipe_name = row['name'].lower()
@@ -1105,7 +1105,7 @@ def main():
     )
     
     # แอปหลัก
-    st.title("🍲 Thai Food Recipe Chatbot")
+    st.title("🍲 แชทบอทสูตรอาหารไทย")
     st.markdown("**ค้นหาสูตรอาหารไทยพร้อมข้อมูลโภชนาการ** - ถามเกี่ยวกับวิธีทำอาหารไทยหรือค้นหาตามโภชนาการได้เลย!")
     
     # ตัวอย่างการค้นหา
