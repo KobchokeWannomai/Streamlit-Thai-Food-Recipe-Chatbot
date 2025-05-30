@@ -880,7 +880,7 @@ def search_recipes_enhanced(query, model, data, embeddings, nutrition_analyzer, 
             if key in query_lower:
                 expanded_query += ' ' + ' '.join(expansions)
     
-    # ค้นหาแบบตরงตัวก่อน (exact match)
+    # ค้นหาแบบตรงตัวก่อน (exact match)
     exact_matches = []
     for idx, row in data.iterrows():
         recipe_name = row['name'].lower()
@@ -1177,15 +1177,10 @@ def main():
     # สร้างปุ่มเลื่อนไปข้อความล่าสุด
     create_scroll_to_bottom_button()
     
-    # ตรวจสอบตัวอย่างการค้นหาที่ถูกคลิก
-    input_value = st.session_state.get("example_query", "")
-    if input_value:
+    # ตรวจสอบและประมวลผลตัวอย่างการค้นหาที่ถูกคลิก
+    if "example_query" in st.session_state and st.session_state.example_query:
+        prompt = st.session_state.example_query
         st.session_state.pop("example_query", None)  # ลบค่าออกหลังใช้
-    
-    # ช่องใส่ข้อความสำหรับแชท
-    if prompt := st.chat_input("ค้นหาสูตรอาหารไทย...", value=input_value):
-        # นับการค้นหา
-        st.session_state.search_count += 1
         
         # เพิ่มข้อความของผู้ใช้ลงในประวัติการสนทนา
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -1193,6 +1188,23 @@ def main():
         # แสดงข้อความของผู้ใช้
         with st.chat_message("user"):
             st.markdown(prompt)
+    else:
+        prompt = None
+    
+    # ช่องใส่ข้อความสำหรับแชท
+    if user_input := st.chat_input("ค้นหาสูตรอาหารไทย..."):
+        prompt = user_input
+        # เพิ่มข้อความของผู้ใช้ลงในประวัติการสนทนา
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        
+        # แสดงข้อความของผู้ใช้
+        with st.chat_message("user"):
+            st.markdown(prompt)
+    
+    # ประมวลผลคำค้นหา (จากตัวอย่างหรือจากการพิมพ์)
+    if prompt:
+        # นับการค้นหา
+        st.session_state.search_count += 1
         
         # รับการตอบสนอง
         with st.chat_message("assistant"):
