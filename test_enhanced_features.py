@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Comprehensive Test Suite for Enhanced Thai Food Recipe Chatbot
-Tests all new features including API integration, cooking adjustments, and enhanced search
+ชุดการทดสอบแบบครอบคลุมสำหรับแชทบอทสูตรอาหารไทยขั้นสูง
+ทดสอบฟีเจอร์ใหม่ทั้งหมดรวมถึงการเชื่อมต่อ API, การปรับแต่งการทำอาหาร, และการค้นหาขั้นสูง
 """
 
 import pytest
@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
 from datetime import datetime
 
-# Import components to test
+# นำเข้าคอมโพเนนต์ที่จะทดสอบ
 from nutrition_analyzer import (
     NutritionAnalyzer, 
     USDANutritionAPI, 
@@ -25,16 +25,16 @@ from ingredient_converter import IngredientConverter
 from config import Config, APIConfig, NutritionConfig
 
 class TestEnhancedNutritionAnalyzer:
-    """Test suite for enhanced nutrition analyzer with API integration"""
+    """ชุดการทดสอบสำหรับตัววิเคราะห์โภชนาการขั้นสูงพร้อมการเชื่อมต่อ API"""
     
     def setup_method(self):
-        """Setup test environment"""
+        """ตั้งค่าสภาพแวดล้อมการทดสอบ"""
         self.analyzer = NutritionAnalyzer()
         self.converter = IngredientConverter()
         self.cooking_helper = CookingAdjustmentHelper()
     
     def test_basic_nutrition_analysis(self):
-        """Test basic nutrition analysis without API"""
+        """ทดสอบการวิเคราะห์โภชนาการพื้นฐานโดยไม่ใช้ API"""
         ingredients = """
         - ไข่ไก่ 2 ฟอง
         - น้ำมันพืช 1 ช้อนโต๊ะ
@@ -46,70 +46,70 @@ class TestEnhancedNutritionAnalyzer:
         assert any('ไข่ไก่' in key for key in result.keys())
         assert any('น้ำมันพืช' in key for key in result.keys())
         
-        # Check nutrition values
+        # ตรวจสอบค่าโภชนาการ
         total = self.analyzer.calculate_total_nutrition(result)
         assert total.calories > 0
         assert total.protein > 0
     
     def test_cooking_adjustments(self):
-        """Test cooking adjustment functionality"""
-        # Test oil absorption adjustment
+        """ทดสอบฟังก์ชันการปรับแต่งการทำอาหาร"""
+        # ทดสอบการปรับแต่งการดูดซึมน้ำมัน
         adjustments = self.cooking_helper.get_cooking_adjustments("ไข่เจียว")
         
         assert 'oil_absorption' in adjustments
-        assert adjustments['oil_absorption'] == 0.1  # 10% absorption
+        assert adjustments['oil_absorption'] == 0.1  # การดูดซึม 10%
         
-        # Test missing ingredients addition
+        # ทดสอบการเพิ่มวัตถุดิบที่ขาดหายไป
         if 'missing_ingredients' in adjustments:
             assert any(ing['name'] == 'น้ำมันพืช' for ing in adjustments['missing_ingredients'])
     
     def test_enhanced_ingredient_conversion(self):
-        """Test enhanced ingredient conversion with cooking context"""
+        """ทดสอบการแปลงส่วนผสมขั้นสูงพร้อมบริบทการทำอาหาร"""
         test_cases = [
-            ("ไข่ไก่ 2 ฟอง", 100),  # Approximately 100g for 2 eggs
-            ("น้ำมันพืช 1 ช้อนโต๊ะ", 14),  # Approximately 14g for 1 tbsp oil
-            ("กุ้งนาง 4 ตัว", 100),  # Approximately 100g for 4 medium shrimp
+            ("ไข่ไก่ 2 ฟอง", 100),  # ประมาณ 100g สำหรับไข่ 2 ฟอง
+            ("น้ำมันพืช 1 ช้อนโต๊ะ", 14),  # ประมาณ 14g สำหรับน้ำมัน 1 ช้อนโต๊ะ
+            ("กุ้งนาง 4 ตัว", 100),  # ประมาณ 100g สำหรับกุ้งขนาดกลาง 4 ตัว
         ]
         
         for ingredient_text, expected_weight in test_cases:
             result = self.converter.parse_and_convert_ingredient(ingredient_text)
             
             assert result['weight_grams'] > 0
-            assert abs(result['weight_grams'] - expected_weight) < expected_weight * 0.5  # Within 50%
+            assert abs(result['weight_grams'] - expected_weight) < expected_weight * 0.5  # ภายใน 50%
             assert result['nutrition_multiplier'] > 0
     
     def test_recipe_analysis_with_adjustments(self):
-        """Test recipe analysis with cooking adjustments"""
+        """ทดสอบการวิเคราะห์สูตรอาหารพร้อมการปรับแต่งการทำอาหาร"""
         ingredients = """
         - ไข่ไก่ 2 ฟอง
         - เกลือ 1/2 ช้อนชา
         """
         
-        # Test without adjustments
+        # ทดสอบโดยไม่มีการปรับแต่ง
         normal_result = self.analyzer.analyze_ingredients(ingredients, "ไข่เจียว", False)
         normal_total = self.analyzer.calculate_total_nutrition(normal_result)
         
-        # Test with adjustments
+        # ทดสอบพร้อมการปรับแต่ง
         enhanced_result = self.analyzer.analyze_ingredients(ingredients, "ไข่เจียว", True)
         enhanced_total = self.analyzer.calculate_total_nutrition(enhanced_result)
         
-        # Enhanced version should have more calories due to added oil
+        # เวอร์ชันขั้นสูงควรมีแคลอรี่มากกว่าเนื่องจากน้ำมันที่เพิ่มเข้ามา
         assert enhanced_total.calories >= normal_total.calories
-        assert len(enhanced_result) >= len(normal_result)  # May have additional ingredients
+        assert len(enhanced_result) >= len(normal_result)  # อาจมีส่วนผสมเพิ่มเติม
 
 class TestAPIIntegration:
-    """Test suite for API integrations"""
+    """ชุดการทดสอบสำหรับการเชื่อมต่อ API"""
     
     def setup_method(self):
-        """Setup API test environment"""
+        """ตั้งค่าสภาพแวดล้อมการทดสอบ API"""
         self.mock_usda_key = "test_usda_key"
         self.mock_nutritionix_id = "test_app_id"
         self.mock_nutritionix_key = "test_api_key"
     
     @patch('requests.Session.get')
     def test_usda_api_search(self, mock_get):
-        """Test USDA API search functionality"""
-        # Mock successful API response
+        """ทดสอบฟังก์ชันการค้นหา USDA API"""
+        # จำลองการตอบสนอง API ที่สำเร็จ
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -129,7 +129,7 @@ class TestAPIIntegration:
         assert 'foods' in result
         assert len(result['foods']) > 0
         
-        # Verify API was called with correct parameters
+        # ตรวจสอบว่า API ถูกเรียกด้วยพารามิเตอร์ที่ถูกต้อง
         mock_get.assert_called()
         call_args = mock_get.call_args
         assert 'api_key' in call_args[1]['params']
@@ -137,14 +137,14 @@ class TestAPIIntegration:
     
     @patch('requests.Session.get')
     def test_usda_api_rate_limiting(self, mock_get):
-        """Test USDA API rate limiting"""
+        """ทดสอบการจำกัดอัตรา USDA API"""
         api = USDANutritionAPI(self.mock_usda_key)
         
-        # Reset rate limit counters
+        # รีเซ็ตตัวนับการจำกัดอัตรา
         api.rate_limit_calls = 0
         api.rate_limit_reset = datetime.now()
         
-        # Mock multiple API calls
+        # จำลองการเรียก API หลายครั้ง
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {'foods': []}
@@ -152,18 +152,18 @@ class TestAPIIntegration:
         
         start_time = time.time()
         
-        # Make multiple calls quickly
+        # เรียกส่วนผสมหลายตัวอย่างรวดเร็ว
         for _ in range(5):
             api.search_food("test")
         
-        # Should not take too long due to rate limiting
+        # ไม่ควรใช้เวลานานเกินไปเนื่องจากการจำกัดอัตรา
         elapsed = time.time() - start_time
-        assert elapsed < 10  # Should complete within 10 seconds
+        assert elapsed < 10  # ควรเสร็จภายใน 10 วินาที
     
     @patch('requests.Session.post')
     def test_nutritionix_api_integration(self, mock_post):
-        """Test Nutritionix API integration"""
-        # Mock successful API response
+        """ทดสอบการเชื่อมต่อ Nutritionix API"""
+        # จำลองการตอบสนอง API ที่สำเร็จ
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -185,22 +185,22 @@ class TestAPIIntegration:
         assert result.calories == 155
         assert result.protein == 13
         
-        # Verify API was called with correct headers
+        # ตรวจสอบว่า API ถูกเรียกด้วย headers ที่ถูกต้อง
         mock_post.assert_called()
         call_args = mock_post.call_args
         assert 'x-app-id' in call_args[1]['headers']
         assert 'x-app-key' in call_args[1]['headers']
     
     def test_api_fallback_strategy(self):
-        """Test API fallback when services are unavailable"""
-        # Create analyzer with invalid API keys
+        """ทดสอบกลยุทธ์ fallback ของ API เมื่อบริการไม่พร้อมใช้งาน"""
+        # สร้าง analyzer ด้วย API keys ที่ไม่ถูกต้อง
         analyzer = NutritionAnalyzer(
             usda_api_key="invalid_key",
             nutritionix_app_id="invalid_id",
             nutritionix_api_key="invalid_key"
         )
         
-        # Should still return nutrition data from Thai database
+        # ควรยังคงคืนข้อมูลโภชนาการจากฐานข้อมูลไทย
         result = analyzer.get_ingredient_nutrition("ไข่ไก่")
         
         assert result is not None
@@ -208,36 +208,36 @@ class TestAPIIntegration:
         assert result.name == "ไข่ไก่"
 
 class TestEnhancedSearch:
-    """Test suite for enhanced search capabilities"""
+    """ชุดการทดสอบสำหรับความสามารถการค้นหาขั้นสูง"""
     
     def setup_method(self):
-        """Setup search test environment"""
+        """ตั้งค่าสภาพแวดล้อมการทดสอบการค้นหา"""
         self.search_expansions = Config.SEARCH_ENHANCEMENT['query_expansions']
     
     def test_query_expansion(self):
-        """Test automatic query expansion"""
-        # Test basic expansion
+        """ทดสอบการขยายคำค้นหาอัตโนมัติ"""
+        # ทดสอบการขยายพื้นฐาน
         assert 'ไข่' in self.search_expansions
         assert 'ไข่เจียว' in self.search_expansions['ไข่']
         assert 'ไข่ดาว' in self.search_expansions['ไข่']
         
-        # Test cooking method expansion
+        # ทดสอบการขยายวิธีการทำอาหาร
         assert 'ผัด' in self.search_expansions
         assert 'ผัดไทย' in self.search_expansions['ผัด']
         assert 'ผัดกะเพรา' in self.search_expansions['ผัด']
     
     def test_search_threshold_adjustment(self):
-        """Test different similarity thresholds"""
+        """ทดสอบเกณฑ์ความคล้ายคลึงที่แตกต่างกัน"""
         normal_threshold = Config.SIMILARITY_THRESHOLD
         enhanced_threshold = Config.ENHANCED_SIMILARITY_THRESHOLD
         
         assert enhanced_threshold < normal_threshold
-        assert enhanced_threshold >= 0.2  # Should not be too low
-        assert normal_threshold <= 0.4    # Should not be too high
+        assert enhanced_threshold >= 0.2  # ไม่ควรต่ำเกินไป
+        assert normal_threshold <= 0.4    # ไม่ควรสูงเกินไป
     
     def test_semantic_search_improvements(self):
-        """Test semantic search improvements"""
-        # Test that common food-related queries are properly categorized
+        """ทดสอบการปรับปรุงการค้นหาแบบ semantic"""
+        # ทดสอบว่าคำค้นหาที่เกี่ยวข้องกับอาหารถูกจัดหมวดหมู่อย่างเหมาะสม
         cooking_methods = Config.SEARCH_ENHANCEMENT['cooking_methods']
         
         assert 'ผัด' in cooking_methods
@@ -246,32 +246,32 @@ class TestEnhancedSearch:
         assert 'ย่าง' in cooking_methods
 
 class TestUserInterface:
-    """Test suite for UI/UX enhancements"""
+    """ชุดการทดสอบสำหรับการปรับปรุง UI/UX"""
     
     def test_auto_scroll_configuration(self):
-        """Test auto-scroll settings"""
+        """ทดสอบการตั้งค่า auto-scroll"""
         display_settings = UIConfig.DISPLAY_SETTINGS if 'UIConfig' in globals() else {}
         
-        # Test that auto-scroll delay is reasonable
+        # ทดสอบว่าความล่าช้า auto-scroll เหมาะสม
         if 'auto_scroll_delay' in display_settings:
             delay = display_settings['auto_scroll_delay']
-            assert 100 <= delay <= 2000  # Between 0.1 and 2 seconds
+            assert 100 <= delay <= 2000  # ระหว่าง 0.1 ถึง 2 วินาที
     
     def test_animation_settings(self):
-        """Test animation configuration"""
+        """ทดสอบการกำหนดค่าแอนิเมชั่น"""
         display_settings = UIConfig.DISPLAY_SETTINGS if 'UIConfig' in globals() else {}
         
-        # Test animation duration is reasonable
+        # ทดสอบระยะเวลาแอนิเมชั่นที่เหมาะสม
         if 'animation_duration' in display_settings:
             duration = display_settings['animation_duration']
-            assert 100 <= duration <= 1000  # Between 0.1 and 1 second
+            assert 100 <= duration <= 1000  # ระหว่าง 0.1 ถึง 1 วินาที
 
 class TestConfiguration:
-    """Test suite for configuration management"""
+    """ชุดการทดสอบสำหรับการจัดการการกำหนดค่า"""
     
     def test_api_configuration_validation(self):
-        """Test API configuration validation"""
-        # Test API status detection
+        """ทดสอบการตรวจสอบการกำหนดค่า API"""
+        # ทดสอบการตรวจจับสถานะ API
         api_status = Config.is_api_configured()
         
         assert 'usda' in api_status
@@ -280,51 +280,51 @@ class TestConfiguration:
         assert isinstance(api_status['nutritionix'], bool)
     
     def test_nutrition_source_priority(self):
-        """Test nutrition data source priority"""
+        """ทดสอบลำดับความสำคัญแหล่งข้อมูลโภชนาการ"""
         sources = Config.get_nutrition_source_priority()
         
         assert 'thai_database' in sources
-        assert sources[0] == 'thai_database'  # Thai DB should be first priority
+        assert sources[0] == 'thai_database'  # ฐานข้อมูลไทยควรเป็นลำดับแรก
     
     def test_cooking_adjustment_configuration(self):
-        """Test cooking adjustment settings"""
+        """ทดสอบการตั้งค่าการปรับแต่งการทำอาหาร"""
         adjustments = Config.COOKING_ADJUSTMENTS
         
         assert 'oil_absorption_rates' in adjustments
         assert 'missing_ingredients_common' in adjustments
         
-        # Test oil absorption rates are reasonable
+        # ทดสอบอัตราการดูดซึมน้ำมันที่สมเหตุสมผล
         oil_rates = adjustments['oil_absorption_rates']
         for method, rate in oil_rates.items():
-            assert 0 < rate <= 1.0  # Should be between 0 and 100%
+            assert 0 < rate <= 1.0  # ควรอยู่ระหว่าง 0 ถึง 100%
 
 class TestPerformance:
-    """Test suite for performance optimization"""
+    """ชุดการทดสอบสำหรับการเพิ่มประสิทธิภาพ"""
     
     def test_caching_performance(self):
-        """Test caching improves performance"""
+        """ทดสอบการแคชปรับปรุงประสิทธิภาพ"""
         analyzer = NutritionAnalyzer()
         
-        # First call (should be slower - no cache)
+        # การเรียกครั้งแรก (ควรช้ากว่า - ไม่มีแคช)
         start_time = time.time()
         result1 = analyzer.get_ingredient_nutrition("ไข่ไก่")
         first_call_time = time.time() - start_time
         
-        # Second call (should be faster - cached)
+        # การเรียกครั้งที่สอง (ควรเร็วกว่า - มีแคช)
         start_time = time.time()
         result2 = analyzer.get_ingredient_nutrition("ไข่ไก่")
         second_call_time = time.time() - start_time
         
-        # Results should be identical
+        # ผลลัพธ์ควรเหมือนกัน
         assert result1.calories == result2.calories
         assert result1.protein == result2.protein
         
-        # Second call should be significantly faster (cached)
-        # Note: This test might be flaky in fast systems, so we use a lenient check
+        # การเรียกครั้งที่สองควรเร็วกว่าอย่างเห็นได้ชัด (มีแคช)
+        # หมายเหตุ: การทดสอบนี้อาจไม่เสถียรในระบบที่เร็ว ดังนั้นใช้การตรวจสอบแบบผ่อนผัน
         assert second_call_time <= first_call_time + 0.1
     
     def test_batch_processing_efficiency(self):
-        """Test batch processing is efficient"""
+        """ทดสอบประสิทธิภาพการประมวลผลแบบ batch"""
         analyzer = NutritionAnalyzer()
         
         ingredients_list = [
@@ -341,19 +341,19 @@ class TestPerformance:
         
         batch_time = time.time() - start_time
         
-        # Should process 10 ingredients in reasonable time
-        assert batch_time < 5.0  # Less than 5 seconds
+        # ควรประมวลผล 10 ส่วนผสมในเวลาที่สมเหตุสมผล
+        assert batch_time < 5.0  # น้อยกว่า 5 วินาที
         assert len(results) == len(ingredients_list)
         assert all(result is not None for result in results)
 
 class TestDataIntegrity:
-    """Test suite for data integrity and validation"""
+    """ชุดการทดสอบสำหรับความสมบูรณ์และการตรวจสอบข้อมูล"""
     
     def test_nutrition_data_consistency(self):
-        """Test nutrition data consistency"""
+        """ทดสอบความสอดคล้องของข้อมูลโภชนาการ"""
         analyzer = NutritionAnalyzer()
         
-        # Test common Thai ingredients
+        # ทดสอบส่วนผสมไทยทั่วไป
         test_ingredients = ["ไข่ไก่", "กุ้ง", "หมู", "ข้าว", "น้ำปลา"]
         
         for ingredient in test_ingredients:
@@ -365,19 +365,19 @@ class TestDataIntegrity:
             assert nutrition.carbs >= 0
             assert nutrition.fat >= 0
             
-            # Basic sanity checks
-            if ingredient in ["ไข่ไก่", "กุ้ง", "หมู"]:  # Protein sources
-                assert nutrition.protein > 5  # Should have significant protein
+            # การตรวจสอบสุขภาพพื้นฐาน
+            if ingredient in ["ไข่ไก่", "กุ้ง", "หมู"]:  # แหล่งโปรตีน
+                assert nutrition.protein > 5  # ควรมีโปรตีนอย่างมีนัยสำคัญ
             
-            if ingredient == "ข้าว":  # Carb source
-                assert nutrition.carbs > 10  # Should have significant carbs
+            if ingredient == "ข้าว":  # แหล่งคาร์โบไฮเดรต
+                assert nutrition.carbs > 10  # ควรมีคาร์โบไฮเดรตอย่างมีนัยสำคัญ
     
     def test_unit_conversion_accuracy(self):
-        """Test unit conversion accuracy"""
+        """ทดสอบความแม่นยำการแปลงหน่วย"""
         converter = IngredientConverter()
         
         test_cases = [
-            # (ingredient, expected_weight_range)
+            # (ส่วนผสม, ช่วงน้ำหนักที่คาดหวัง)
             ("ไข่ไก่ 1 ฟอง", (40, 60)),
             ("น้ำมันพืช 1 ช้อนโต๊ะ", (12, 16)),
             ("กุ้งนาง 1 ตัว", (15, 30)),
@@ -389,66 +389,66 @@ class TestDataIntegrity:
             weight = result['weight_grams']
             
             assert min_weight <= weight <= max_weight, \
-                f"{ingredient_text}: expected {min_weight}-{max_weight}g, got {weight}g"
+                f"{ingredient_text}: คาดหวัง {min_weight}-{max_weight}g, ได้ {weight}g"
 
 class TestErrorHandling:
-    """Test suite for error handling and edge cases"""
+    """ชุดการทดสอบสำหรับการจัดการข้อผิดพลาดและกรณีขอบเขต"""
     
     def test_invalid_ingredient_handling(self):
-        """Test handling of invalid ingredients"""
+        """ทดสอบการจัดการส่วนผสมที่ไม่ถูกต้อง"""
         analyzer = NutritionAnalyzer()
         
-        # Test empty ingredient
+        # ทดสอบส่วนผสมว่าง
         result = analyzer.get_ingredient_nutrition("")
-        assert result is not None  # Should return basic NutritionInfo
+        assert result is not None  # ควรคืนค่า NutritionInfo พื้นฐาน
         
-        # Test very long ingredient name
+        # ทดสอบชื่อส่วนผสมที่ยาวมาก
         long_name = "a" * 1000
         result = analyzer.get_ingredient_nutrition(long_name)
         assert result is not None
         
-        # Test ingredient with special characters
+        # ทดสอบส่วนผสมที่มีอักขระพิเศษ
         special_name = "ไข่@#$%^&*()"
         result = analyzer.get_ingredient_nutrition(special_name)
         assert result is not None
     
     def test_api_error_handling(self):
-        """Test API error handling"""
-        # Test with invalid API key
+        """ทดสอบการจัดการข้อผิดพลาด API"""
+        # ทดสอบด้วย API key ที่ไม่ถูกต้อง
         analyzer = NutritionAnalyzer(usda_api_key="invalid_key")
         
-        # Should not crash, should fallback to local data
+        # ไม่ควรล้มเหลว ควร fallback ไปข้อมูลท้องถิ่น
         result = analyzer.get_ingredient_nutrition("egg")
         assert result is not None
     
     def test_malformed_ingredient_text(self):
-        """Test handling of malformed ingredient text"""
+        """ทดสอบการจัดการข้อความส่วนผสมที่ผิดรูปแบบ"""
         analyzer = NutritionAnalyzer()
         
         malformed_inputs = [
-            "",  # Empty
-            "   ",  # Only spaces
-            "- ",  # Just dash
-            "- \n- \n",  # Empty list items
+            "",  # ว่าง
+            "   ",  # เฉพาะช่องว่าง
+            "- ",  # เฉพาะขีด
+            "- \n- \n",  # รายการว่าง
             "invalid format without dash",
             "- ingredient 1\ninvalid line\n- ingredient 2"
         ]
         
         for malformed_input in malformed_inputs:
-            # Should not crash
+            # ไม่ควรล้มเหลว
             try:
                 result = analyzer.analyze_ingredients(malformed_input)
                 assert isinstance(result, dict)
             except Exception as e:
-                pytest.fail(f"Failed to handle malformed input '{malformed_input}': {e}")
+                pytest.fail(f"ล้มเหลวในการจัดการ input ที่ผิดรูปแบบ '{malformed_input}': {e}")
 
 @pytest.mark.asyncio
 async def test_async_processing():
-    """Test asynchronous processing capabilities"""
+    """ทดสอบความสามารถการประมวลผลแบบ asynchronous"""
     
     async def mock_async_analysis(ingredient):
-        """Mock async nutrition analysis"""
-        await asyncio.sleep(0.1)  # Simulate API delay
+        """จำลองการวิเคราะห์โภชนาการแบบ async"""
+        await asyncio.sleep(0.1)  # จำลองความล่าช้า API
         analyzer = NutritionAnalyzer()
         return analyzer.get_ingredient_nutrition(ingredient)
     
@@ -456,33 +456,33 @@ async def test_async_processing():
     
     start_time = time.time()
     
-    # Process ingredients concurrently
+    # ประมวลผลส่วนผสมพร้อมกัน
     tasks = [mock_async_analysis(ingredient) for ingredient in ingredients]
     results = await asyncio.gather(*tasks)
     
     elapsed_time = time.time() - start_time
     
-    # Should complete faster than sequential processing
-    # (5 ingredients * 0.1s each = 0.5s sequential, should be ~0.1s concurrent)
-    assert elapsed_time < 0.3  # Allow some overhead
+    # ควรเสร็จเร็วกว่าการประมวลผลแบบต่อเนื่อง
+    # (5 ส่วนผสม * 0.1s แต่ละตัว = 0.5s แบบต่อเนื่อง, ควรเป็น ~0.1s แบบพร้อมกัน)
+    assert elapsed_time < 0.3  # อนุญาตให้มี overhead บางส่วน
     assert len(results) == len(ingredients)
     assert all(result is not None for result in results)
 
 def test_integration_comprehensive():
-    """Comprehensive integration test"""
+    """การทดสอบรวมแบบครอบคลุม"""
     print("\n" + "="*60)
-    print("🧪 Running Comprehensive Integration Test")
+    print("🧪 กำลังรันการทดสอบรวมแบบครอบคลุม")
     print("="*60)
     
     try:
-        # Test complete workflow
+        # ทดสอบเวิร์กโฟลว์ที่สมบูรณ์
         analyzer = NutritionAnalyzer()
         
-        # 1. Test ingredient conversion
+        # 1. ทดสอบการแปลงส่วนผสม
         converter = IngredientConverter()
         ingredient_result = converter.parse_and_convert_ingredient("ไข่ไก่ 2 ฟอง")
         
-        # 2. Test nutrition analysis
+        # 2. ทดสอบการวิเคราะห์โภชนาการ
         ingredients_text = """
         - ไข่ไก่ 2 ฟอง
         - น้ำมันพืช 1 ช้อนโต๊ะ
@@ -492,10 +492,10 @@ def test_integration_comprehensive():
         nutrition_data = analyzer.analyze_ingredients(ingredients_text, "ไข่เจียว", True)
         total_nutrition = analyzer.calculate_total_nutrition(nutrition_data)
         
-        # 3. Test recipe analysis
+        # 3. ทดสอบการวิเคราะห์สูตรอาหาร
         recipe_result = analyzer.analyze_recipe("ไข่เจียว", ingredients_text, True)
         
-        # Assertions
+        # การยืนยัน
         assert ingredient_result['weight_grams'] > 0
         assert len(nutrition_data) >= 2
         assert total_nutrition.calories > 0
@@ -503,25 +503,25 @@ def test_integration_comprehensive():
         assert 'total_nutrition' in recipe_result
         assert 'ingredients' in recipe_result
         
-        print("✅ All integration tests passed!")
+        print("✅ การทดสอบรวมทั้งหมดผ่าน!")
         return True
         
     except Exception as e:
-        print(f"❌ Integration test failed: {e}")
+        print(f"❌ การทดสอบรวมล้มเหลว: {e}")
         return False
 
 if __name__ == "__main__":
-    """Run all tests when script is executed directly"""
-    print("🍲 Enhanced Thai Food Recipe Chatbot - Test Suite")
+    """รันการทดสوบทั้งหมดเมื่อสคริปต์ถูกเรียกใช้โดยตรง"""
+    print("🍲 แชทบอทสูตรอาหารไทยขั้นสูง - ชุดการทดสอบ")
     print("="*60)
     
-    # Run comprehensive integration test first
+    # รันการทดสอบรวมแบบครอบคลุมก่อน
     integration_success = test_integration_comprehensive()
     
     if integration_success:
-        print("\n🚀 Running detailed test suite...")
+        print("\n🚀 กำลังรันชุดการทดสอบรายละเอียด...")
         
-        # Configure pytest to run with verbose output
+        # กำหนดค่า pytest ให้รันด้วยผลลัพธ์แบบละเอียด
         pytest_args = [
             __file__,
             "-v",
@@ -529,13 +529,13 @@ if __name__ == "__main__":
             "--color=yes"
         ]
         
-        # Run pytest
+        # รัน pytest
         exit_code = pytest.main(pytest_args)
         
         if exit_code == 0:
-            print("\n🎉 All tests passed successfully!")
+            print("\n🎉 การทดสอบทั้งหมดผ่านเรียบร้อย!")
         else:
-            print(f"\n⚠️  Some tests failed (exit code: {exit_code})")
+            print(f"\n⚠️  การทดสอบบางส่วนล้มเหลว (รหัสออก: {exit_code})")
     else:
-        print("\n❌ Integration test failed - skipping detailed tests")
+        print("\n❌ การทดสอบรวมล้มเหลว - ข้ามการทดสอบรายละเอียด")
         exit(1)
