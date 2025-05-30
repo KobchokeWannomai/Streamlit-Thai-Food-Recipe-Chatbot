@@ -17,7 +17,7 @@ class Config:
     ENHANCED_SIMILARITY_THRESHOLD = 0.25
     MAX_SEARCH_RESULTS = 5
     
-    # API Keys และการตั้งค่าภายนอก
+    # คีย์ API และการตั้งค่าภายนอก
     USDA_API_KEY: Optional[str] = os.getenv("USDA_API_KEY")
     NUTRITIONIX_API_KEY: Optional[str] = os.getenv("NUTRITIONIX_API_KEY")
     NUTRITIONIX_APP_ID: Optional[str] = os.getenv("NUTRITIONIX_APP_ID")
@@ -28,7 +28,7 @@ class Config:
     API_RATE_LIMIT_PER_MINUTE = 30
     
     # การตั้งค่า UI
-    PAGE_TITLE = "Thai Food Recipe Chatbot with Enhanced Nutrition"
+    PAGE_TITLE = "แชทบอทสูตรอาหารไทยพร้อมการวิเคราะห์โภชนาการขั้นสูง"
     PAGE_ICON = "🍲"
     
     # เกณฑ์โภชนาการเริ่มต้น
@@ -124,18 +124,18 @@ class Config:
             'using_local_data': 'ใช้ข้อมูลภายในระบบ',
         },
         'en': {
-            'welcome': 'Welcome to Enhanced Thai Food Recipe Chatbot with Advanced Nutrition Analysis',
-            'search_placeholder': 'Ask about Thai food or search by nutrition...',
-            'analyzing_nutrition': 'Analyzing nutrition data...',
-            'analyzing_enhanced': 'Performing advanced nutrition analysis...',
-            'connecting_api': 'Connecting to API...',
-            'no_results': 'No recipes found matching your search',
-            'nutrition_analysis_failed': 'Unable to analyze nutrition data',
-            'recipe_found': 'Found the recipe you\'re looking for with nutrition data',
-            'enhanced_analysis': 'Enhanced data with advanced calculations',
-            'api_connection_success': 'API connection successful',
-            'api_connection_failed': 'API connection failed',
-            'using_local_data': 'Using local database',
+            'welcome': 'ยินดีต้อนรับสู่แชทบอทสูตรอาหารไทยขั้นสูงพร้อมการวิเคราะห์โภชนาการขั้นสูง',
+            'search_placeholder': 'ถามเกี่ยวกับอาหารไทยหรือค้นหาตามโภชนาการ...',
+            'analyzing_nutrition': 'กำลังวิเคราะห์ข้อมูลโภชนาการ...',
+            'analyzing_enhanced': 'กำลังทำการวิเคราะห์โภชนาการขั้นสูง...',
+            'connecting_api': 'กำลังเชื่อมต่อกับ API...',
+            'no_results': 'ไม่พบสูตรอาหารที่ตรงกับการค้นหาของคุณ',
+            'nutrition_analysis_failed': 'ไม่สามารถวิเคราะห์ข้อมูลโภชนาการได้',
+            'recipe_found': 'พบสูตรอาหารที่คุณกำลังมองหาพร้อมข้อมูลโภชนาการ',
+            'enhanced_analysis': 'ข้อมูลขั้นสูงพร้อมการคำนวณขั้นสูง',
+            'api_connection_success': 'การเชื่อมต่อ API สำเร็จ',
+            'api_connection_failed': 'การเชื่อมต่อ API ล้มเหลว',
+            'using_local_data': 'ใช้ฐานข้อมูลภายใน',
         }
     }
     
@@ -193,7 +193,7 @@ class Config:
 class APIConfig:
     """การตั้งค่าเฉพาะสำหรับ API"""
     
-    # USDA API Configuration
+    # การกำหนดค่า USDA API
     USDA_BASE_URL = "https://api.nal.usda.gov/fdc/v1"
     USDA_SEARCH_PARAMS = {
         'pageSize': 5,
@@ -201,21 +201,21 @@ class APIConfig:
     }
     USDA_RATE_LIMIT = 30  # calls per minute
     
-    # Nutritionix API Configuration
+    # การกำหนดค่า Nutritionix API
     NUTRITIONIX_BASE_URL = "https://trackapi.nutritionix.com/v2"
-    NUTRITIONIX_DAILY_LIMIT = 200  # free plan
+    NUTRITIONIX_DAILY_LIMIT = 200  # แผนฟรี
     NUTRITIONIX_TIMEOUT = 10
     
-    # General API Settings
+    # การตั้งค่า API ทั่วไป
     API_TIMEOUT = 10
     API_RETRY_ATTEMPTS = 3
-    API_RETRY_DELAY = 1  # seconds
+    API_RETRY_DELAY = 1  # วินาที
     
-    # API Response Caching
+    # การแคช API Response
     CACHE_DURATION = {
-        'nutrition_data': 86400,  # 24 hours
-        'recipe_data': 3600,      # 1 hour
-        'search_results': 1800    # 30 minutes
+        'nutrition_data': 86400,  # 24 ชั่วโมง
+        'recipe_data': 3600,      # 1 ชั่วโมง
+        'search_results': 1800    # 30 นาที
     }
 
 class NutritionConfig:
@@ -291,7 +291,7 @@ class DatabaseConfig:
     RECIPE_ADJUSTMENTS_TABLE = 'recipe_adjustments'
     USER_PREFERENCES_TABLE = 'user_preferences'
     
-    # SQL Commands
+    # คำสั่ง SQL
     CREATE_TABLES_SQL = {
         'nutrition_cache': '''
             CREATE TABLE IF NOT EXISTS nutrition_cache (
@@ -415,13 +415,13 @@ class LoggingConfig:
 
 # ตัวอย่างการใช้งาน
 if __name__ == "__main__":
-    print("Enhanced Thai Food Chatbot Configuration")
+    print("การกำหนดค่าแชทบอทอาหารไทยขั้นสูง")
     print("=" * 50)
-    print(f"Data path: {Config.DATA_PATH}")
-    print(f"Model: {Config.SENTENCE_TRANSFORMER_MODEL}")
-    print(f"API Status: {Config.is_api_configured()}")
-    print(f"Nutrition sources: {Config.get_nutrition_source_priority()}")
-    print(f"Welcome message: {Config.get_message('welcome')}")
-    print(f"Enhanced search threshold: {Config.ENHANCED_SIMILARITY_THRESHOLD}")
-    print(f"Cooking adjustments available: {len(Config.COOKING_ADJUSTMENTS['oil_absorption_rates'])} types")
-    print(f"Search expansions: {len(Config.SEARCH_ENHANCEMENT['query_expansions'])} categories")
+    print(f"เส้นทางข้อมูล: {Config.DATA_PATH}")
+    print(f"โมเดล: {Config.SENTENCE_TRANSFORMER_MODEL}")
+    print(f"สถานะ API: {Config.is_api_configured()}")
+    print(f"แหล่งข้อมูลโภชนาการ: {Config.get_nutrition_source_priority()}")
+    print(f"ข้อความต้อนรับ: {Config.get_message('welcome')}")
+    print(f"เกณฑ์การค้นหาขั้นสูง: {Config.ENHANCED_SIMILARITY_THRESHOLD}")
+    print(f"การปรับแต่งการทำอาหารมีให้: {len(Config.COOKING_ADJUSTMENTS['oil_absorption_rates'])} ประเภท")
+    print(f"การขยายการค้นหา: {len(Config.SEARCH_ENHANCEMENT['query_expansions'])} หมวดหมู่")
