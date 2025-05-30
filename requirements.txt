@@ -1,161 +1,118 @@
-# Enhanced Thai Food Recipe Chatbot with Advanced Nutrition Analysis
-# Requirements file with API integration support
+# แชทบอทสูตรอาหารไทยพร้อมระบบวิเคราะห์โภชนาการขั้นสูง
+# ไฟล์ Dependencies ที่ปรับปรุงแล้วสำหรับการรองรับ API
 
-# Core dependencies
+# Dependencies หลัก
 streamlit
 pandas
 numpy
 
-# Machine Learning & NLP (Enhanced)
+# Machine Learning & NLP (ปรับปรุงแล้ว)
 sentence-transformers
 scikit-learn
 torch
 transformers
 
-# Data visualization (Enhanced)
+# การแสดงผลข้อมูล (ปรับปรุงแล้ว)
 plotly
 matplotlib
 seaborn
-altair  # Additional visualization library
+altair  # ไลบรารีสำหรับการแสดงผลเพิ่มเติม
 
-# HTTP requests and APIs (Enhanced for API integration)
+# HTTP requests และ APIs (ปรับปรุงสำหรับการรวม API)
 requests
 urllib3
-httpx  # Modern HTTP client with async support
+httpx  # HTTP client สมัยใหม่ที่รองรับ async
 aiohttp  # Async HTTP client
 
-# Database (Enhanced)
-# sqlite3 is built-in with Python, but adding related tools
-sqlalchemy  # Advanced database toolkit
-alembic     # Database migration tool
+# ฐานข้อมูล (ปรับปรุงแล้ว)
+# sqlite3 มีมาในตัวกับ Python แต่เพิ่มเครื่องมือที่เกี่ยวข้อง
+sqlalchemy  # ชุดเครื่องมือฐานข้อมูลขั้นสูง
+alembic     # เครื่องมือ Database migration
 
-# JSON and data processing (Enhanced)
+# JSON และการประมวลผลข้อมูล (ปรับปรุงแล้ว)
 jsonschema
-pydantic   # Data validation and settings management
-orjson      # Fast JSON library
+pydantic   # การตรวจสอบข้อมูลและการจัดการการตั้งค่า
+orjson      # ไลบรารี JSON ที่เร็ว
 
-# Logging and utilities (Enhanced)
+# Logging และ utilities (ปรับปรุงแล้ว)
 python-dateutil
 pytz
 loguru      # Advanced logging
-rich       # Rich text and beautiful formatting
+rich       # Rich text และการจัดรูปแบบที่สวยงาม
 
-# API Integration Dependencies
-# USDA FoodData Central API
-fdc-api     # USDA FoodData Central Python client (optional)
-
-# Nutritionix API (optional)
-# nutritionix  # Nutritionix Python client (uncomment if available)
-
-# Enhanced nutrition APIs (optional)
-# Uncomment if you plan to use these services
-# spoonacular  # Spoonacular API client
-# edamam       # Edamam API client
-
-# Async and Performance (New)
-asyncio-throttle  # Rate limiting for async operations
+# Async และ Performance (ใหม่)
+asyncio-throttle  # Rate limiting สำหรับ async operations
 tenacity          # Retry library
 backoff           # Exponential backoff
 
-# Caching (Enhanced)
-redis        # Redis client for advanced caching (optional)
+# Caching (ปรับปรุงแล้ว)
 diskcache    # Disk-based caching
 cachetools   # Memory caching utilities
 
-# Development and testing (Enhanced)
+# การพัฒนาและการทดสอบ (ปรับปรุงแล้ว)
 pytest
 pytest-cov
-pytest-asyncio  # Async testing support
+pytest-asyncio  # รองรับการทดสอบ Async
 black
 flake8
 mypy         # Type checking
-pre-commit  # Git hooks
 
-# Performance optimization (Enhanced)
-numba       # JIT compiler for numerical computations
-cython      # C extensions for Python
-psutil       # System and process utilities
+# การปรับปรุงประสิทธิภาพ (ปรับปรุงแล้ว)
+numba       # JIT compiler สำหรับการคำนวณเชิงตัวเลข
+psutil       # ระบบและ process utilities
 
-# Thai language processing (Enhanced)
-pythainlp    # Thai natural language processing
-attacut      # Thai word segmentation
-thai-segmenter  # Alternative Thai segmentation
+# การประมวลผลภาษาไทย (ปรับปรุงแล้ว)
+pythainlp    # การประมวลผลภาษาธรรมชาติไทย
+attacut      # การตัดคำไทย
+# thai-segmenter  # การตัดคำไทยทางเลือก (ปิดใช้งานเพื่อความเสถียร)
 
-# Additional utilities (New)
+# Utilities เพิ่มเติม (ใหม่)
 tqdm        # Progress bars
-python-dotenv  # Environment variable management
-click           # Command line interface creation
-tabulate        # Pretty-print tabular data
-colorama        # Cross-platform colored terminal text
+python-dotenv  # การจัดการ Environment variable
+click           # การสร้าง Command line interface
+tabulate        # การแสดงผลตารางที่สวยงาม
+colorama        # ข้อความสีใน terminal
 
-# Web scraping (for potential recipe data collection)
+# Web scraping (สำหรับการรวบรวมข้อมูลสูตรอาหารที่อาจเกิดขึ้น)
 beautifulsoup4
 lxml
-selenium     # Web browser automation (optional)
 
-# Image processing (for potential recipe image analysis)
+# การประมวลผลภาพ (สำหรับการวิเคราะห์ภาพสูตรอาหารที่อาจเกิดขึ้น)
 Pillow       # Python Imaging Library
-opencv-python  # Computer vision library (optional)
 
-# Data export and reporting (Enhanced)
-openpyxl     # Excel file handling
-xlsxwriter   # Excel file creation
-reportlab    # PDF generation
+# การส่งออกข้อมูลและการรายงาน (ปรับปรุงแล้ว)
+openpyxl     # การจัดการไฟล์ Excel
+xlsxwriter   # การสร้างไฟล์ Excel
 jinja2       # Template engine
 
-# Machine Learning enhancements (Optional)
-xgboost      # Gradient boosting framework
-lightgbm     # Gradient boosting framework
-catboost     # Gradient boosting framework
-
-# API documentation and testing
-swagger-ui   # API documentation
-httpie       # HTTP client for API testing
-
-# Deployment and production (Optional)
+# การปรับใช้งานและ production (ทางเลือก)
 gunicorn    # WSGI HTTP Server
-uvicorn     # ASGI server
-fastapi     # Modern web framework (for potential API)
 
-# Monitoring and observability (Optional)
-prometheus-client  # Metrics collection
-structlog          # Structured logging
+# Security (ปรับปรุงแล้ว)
+cryptography       # ไลบรารี Cryptographic
+pyjwt              # การใช้งาน JSON Web Token
+bcrypt             # การ hash รหัสผ่าน
 
-# Security (Enhanced)
-cryptography       # Cryptographic library
-pyjwt              # JSON Web Token implementation
-bcrypt             # Password hashing
+# การจัดการ Configuration (ปรับปรุงแล้ว)
+omegaconf          # การจัดการ Configuration
 
-# Configuration management (Enhanced)
-hydra-core         # Configuration management framework
-omegaconf          # Configuration management
-
-# Type hints and validation (Enhanced)
+# Type hints และ validation (ปรับปรุงแล้ว)
 typing-extensions  # Extended type hints
-pydantic-settings  # Settings management with Pydantic
+pydantic-settings  # การจัดการ Settings ด้วย Pydantic
 
-# Database migrations and management (Optional)
-yoyo-migrations    # Database migrations
-
-# Specialized nutrition libraries (Research/Optional)
-# nutrition        # Basic nutrition calculations
-# food-composition # Food composition databases
-# recipe-scrapers # Recipe scraping from websites
-
-# Note: Some packages marked as "optional" can be installed based on specific needs
-# To install all optional packages:
+# หมายเหตุ: บาง packages ที่ทำเครื่องหมายเป็น "ทางเลือก" สามารถติดตั้งตามความต้องการ
+# สำหรับการติดตั้งทั้งหมด:
 # pip install -r requirements.txt
-# pip install redis selenium opencv-python xgboost lightgbm catboost
 
-# For minimal installation (core features only):
-# Uncomment the following and comment out optional packages above
-# streamlit==1.28.0
-# pandas==1.5.0
-# numpy==1.21.0
-# sentence-transformers==2.2.0
-# scikit-learn==1.1.0
-# plotly==5.10.0
-# requests==2.28.0
-# python-dateutil==2.8.0
-# tqdm==4.64.0
-# python-dotenv==0.20.0
+# สำหรับการติดตั้งแบบขั้นต่ำ (คุณสมบัติหลักเท่านั้น):
+# ถ้าต้องการแบบขั้นต่ำ ให้ใช้เฉพาะ packages เหล่านี้:
+# streamlit==1.45.0
+# pandas==2.2.0
+# numpy==1.26.0
+# sentence-transformers==2.5.0
+# scikit-learn==1.4.0
+# plotly==5.18.0
+# requests==2.31.0
+# python-dateutil==2.9.0
+# tqdm==4.66.0
+# python-dotenv==1.0.0
