@@ -9,6 +9,7 @@ import re
 import requests
 import time
 import json
+from difflib import SequenceMatcher
 from nutrition_analyzer import NutritionAnalyzer
 from config import Config
 
@@ -19,129 +20,14 @@ st.set_page_config(
     layout="wide"
 )
 
-# JavaScript ปรับปรุงแล้วสำหรับ auto-scroll และปุ่มเลื่อน
-scroll_js = """
-<script>
-let isScrollingProgrammatically = false;
-
-function scrollToBottom() {
-    isScrollingProgrammatically = true;
-    window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: 'smooth'
-    });
-    setTimeout(() => {
-        isScrollingProgrammatically = false;
-    }, 1000);
-}
-
-function scrollToLatestMessage() {
-    isScrollingProgrammatically = true;
-    const messages = document.querySelectorAll('[data-testid="stChatMessage"]');
-    if (messages.length > 0) {
-        const lastMessage = messages[messages.length - 1];
-        lastMessage.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start',
-            inline: 'nearest'
-        });
-    } else {
-        // ถ้าไม่มี chat message ให้เลื่อนไปด้านล่าง
-        window.scrollTo({
-            top: document.body.scrollHeight,
-            behavior: 'smooth'
-        });
-    }
-    setTimeout(() => {
-        isScrollingProgrammatically = false;
-    }, 1000);
-}
-
-// Auto-scroll ที่ปรับปรุงแล้ว
-function setupAutoScroll() {
-    const observer = new MutationObserver(function(mutations) {
-        if (isScrollingProgrammatically) return;
-        
-        let shouldScroll = false;
-        mutations.forEach(function(mutation) {
-            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                // ตรวจสอบว่ามีการเพิ่ม chat message ใหม่หรือไม่
-                mutation.addedNodes.forEach(function(node) {
-                    if (node.nodeType === 1) { // Element node
-                        if (node.querySelector && node.querySelector('[data-testid="stChatMessage"]')) {
-                            shouldScroll = true;
-                        }
-                    }
-                });
-            }
-        });
-        
-        if (shouldScroll) {
-            setTimeout(() => {
-                if (!isScrollingProgrammatically) {
-                    scrollToLatestMessage();
-                }
-            }, 300);
-        }
-    });
-
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-}
-
-// เรียกใช้ setup เมื่อหน้าโหลดเสร็จ
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupAutoScroll);
-} else {
-    setupAutoScroll();
-}
-
-// เก็บตำแหน่งสำหรับ expander
-let scrollPosition = 0;
-function saveScrollPosition() {
-    scrollPosition = window.pageYOffset;
-}
-
-function restoreScrollPosition() {
-    if (!isScrollingProgrammatically) {
-        window.scrollTo(0, scrollPosition);
-    }
-}
-
-// เพิ่มการจัดการ scroll button
-function createScrollButton() {
-    // ลบปุ่มเก่าถ้ามี
-    const existingButton = document.getElementById('scroll-to-latest-btn');
-    if (existingButton) {
-        existingButton.remove();
-    }
-    
-    // สร้างปุ่มใหม่
-    const button = document.createElement('button');
-    button.id = 'scroll-to-latest-btn';
-    button.className = 'scroll-to-bottom';
-    button.innerHTML = '↓';
-    button.title = 'เลื่อนไปข้อความล่าสุด';
-    button.onclick = scrollToLatestMessage;
-    
-    document.body.appendChild(button);
-}
-
-// สร้างปุ่มเมื่อหน้าโหลดเสร็จ
-setTimeout(createScrollButton, 1000);
-</script>
-"""
-
 # ตั้งค่าฟอนต์ไทยและ CSS ปรับปรุงแล้ว
-st.markdown(f"""
+st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-    html, body, [class*="st-"] {{
+    html, body, [class*="st-"] {
         font-family: 'Sarabun', sans-serif !important;
-    }}
-    .nutrition-card {{
+    }
+    .nutrition-card {
         background-color: #f0f8ff;
         padding: 1rem;
         border-radius: 12px;
@@ -150,8 +36,8 @@ st.markdown(f"""
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         width: 100%;
         box-sizing: border-box;
-    }}
-    .nutrition-item {{
+    }
+    .nutrition-item {
         display: inline-block;
         margin: 5px 10px;
         padding: 8px 15px;
@@ -159,79 +45,81 @@ st.markdown(f"""
         border-radius: 20px;
         font-size: 0.9em;
         font-weight: 500;
-    }}
-    .vitamin-mineral {{
+    }
+    .vitamin-mineral {
         display: inline;
         color: #555;
         margin-top: 10px;
         line-height: 1.8;
-    }}
-    .vitamin-mineral-label {{
+    }
+    .vitamin-mineral-label {
         display: inline;
         font-weight: 600;
         margin-right: 10px;
-    }}
-    .recipe-card {{
+    }
+    .recipe-card {
         background-color: #f9f9f9;
         padding: 1rem;
         border-radius: 10px;
         margin: 10px 0;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }}
-    .recipe-title {{
+    }
+    .recipe-title {
         font-size: 1.8em;
         font-weight: 700;
         color: #2c3e50;
         margin-bottom: 15px;
-    }}
-    .section-title {{
+    }
+    .section-title {
         font-size: 1.2em;
         font-weight: 600;
         color: #34495e;
         margin: 15px 0 10px 0;
         padding-bottom: 5px;
         border-bottom: 2px solid #e0e0e0;
-    }}
-    .status-indicator {{
+    }
+    .status-indicator {
         display: inline-block;
         width: 12px;
         height: 12px;
         border-radius: 50%;
         margin-right: 8px;
-    }}
-    .status-connected {{
+    }
+    .status-connected {
         background-color: #4CAF50;
-    }}
-    .status-disconnected {{
+    }
+    .status-disconnected {
         background-color: #f44336;
-    }}
-    .status-testing {{
+    }
+    .status-testing {
         background-color: #ff9800;
-    }}
-    .scroll-to-bottom {{
+    }
+    .scroll-to-bottom-btn {
         position: fixed !important;
-        bottom: 100px !important;
-        right: 20px !important;
-        z-index: 9999 !important;
+        bottom: 120px !important;
+        right: 30px !important;
+        z-index: 99999 !important;
         background-color: #4CAF50 !important;
         color: white !important;
         border: none !important;
         border-radius: 50% !important;
-        width: 50px !important;
-        height: 50px !important;
+        width: 56px !important;
+        height: 56px !important;
         cursor: pointer !important;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
-        font-size: 20px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+        font-size: 24px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         transition: all 0.3s ease !important;
-    }}
-    .scroll-to-bottom:hover {{
+        user-select: none !important;
+    }
+    .scroll-to-bottom-btn:hover {
         background-color: #45a049 !important;
         transform: scale(1.1) !important;
-    }}
-    .similarity-score {{
+        box-shadow: 0 6px 16px rgba(0,0,0,0.4) !important;
+    }
+    .similarity-score {
         background-color: #e3f2fd;
         color: #1976d2;
         padding: 4px 12px;
@@ -239,28 +127,98 @@ st.markdown(f"""
         font-size: 0.85em;
         font-weight: 600;
         margin-left: 10px;
-    }}
+    }
+    .fuzzy-match-score {
+        background-color: #fff3e0;
+        color: #ef6c00;
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 0.85em;
+        font-weight: 600;
+        margin-left: 10px;
+    }
     /* ปรับปรุงการแสดงผลรายการ */
-    ul, ol {{
+    ul, ol {
         margin-left: 20px;
         line-height: 1.8;
-    }}
+    }
     /* ปรับปรุงการแสดงผล metric */
-    [data-testid="metric-container"] {{
+    [data-testid="metric-container"] {
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
         padding: 15px;
         border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }}
+    }
 </style>
-{scroll_js}
 """, unsafe_allow_html=True)
 
 # เส้นทางของไฟล์
 DATA_PATH = "thai_food_processed.csv"
 EMBEDDINGS_PATH = "embeddings.pkl"
 MODEL_PATH = "model"
+
+class FuzzyMatcher:
+    """คลาสสำหรับจับคู่ข้อความที่คล้ายคลึงกัน"""
+    
+    @staticmethod
+    def calculate_similarity(s1, s2):
+        """คำนวณความคล้ายคลึงระหว่างสองสตริง"""
+        return SequenceMatcher(None, s1.lower(), s2.lower()).ratio()
+    
+    @staticmethod
+    def fix_common_typos(text):
+        """แก้ไขการพิมพ์ผิดที่พบบ่อย"""
+        typo_fixes = {
+            'กระเพรา': 'กะเพรา',
+            'ผัดกระเพรา': 'ผัดกะเพรา',
+            'ต้มยำ': 'ต้มยำ',
+            'ต้มยํา': 'ต้มยำ',
+            'มัสมั่น': 'มัสมั่น',
+            'มัสมัน': 'มัสมั่น',
+            'เขียวหวาน': 'เขียวหวาน',
+            'แกงเผ็ด': 'แกงเผ็ด',
+            'แกงเปรียว': 'แกงเผ็ด',
+            'ส้มตำ': 'ส้มตำ',
+            'ส้มตํา': 'ส้มตำ',
+            'ยำวุ้นเส้น': 'ยำวุ้นเส้น',
+            'ยำวุนเส้น': 'ยำวุ้นเส้น',
+            'ผัดไทย': 'ผัดไทย',
+            'ผัดไท': 'ผัดไทย',
+            'ไข่เจียว': 'ไข่เจียว',
+            'ไข่เยียว': 'ไข่เจียว',
+            'ไข่ดาว': 'ไข่ดาว',
+            'ลาบหมู': 'ลาบหมู',
+            'ลาป': 'ลาบ',
+        }
+        
+        fixed_text = text
+        for typo, correct in typo_fixes.items():
+            fixed_text = fixed_text.replace(typo, correct)
+        
+        return fixed_text
+    
+    @staticmethod
+    def find_best_match(query, candidates, threshold=0.6):
+        """หาผลลัพธ์ที่ตรงกันมากที่สุด"""
+        query = FuzzyMatcher.fix_common_typos(query.lower())
+        best_matches = []
+        
+        for i, candidate in enumerate(candidates):
+            candidate_clean = candidate.lower()
+            similarity = FuzzyMatcher.calculate_similarity(query, candidate_clean)
+            
+            if similarity >= threshold:
+                best_matches.append({
+                    'index': i,
+                    'text': candidate,
+                    'similarity': similarity,
+                    'match_type': 'fuzzy'
+                })
+        
+        # เรียงลำดับตามความคล้ายคลึง
+        best_matches.sort(key=lambda x: x['similarity'], reverse=True)
+        return best_matches
 
 class APIManager:
     """จัดการการเชื่อมต่อ API ต่างๆ"""
@@ -849,7 +807,7 @@ def display_nutrition_info(nutrition_data):
             st.divider()
 
 def search_recipes_enhanced(query, model, data, embeddings, nutrition_analyzer, settings, top_k=5):
-    """ฟังก์ชันค้นหาสูตรอาหารที่ปรับปรุงแล้วให้แม่นยำขึ้น"""
+    """ฟังก์ชันค้นหาสูตรอาหารที่ปรับปรุงแล้วด้วย fuzzy matching"""
     query_lower = query.lower().strip()
     
     # ขยายคำค้นหาด้วยคำที่เกี่ยวข้อง
@@ -872,7 +830,14 @@ def search_recipes_enhanced(query, model, data, embeddings, nutrition_analyzer, 
         if key in query_lower:
             expanded_terms.extend(expansions)
     
-    # ค้นหาแบบตรงตัวก่อน (exact match) - เน้นความแม่นยำ
+    # สร้างรายการชื่อเมนูสำหรับ fuzzy matching
+    recipe_names = data['name'].tolist()
+    
+    # หา fuzzy matches ก่อน
+    fuzzy_matcher = FuzzyMatcher()
+    fuzzy_matches = fuzzy_matcher.find_best_match(query, recipe_names, threshold=0.6)
+    
+    # ค้นหาแบบตรงตัว (exact match)
     exact_matches = []
     
     for idx, row in data.iterrows():
@@ -880,33 +845,55 @@ def search_recipes_enhanced(query, model, data, embeddings, nutrition_analyzer, 
         ingredients = row['ingredient'].lower()
         method = row['method'].lower()
         
-        # ให้คะแนนสูงสุดสำหรับการตรงกันของชื่อเมนูทุกคำ
+        # ตรวจสอบการตรงกันแบบต่างๆ
         if query_lower == recipe_name:
             exact_matches.append({'index': idx, 'score': 1.0, 'match_type': 'exact_name'})
-        # การตรงกันบางส่วนของชื่อเมนู
         elif query_lower in recipe_name or any(term in recipe_name for term in query_lower.split()):
-            # คำนวณคะแนนตามจำนวนคำที่ตรงกัน
             query_words = query_lower.split()
             matching_words = sum(1 for word in query_words if word in recipe_name)
             score = 0.9 * (matching_words / len(query_words))
             exact_matches.append({'index': idx, 'score': score, 'match_type': 'partial_name'})
-        # การตรงกันในส่วนผสม (ลดคะแนนลง)
         elif any(term in ingredients for term in expanded_terms):
             ingredient_words = ingredients.split()
             matching_ingredients = sum(1 for term in expanded_terms if term in ingredients)
             score = 0.7 * (matching_ingredients / len(expanded_terms))
             exact_matches.append({'index': idx, 'score': score, 'match_type': 'ingredient'})
     
-    # ค้นหาแบบ semantic search เพื่อเติมเต็ม
+    # ค้นหาแบบ semantic search
     search_text = ' '.join(expanded_terms)
     query_embedding = model.encode([search_text])
     similarities = cosine_similarity(query_embedding, embeddings)[0]
     
-    # รวมผลลัพธ์โดยให้ exact match มีความสำคัญสูงกว่า
+    # รวมผลลัพธ์
     results = []
     used_indices = set()
     
-    # เพิ่ม exact matches ก่อน (เรียงตามคะแนน)
+    # เพิ่ม fuzzy matches ก่อน (มีคะแนนความคล้ายคลึงสูง)
+    for match in fuzzy_matches[:2]:  # เอาแค่ 2 ผลลัพธ์ที่ดีที่สุด
+        if len(results) >= top_k:
+            break
+            
+        idx = match['index']
+        if idx not in used_indices:
+            recipe_name = data.iloc[idx]['name']
+            ingredients = data.iloc[idx]['ingredient']
+            
+            nutrition_data = nutrition_analyzer.analyze_recipe_enhanced(
+                recipe_name, ingredients,
+                use_external_data=settings.get('use_external_recipe_data', False)
+            ) if hasattr(nutrition_analyzer, 'analyze_recipe_enhanced') else nutrition_analyzer.analyze_recipe(recipe_name, ingredients)
+            
+            results.append({
+                'name': recipe_name,
+                'similarity': match['similarity'],
+                'match_type': 'fuzzy',
+                'ingredients': ingredients,
+                'method': data.iloc[idx]['method'],
+                'nutrition': nutrition_data
+            })
+            used_indices.add(idx)
+    
+    # เพิ่ม exact matches
     for match in sorted(exact_matches, key=lambda x: x['score'], reverse=True):
         if len(results) >= top_k:
             break
@@ -916,7 +903,6 @@ def search_recipes_enhanced(query, model, data, embeddings, nutrition_analyzer, 
             recipe_name = data.iloc[idx]['name']
             ingredients = data.iloc[idx]['ingredient']
             
-            # วิเคราะห์โภชนาการ
             nutrition_data = nutrition_analyzer.analyze_recipe_enhanced(
                 recipe_name, ingredients,
                 use_external_data=settings.get('use_external_recipe_data', False)
@@ -934,7 +920,6 @@ def search_recipes_enhanced(query, model, data, embeddings, nutrition_analyzer, 
     
     # เพิ่มผลลัพธ์จาก semantic search ถ้าต้องการเพิ่มเติม
     if len(results) < top_k:
-        # ใช้ threshold ที่สูงขึ้นเพื่อความแม่นยำ
         threshold = 0.4
         top_indices = np.argsort(-similarities)
         
@@ -1058,6 +1043,129 @@ def extract_nutrition_criteria_from_text(query):
     
     return criteria
 
+def create_scroll_button():
+    """สร้างปุ่มเลื่อนไปข้อความล่าสุด"""
+    scroll_button_html = """
+    <div id="scroll-to-bottom-container"></div>
+    <script>
+    // สร้างปุ่มเลื่อน
+    function createScrollButton() {
+        // ลบปุ่มเก่าถ้ามี
+        const existingBtn = document.getElementById('scroll-btn');
+        if (existingBtn) {
+            existingBtn.remove();
+        }
+        
+        // สร้างปุ่มใหม่
+        const scrollBtn = document.createElement('button');
+        scrollBtn.id = 'scroll-btn';
+        scrollBtn.className = 'scroll-to-bottom-btn';
+        scrollBtn.innerHTML = '↓';
+        scrollBtn.title = 'เลื่อนไปข้อความล่าสุด';
+        
+        // เพิ่ม event listener
+        scrollBtn.addEventListener('click', function() {
+            scrollToLatestMessage();
+        });
+        
+        // เพิ่มปุ่มเข้าไปใน DOM
+        document.body.appendChild(scrollBtn);
+        
+        console.log('✅ สร้างปุ่มเลื่อนสำเร็จ');
+    }
+    
+    // ฟังก์ชันเลื่อนไปข้อความล่าสุด
+    function scrollToLatestMessage() {
+        try {
+            // หาข้อความล่าสุด
+            const messages = document.querySelectorAll('[data-testid="stChatMessage"]');
+            
+            if (messages.length > 0) {
+                const lastMessage = messages[messages.length - 1];
+                lastMessage.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start',
+                    inline: 'nearest'
+                });
+                console.log('📜 เลื่อนไปข้อความล่าสุดแล้ว');
+            } else {
+                // ถ้าไม่มี chat message ให้เลื่อนไปด้านล่าง
+                window.scrollTo({
+                    top: document.body.scrollHeight,
+                    behavior: 'smooth'
+                });
+                console.log('📜 เลื่อนไปด้านล่างแล้ว');
+            }
+        } catch (error) {
+            console.error('❌ เกิดข้อผิดพลาดในการเลื่อน:', error);
+        }
+    }
+    
+    // Auto-scroll เมื่อมีข้อความใหม่
+    function setupAutoScroll() {
+        let isScrolling = false;
+        
+        const observer = new MutationObserver(function(mutations) {
+            if (isScrolling) return;
+            
+            let hasNewMessage = false;
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList') {
+                    mutation.addedNodes.forEach(function(node) {
+                        if (node.nodeType === 1 && node.querySelector && 
+                            node.querySelector('[data-testid="stChatMessage"]')) {
+                            hasNewMessage = true;
+                        }
+                    });
+                }
+            });
+            
+            if (hasNewMessage) {
+                isScrolling = true;
+                setTimeout(() => {
+                    scrollToLatestMessage();
+                    setTimeout(() => {
+                        isScrolling = false;
+                    }, 1000);
+                }, 300);
+            }
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        console.log('🎯 ตั้งค่า auto-scroll แล้ว');
+    }
+    
+    // เรียกใช้งานฟังก์ชัน
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(() => {
+            createScrollButton();
+            setupAutoScroll();
+        }, 1000);
+    });
+    
+    // สำหรับกรณีที่ DOM โหลดเสร็จแล้ว
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(() => {
+            createScrollButton();
+            setupAutoScroll();
+        }, 1000);
+    }
+    
+    // สร้างปุ่มซ้ำทุก 3 วินาที เพื่อให้แน่ใจว่าปุ่มจะอยู่เสมอ
+    setInterval(function() {
+        if (!document.getElementById('scroll-btn')) {
+            createScrollButton();
+        }
+    }, 3000);
+    </script>
+    """
+    
+    st.components.v1.html(scroll_button_html, height=0)
+
 def main():
     # สร้างแถบการตั้งค่า
     settings = create_settings_sidebar()
@@ -1079,6 +1187,9 @@ def main():
     # แอปหลัก
     st.title("🍲 แชทบอทสูตรอาหารไทย")
     st.markdown("**ค้นหาสูตรอาหารไทยพร้อมข้อมูลโภชนาการขั้นสูง** - ถามเกี่ยวกับวิธีทำอาหารไทยหรือค้นหาตามโภชนาการได้เลย!")
+    
+    # สร้างปุ่มเลื่อน
+    create_scroll_button()
     
     # ตัวอย่างการค้นหา
     example_queries = [
@@ -1111,7 +1222,10 @@ def main():
                 
                 title_html = f'<div class="recipe-title">{recipe["name"]}'
                 if similarity_score > 0:
-                    title_html += f'<span class="similarity-score">ความเกี่ยวข้อง: {similarity_score:.2f}</span>'
+                    if match_type == 'fuzzy':
+                        title_html += f'<span class="fuzzy-match-score">ความคล้ายคลึง: {similarity_score:.2f}</span>'
+                    else:
+                        title_html += f'<span class="similarity-score">ความเกี่ยวข้อง: {similarity_score:.2f}</span>'
                 title_html += '</div>'
                 
                 st.markdown(title_html, unsafe_allow_html=True)
@@ -1225,16 +1339,24 @@ def main():
                         best_match = results[0]
                         
                         # ตรวจสอบคุณภาพของผลลัพธ์
-                        if best_match["similarity"] > 0.3:
+                        threshold = 0.3 if best_match.get('match_type') == 'fuzzy' else 0.4
+                        if best_match["similarity"] > threshold:
                             similarity_score = best_match["similarity"]
                             match_type = best_match.get("match_type", "semantic")
                             
-                            response = f"พบสูตรอาหารที่คุณค้นหา: **{best_match['name']}**"
+                            if match_type == 'fuzzy':
+                                response = f"พบสูตรอาหารที่คล้ายกับที่คุณค้นหา: **{best_match['name']}**"
+                            else:
+                                response = f"พบสูตรอาหารที่คุณค้นหา: **{best_match['name']}**"
+                            
                             st.markdown(response)
                             
                             # แสดงชื่อเมนูพร้อมค่าความเกี่ยวข้อง
                             title_html = f'<div class="recipe-title">{best_match["name"]}'
-                            title_html += f'<span class="similarity-score">ความเกี่ยวข้อง: {similarity_score:.2f}</span>'
+                            if match_type == 'fuzzy':
+                                title_html += f'<span class="fuzzy-match-score">ความคล้ายคลึง: {similarity_score:.2f}</span>'
+                            else:
+                                title_html += f'<span class="similarity-score">ความเกี่ยวข้อง: {similarity_score:.2f}</span>'
                             title_html += '</div>'
                             
                             st.markdown(title_html, unsafe_allow_html=True)
@@ -1252,7 +1374,11 @@ def main():
                                 st.markdown("### 🍽️ เมนูที่เกี่ยวข้อง")
                                 for i, related in enumerate(results[1:4], 1):
                                     similarity = related['similarity']
-                                    st.markdown(f"{i}. **{related['name']}** (ความเกี่ยวข้อง: {similarity:.2f})")
+                                    match_type_related = related.get('match_type', 'semantic')
+                                    if match_type_related == 'fuzzy':
+                                        st.markdown(f"{i}. **{related['name']}** (ความคล้ายคลึง: {similarity:.2f})")
+                                    else:
+                                        st.markdown(f"{i}. **{related['name']}** (ความเกี่ยวข้อง: {similarity:.2f})")
                             
                             st.session_state.messages.append({
                                 "role": "assistant", 
@@ -1274,15 +1400,6 @@ def main():
                         response = "ขออภัย ฉันไม่สามารถค้นหาสูตรอาหารได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง"
                         st.markdown(response)
                         st.session_state.messages.append({"role": "assistant", "content": response})
-                
-                # ทริกเกอร์ auto-scroll
-                st.markdown("""
-                <script>
-                setTimeout(function() {
-                    scrollToLatestMessage();
-                }, 800);
-                </script>
-                """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
