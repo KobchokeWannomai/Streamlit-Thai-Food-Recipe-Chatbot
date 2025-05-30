@@ -1,0 +1,305 @@
+# Enhanced Thai Food Recipe Chatbot - Environment Variables Configuration
+# Copy this file to .env and fill in your actual values
+
+# =============================================================================
+# API CONFIGURATION (External Nutrition Data Sources)
+# =============================================================================
+
+# USDA FoodData Central API (FREE - Highly Recommended!)
+# Sign up at: https://fdc.nal.usda.gov/api-guide.html
+# Benefits: Free unlimited usage, government-backed nutrition data
+USDA_API_KEY=your_usda_api_key_here
+
+# Nutritionix API (Optional - 200 requests/day free)
+# Sign up at: https://www.nutritionix.com/business/api
+# Benefits: Natural language food queries, branded foods database
+NUTRITIONIX_API_KEY=your_nutritionix_api_key_here
+NUTRITIONIX_APP_ID=your_nutritionix_app_id_here
+
+# Spoonacular API (Optional - Premium features)
+# Sign up at: https://spoonacular.com/food-api
+# Benefits: Recipe analysis, meal planning, grocery lists
+SPOONACULAR_API_KEY=your_spoonacular_api_key_here
+
+# Edamam Nutrition Analysis API (Optional)
+# Sign up at: https://developer.edamam.com/
+# Benefits: Recipe analysis, nutrition data
+EDAMAM_APP_ID=your_edamam_app_id_here
+EDAMAM_APP_KEY=your_edamam_app_key_here
+
+# =============================================================================
+# FEATURE TOGGLES (Enable/Disable Advanced Features)
+# =============================================================================
+
+# Enhanced Search Capabilities
+ENABLE_ENHANCED_SEARCH=true
+ENABLE_QUERY_EXPANSION=true
+ENABLE_SEMANTIC_SEARCH=true
+
+# Nutrition Analysis Enhancements
+ENABLE_API_INTEGRATION=true
+ENABLE_COOKING_ADJUSTMENTS=true
+ENABLE_MISSING_INGREDIENT_DETECTION=true
+ENABLE_NUTRIENT_RETENTION_CALCULATION=true
+
+# User Experience Enhancements
+ENABLE_AUTO_SCROLL=true
+ENABLE_SMOOTH_ANIMATIONS=true
+ENABLE_PROGRESS_INDICATORS=true
+ENABLE_REAL_TIME_STATUS=true
+
+# Advanced Analytics
+ENABLE_USAGE_ANALYTICS=false
+ENABLE_PERFORMANCE_MONITORING=false
+ENABLE_ERROR_TRACKING=false
+
+# =============================================================================
+# PERFORMANCE SETTINGS
+# =============================================================================
+
+# API Configuration
+API_TIMEOUT=10
+API_RETRY_ATTEMPTS=3
+API_RETRY_DELAY=1
+API_RATE_LIMIT_PER_MINUTE=30
+
+# Caching Settings
+CACHE_DURATION_HOURS=24
+NUTRITION_CACHE_EXPIRE_DAYS=30
+ENABLE_DISK_CACHE=true
+ENABLE_MEMORY_CACHE=true
+MAX_CACHE_SIZE_MB=100
+
+# Search and Processing
+MAX_SEARCH_RESULTS=10
+BATCH_SIZE=5
+SIMILARITY_THRESHOLD=0.3
+ENHANCED_SIMILARITY_THRESHOLD=0.25
+
+# Database Settings
+DATABASE_POOL_SIZE=5
+DATABASE_TIMEOUT=30
+AUTO_VACUUM_DATABASE=true
+
+# =============================================================================
+# UI/UX CONFIGURATION
+# =============================================================================
+
+# App Appearance
+APP_THEME=light
+ENABLE_DARK_MODE=false
+PRIMARY_COLOR=#4CAF50
+SECONDARY_COLOR=#2196F3
+
+# Display Settings
+DEFAULT_LANGUAGE=th
+SHOW_DETAILED_NUTRITION=true
+SHOW_COOKING_ADJUSTMENTS=true
+SHOW_API_STATUS=true
+MAX_RECIPES_PER_SEARCH=10
+
+# Animation and Interaction
+AUTO_SCROLL_DELAY=500
+ANIMATION_DURATION=300
+ENABLE_CLICK_ANIMATIONS=true
+ENABLE_HOVER_EFFECTS=true
+
+# =============================================================================
+# LOGGING AND DEBUGGING
+# =============================================================================
+
+# Logging Configuration
+LOG_LEVEL=INFO
+ENABLE_DETAILED_LOGGING=false
+ENABLE_API_LOGGING=true
+ENABLE_PERFORMANCE_LOGGING=false
+ENABLE_ERROR_LOGGING=true
+
+# Log File Settings
+LOG_TO_FILE=true
+LOG_FILE_MAX_SIZE_MB=10
+LOG_FILE_BACKUP_COUNT=5
+LOG_ROTATION_WHEN=midnight
+
+# Debug Settings
+DEBUG_MODE=false
+ENABLE_PROFILING=false
+SHOW_DEBUG_INFO=false
+ENABLE_MOCK_APIs=false
+
+# =============================================================================
+# SECURITY SETTINGS
+# =============================================================================
+
+# API Security
+ENABLE_API_KEY_VALIDATION=true
+HIDE_API_KEYS_IN_LOGS=true
+ENABLE_REQUEST_SIGNING=false
+
+# Data Security
+ENCRYPT_CACHED_DATA=false
+ENABLE_DATA_ANONYMIZATION=false
+SECURE_COOKIE_MODE=false
+
+# Rate Limiting
+ENABLE_RATE_LIMITING=true
+MAX_REQUESTS_PER_HOUR=1000
+MAX_REQUESTS_PER_DAY=10000
+
+# =============================================================================
+# EXTERNAL SERVICES CONFIGURATION
+# =============================================================================
+
+# Redis Cache (Optional - for advanced caching)
+REDIS_URL=redis://localhost:6379/0
+REDIS_PASSWORD=your_redis_password_here
+ENABLE_REDIS_CACHE=false
+
+# Database URL (Optional - for external database)
+DATABASE_URL=sqlite:///nutrition_cache.db
+# For PostgreSQL: postgresql://user:password@localhost/dbname
+# For MySQL: mysql://user:password@localhost/dbname
+
+# Email Notifications (Optional)
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_app_password_here
+ENABLE_EMAIL_NOTIFICATIONS=false
+
+# Cloud Storage (Optional)
+AWS_ACCESS_KEY_ID=your_aws_access_key_here
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key_here
+AWS_S3_BUCKET=your_s3_bucket_name
+ENABLE_CLOUD_STORAGE=false
+
+# =============================================================================
+# ANALYTICS AND MONITORING (Optional)
+# =============================================================================
+
+# Google Analytics
+GA_TRACKING_ID=your_ga_tracking_id_here
+ENABLE_GA_TRACKING=false
+
+# Application Monitoring
+SENTRY_DSN=your_sentry_dsn_here
+ENABLE_SENTRY=false
+
+# Performance Monitoring
+NEW_RELIC_LICENSE_KEY=your_newrelic_key_here
+ENABLE_NEW_RELIC=false
+
+# Custom Analytics
+ENABLE_CUSTOM_ANALYTICS=false
+ANALYTICS_ENDPOINT=https://your-analytics-endpoint.com/api
+ANALYTICS_API_KEY=your_analytics_api_key_here
+
+# =============================================================================
+# DEVELOPMENT SETTINGS
+# =============================================================================
+
+# Development Mode
+DEVELOPMENT_MODE=false
+ENABLE_AUTO_RELOAD=false
+ENABLE_DEBUG_TOOLBAR=false
+
+# Testing Configuration
+ENABLE_TEST_DATA=false
+MOCK_API_RESPONSES=false
+TEST_DATABASE_URL=sqlite:///test_nutrition.db
+
+# Feature Flags for A/B Testing
+FEATURE_FLAG_NEW_UI=false
+FEATURE_FLAG_EXPERIMENTAL_SEARCH=false
+FEATURE_FLAG_BETA_FEATURES=false
+
+# =============================================================================
+# LOCALIZATION AND INTERNATIONALIZATION
+# =============================================================================
+
+# Language Settings
+DEFAULT_LOCALE=th_TH
+SUPPORTED_LANGUAGES=th,en
+ENABLE_RTL_SUPPORT=false
+
+# Currency and Number Formats
+DEFAULT_CURRENCY=THB
+NUMBER_FORMAT=thai
+DATE_FORMAT=%d/%m/%Y
+TIME_FORMAT=%H:%M
+
+# =============================================================================
+# BACKUP AND RECOVERY
+# =============================================================================
+
+# Backup Configuration
+ENABLE_AUTO_BACKUP=false
+BACKUP_FREQUENCY=daily
+BACKUP_RETENTION_DAYS=30
+BACKUP_LOCATION=./backups
+
+# Recovery Settings
+ENABLE_AUTO_RECOVERY=false
+RECOVERY_POINT_INTERVAL=1h
+
+# =============================================================================
+# CUSTOMIZATION SETTINGS
+# =============================================================================
+
+# Recipe Database
+CUSTOM_RECIPE_FILE=custom_recipes.csv
+ENABLE_USER_RECIPES=false
+ALLOW_RECIPE_UPLOAD=false
+
+# Nutrition Database
+CUSTOM_NUTRITION_FILE=custom_nutrition.json
+ENABLE_CUSTOM_INGREDIENTS=false
+ALLOW_NUTRITION_OVERRIDE=false
+
+# Search Customization
+CUSTOM_SEARCH_TERMS=custom_search_terms.json
+ENABLE_SEARCH_SUGGESTIONS=true
+SEARCH_AUTOCOMPLETE=true
+
+# =============================================================================
+# INTEGRATION SETTINGS
+# =============================================================================
+
+# Webhook Configuration
+WEBHOOK_URL=https://your-webhook-endpoint.com/webhook
+WEBHOOK_SECRET=your_webhook_secret_here
+ENABLE_WEBHOOKS=false
+
+# Third-party Integrations
+SLACK_BOT_TOKEN=your_slack_bot_token_here
+DISCORD_BOT_TOKEN=your_discord_bot_token_here
+ENABLE_CHAT_INTEGRATIONS=false
+
+# Social Media Integration
+FACEBOOK_APP_ID=your_facebook_app_id_here
+TWITTER_API_KEY=your_twitter_api_key_here
+ENABLE_SOCIAL_SHARING=false
+
+# =============================================================================
+# NOTES AND INSTRUCTIONS
+# =============================================================================
+
+# How to use this file:
+# 1. Copy this file to .env (cp .env.example .env)
+# 2. Replace 'your_*_here' values with your actual API keys and settings
+# 3. Set feature toggles to true/false based on your needs
+# 4. Adjust performance settings based on your server capabilities
+# 5. For production, make sure to secure your .env file
+
+# Priority settings for getting started:
+# 1. USDA_API_KEY - Free and provides comprehensive nutrition data
+# 2. ENABLE_ENHANCED_SEARCH=true - Better search results
+# 3. ENABLE_COOKING_ADJUSTMENTS=true - More accurate nutrition calculations
+# 4. ENABLE_AUTO_SCROLL=true - Better user experience
+
+# Security reminders:
+# - Never commit your .env file to version control
+# - Use strong, unique API keys
+# - Regularly rotate API keys
+# - Monitor API usage to detect unauthorized access
+# - Use environment-specific configurations for development/production

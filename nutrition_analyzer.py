@@ -75,6 +75,15 @@ class NutritionDatabase:
             )
         ''')
         
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS recipe_adjustments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recipe_name TEXT UNIQUE NOT NULL,
+                adjustments_data TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
         conn.commit()
         conn.close()
     
@@ -113,6 +122,38 @@ class NutritionDatabase:
         
         conn.commit()
         conn.close()
+    
+    def get_recipe_adjustments(self, recipe_name: str) -> Optional[dict]:
+        """ดึงการปรับแต่งสำหรับสูตรอาหาร"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute(
+            "SELECT adjustments_data FROM recipe_adjustments WHERE recipe_name = ?",
+            (recipe_name.lower(),)
+        )
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result:
+            try:
+                return json.loads(result[0])
+            except json.JSONDecodeError:
+                return None
+        return None
+    
+    def cache_recipe_adjustments(self, recipe_name: str, adjustments: dict):
+        """บันทึกการปรับแต่งสำหรับสูตรอาหาร"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT OR REPLACE INTO recipe_adjustments (recipe_name, adjustments_data)
+            VALUES (?, ?)
+        ''', (recipe_name.lower(), json.dumps(adjustments, ensure_ascii=False)))
+        
+        conn.commit()
+        conn.close()
 
 class USDANutritionAPI:
     """คลาสสำหรับดึงข้อมูลจาก USDA FoodData Central API"""
@@ -121,9 +162,27 @@ class USDANutritionAPI:
         self.api_key = api_key
         self.base_url = "https://api.nal.usda.gov/fdc/v1"
         self.session = requests.Session()
+        self.rate_limit_calls = 0
+        self.rate_limit_reset = datetime.now()
+    
+    def _check_rate_limit(self):
+        """ตรวจสอบ rate limit"""
+        now = datetime.now()
+        if now - self.rate_limit_reset > timedelta(minutes=1):
+            self.rate_limit_calls = 0
+            self.rate_limit_reset = now
+        
+        if self.rate_limit_calls >= 30:  # จำกัด 30 calls ต่อนาที
+            sleep_time = 60 - (now - self.rate_limit_reset).seconds
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+                self.rate_limit_calls = 0
+                self.rate_limit_reset = datetime.now()
     
     def search_food(self, query: str) -> Optional[Dict]:
         """ค้นหาอาหารจาก USDA database"""
+        self._check_rate_limit()
+        
         url = f"{self.base_url}/foods/search"
         params = {
             "api_key": self.api_key,
@@ -135,6 +194,7 @@ class USDANutritionAPI:
         try:
             response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
+            self.rate_limit_calls += 1
             return response.json()
         except requests.RequestException as e:
             logger.error(f"Error searching USDA API: {e}")
@@ -156,8 +216,10 @@ class USDANutritionAPI:
         params = {"api_key": self.api_key}
         
         try:
+            self._check_rate_limit()
             response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
+            self.rate_limit_calls += 1
             food_data = response.json()
             
             return self._parse_usda_nutrition(food_data, ingredient)
@@ -207,6 +269,74 @@ class USDANutritionAPI:
                 setattr(nutrition, attr, float(amount))
         
         return nutrition
+
+class NutritionixAPI:
+    """คลาสสำหรับดึงข้อมูลจาก Nutritionix API"""
+    
+    def __init__(self, app_id: str, api_key: str):
+        self.app_id = app_id
+        self.api_key = api_key
+        self.base_url = "https://trackapi.nutritionix.com/v2"
+        self.session = requests.Session()
+        self.daily_calls = 0
+        self.last_reset = datetime.now().date()
+    
+    def _check_daily_limit(self):
+        """ตรวจสอบ daily limit"""
+        today = datetime.now().date()
+        if today != self.last_reset:
+            self.daily_calls = 0
+            self.last_reset = today
+        
+        if self.daily_calls >= 200:  # Free plan limit
+            raise Exception("Daily API limit reached")
+    
+    def get_nutrition_info(self, ingredient: str) -> Optional[NutritionInfo]:
+        """ดึงข้อมูลโภชนาการจาก Nutritionix API"""
+        self._check_daily_limit()
+        
+        url = f"{self.base_url}/natural/nutrients"
+        headers = {
+            'x-app-id': self.app_id,
+            'x-app-key': self.api_key,
+            'Content-Type': 'application/json'
+        }
+        
+        data = {
+            'query': f"1 serving of {ingredient}",
+            'timezone': 'Asia/Bangkok'
+        }
+        
+        try:
+            response = self.session.post(url, headers=headers, json=data, timeout=10)
+            response.raise_for_status()
+            self.daily_calls += 1
+            
+            result = response.json()
+            if result.get('foods'):
+                food = result['foods'][0]
+                return self._parse_nutritionix_data(food, ingredient)
+        except requests.RequestException as e:
+            logger.error(f"Error getting nutrition from Nutritionix: {e}")
+        
+        return None
+    
+    def _parse_nutritionix_data(self, food_data: dict, ingredient: str) -> NutritionInfo:
+        """แปลงข้อมูลจาก Nutritionix เป็น NutritionInfo"""
+        return NutritionInfo(
+            name=ingredient,
+            calories=food_data.get('nf_calories', 0),
+            protein=food_data.get('nf_protein', 0),
+            carbs=food_data.get('nf_total_carbohydrate', 0),
+            fat=food_data.get('nf_total_fat', 0),
+            fiber=food_data.get('nf_dietary_fiber', 0),
+            sugar=food_data.get('nf_sugars', 0),
+            sodium=food_data.get('nf_sodium', 0),
+            calcium=food_data.get('nf_calcium', 0),
+            iron=food_data.get('nf_iron', 0),
+            potassium=food_data.get('nf_potassium', 0),
+            serving_size=f"{food_data.get('serving_weight_grams', 100)}g"
+        )
 
 class ThaiNutritionData:
     """คลาสสำหรับข้อมูลโภชนาการอาหารไทยที่สร้างขึ้นเอง"""
@@ -580,16 +710,142 @@ class ThaiNutritionData:
             ),
         }
 
+class CookingAdjustmentHelper:
+    """ตัวช่วยสำหรับปรับการคำนวณโภชนาการตามวิธีการทำอาหาร"""
+    
+    @staticmethod
+    def get_cooking_adjustments(recipe_name: str) -> dict:
+        """ดึงการปรับแต่งสำหรับการทำอาหาร"""
+        cooking_adjustments = {
+            "ไข่เจียว": {
+                "oil_absorption": 0.1,  # ดูดซับน้ำมัน 10%
+                "missing_ingredients": [
+                    {"name": "น้ำมันพืช", "amount": 3, "unit": "ช้อนโต๊ะ", "consumed": 0.1}
+                ]
+            },
+            "ไข่ดาว": {
+                "oil_absorption": 0.2,  # ดูดซับน้ำมัน 20%
+                "missing_ingredients": [
+                    {"name": "น้ำมันพืช", "amount": 2, "unit": "ช้อนโต๊ะ", "consumed": 0.2}
+                ]
+            },
+            "ผัดกะเพรา": {
+                "oil_absorption": 0.7,  # ดูดซับน้ำมัน 70%
+                "oil_adjustment": True
+            },
+            "ผัดไทย": {
+                "oil_absorption": 0.8,
+                "oil_adjustment": True
+            },
+            "ต้มยำกุ้ง": {
+                "broth_consumption": 0.6,  # บริโภคน้ำซุป 60%
+            },
+            "แกงเขียวหวาน": {
+                "coconut_milk_adjustment": True,
+                "curry_paste_dilution": 0.8
+            }
+        }
+        
+        recipe_name_lower = recipe_name.lower()
+        for key, adjustments in cooking_adjustments.items():
+            if key.lower() in recipe_name_lower:
+                return adjustments
+        
+        return {}
+    
+    @staticmethod
+    def apply_cooking_adjustments(ingredients_data: dict, recipe_name: str) -> dict:
+        """ใช้การปรับแต่งการทำอาหาร"""
+        adjustments = CookingAdjustmentHelper.get_cooking_adjustments(recipe_name)
+        
+        if not adjustments:
+            return ingredients_data
+        
+        adjusted_data = ingredients_data.copy()
+        
+        # ปรับการดูดซึมน้ำมัน
+        if "oil_absorption" in adjustments:
+            oil_ratio = adjustments["oil_absorption"]
+            for ingredient_key, nutrition in adjusted_data.items():
+                if any(oil_word in ingredient_key.lower() for oil_word in ["น้ำมัน", "oil"]):
+                    # ปรับปริมาณโภชนาการตามอัตราการดูดซึม
+                    nutrition.calories *= oil_ratio
+                    nutrition.fat *= oil_ratio
+                    nutrition.vitamin_e *= oil_ratio
+        
+        # เพิ่มวัตถุดิบที่ขาดหายไป
+        if "missing_ingredients" in adjustments:
+            for missing in adjustments["missing_ingredients"]:
+                # ตรวจสอบว่ามีวัตถุดิบนี้อยู่แล้วหรือไม่
+                has_ingredient = any(missing["name"] in key for key in adjusted_data.keys())
+                
+                if not has_ingredient:
+                    # เพิ่มวัตถุดิบที่ขาดหายไป
+                    from ingredient_converter import IngredientConverter
+                    converter = IngredientConverter()
+                    
+                    # คำนวณน้ำหนัก
+                    weight_grams = converter.convert_to_grams(
+                        missing["amount"], missing["unit"], missing["name"]
+                    )
+                    
+                    # ปรับตามปริมาณที่บริโภคจริง
+                    consumed_ratio = missing.get("consumed", 1.0)
+                    effective_weight = weight_grams * consumed_ratio
+                    multiplier = effective_weight / 100.0
+                    
+                    # ดึงข้อมูลโภชนาการพื้นฐาน
+                    thai_data = ThaiNutritionData()
+                    base_nutrition = thai_data.get_nutrition_info(missing["name"])
+                    
+                    if base_nutrition:
+                        # สร้างข้อมูลโภชนาการที่ปรับแล้ว
+                        adjusted_nutrition = NutritionInfo(
+                            name=missing["name"],
+                            calories=base_nutrition.calories * multiplier,
+                            protein=base_nutrition.protein * multiplier,
+                            carbs=base_nutrition.carbs * multiplier,
+                            fat=base_nutrition.fat * multiplier,
+                            fiber=base_nutrition.fiber * multiplier,
+                            sugar=base_nutrition.sugar * multiplier,
+                            sodium=base_nutrition.sodium * multiplier,
+                            vitamin_a=base_nutrition.vitamin_a * multiplier,
+                            vitamin_c=base_nutrition.vitamin_c * multiplier,
+                            vitamin_d=base_nutrition.vitamin_d * multiplier,
+                            vitamin_e=base_nutrition.vitamin_e * multiplier,
+                            vitamin_k=base_nutrition.vitamin_k * multiplier,
+                            vitamin_b1=base_nutrition.vitamin_b1 * multiplier,
+                            vitamin_b2=base_nutrition.vitamin_b2 * multiplier,
+                            vitamin_b6=base_nutrition.vitamin_b6 * multiplier,
+                            vitamin_b12=base_nutrition.vitamin_b12 * multiplier,
+                            folate=base_nutrition.folate * multiplier,
+                            niacin=base_nutrition.niacin * multiplier,
+                            calcium=base_nutrition.calcium * multiplier,
+                            iron=base_nutrition.iron * multiplier,
+                            magnesium=base_nutrition.magnesium * multiplier,
+                            phosphorus=base_nutrition.phosphorus * multiplier,
+                            potassium=base_nutrition.potassium * multiplier,
+                            zinc=base_nutrition.zinc * multiplier,
+                            serving_size=f"{missing['amount']} {missing['unit']} (บริโภค {consumed_ratio*100:.0f}%)"
+                        )
+                        
+                        key = f"{missing['name']} ({missing['amount']} {missing['unit']}) [เพิ่มเติม]"
+                        adjusted_data[key] = adjusted_nutrition
+        
+        return adjusted_data
+
 class NutritionAnalyzer:
     """คลาสหลักสำหรับวิเคราะห์คุณค่าทางโภชนาการ"""
     
-    def __init__(self, usda_api_key: Optional[str] = None):
+    def __init__(self, usda_api_key: Optional[str] = None, nutritionix_app_id: Optional[str] = None, nutritionix_api_key: Optional[str] = None):
         self.db = NutritionDatabase()
         self.thai_data = ThaiNutritionData()
         self.usda_api = USDANutritionAPI(usda_api_key) if usda_api_key else None
-        self.converter = IngredientConverter()  # เพิ่มตัวแปลงหน่วย
+        self.nutritionix_api = NutritionixAPI(nutritionix_app_id, nutritionix_api_key) if nutritionix_app_id and nutritionix_api_key else None
+        self.converter = IngredientConverter()
+        self.cooking_helper = CookingAdjustmentHelper()
     
-    def analyze_ingredients(self, ingredients_text: str) -> Dict[str, NutritionInfo]:
+    def analyze_ingredients(self, ingredients_text: str, recipe_name: str = "", apply_cooking_adjustments: bool = False) -> Dict[str, NutritionInfo]:
         """วิเคราะห์คุณค่าทางโภชนาการของวัตถุดิบทั้งหมด"""
         ingredients = self._parse_ingredients(ingredients_text)
         nutrition_data = {}
@@ -638,6 +894,10 @@ class NutritionAnalyzer:
                 key = f"{ingredient_name} ({converted['quantity']} {converted['unit']})"
                 nutrition_data[key] = adjusted_nutrition
         
+        # ใช้การปรับแต่งการทำอาหารถ้าเปิดใช้งาน
+        if apply_cooking_adjustments and recipe_name:
+            nutrition_data = self.cooking_helper.apply_cooking_adjustments(nutrition_data, recipe_name)
+        
         return nutrition_data
     
     def get_ingredient_nutrition(self, ingredient: str) -> Optional[NutritionInfo]:
@@ -655,12 +915,25 @@ class NutritionAnalyzer:
         
         # 3. ใช้ USDA API (ถ้ามี API key)
         if self.usda_api:
-            usda_nutrition = self.usda_api.get_nutrition_info(ingredient)
-            if usda_nutrition:
-                self.db.cache_nutrition(ingredient, usda_nutrition)
-                return usda_nutrition
+            try:
+                usda_nutrition = self.usda_api.get_nutrition_info(ingredient)
+                if usda_nutrition:
+                    self.db.cache_nutrition(ingredient, usda_nutrition)
+                    return usda_nutrition
+            except Exception as e:
+                logger.warning(f"USDA API error for {ingredient}: {e}")
         
-        # 4. สร้างข้อมูลพื้นฐาน
+        # 4. ใช้ Nutritionix API (ถ้ามี API key)
+        if self.nutritionix_api:
+            try:
+                nutritionix_nutrition = self.nutritionix_api.get_nutrition_info(ingredient)
+                if nutritionix_nutrition:
+                    self.db.cache_nutrition(ingredient, nutritionix_nutrition)
+                    return nutritionix_nutrition
+            except Exception as e:
+                logger.warning(f"Nutritionix API error for {ingredient}: {e}")
+        
+        # 5. สร้างข้อมูลพื้นฐาน
         basic_nutrition = NutritionInfo(name=ingredient)
         self.db.cache_nutrition(ingredient, basic_nutrition)
         return basic_nutrition
@@ -713,10 +986,10 @@ class NutritionAnalyzer:
         
         return total
     
-    def analyze_recipe(self, recipe_name: str, ingredients: str) -> dict:
+    def analyze_recipe(self, recipe_name: str, ingredients: str, apply_cooking_adjustments: bool = False) -> dict:
         """วิเคราะห์โภชนาการสำหรับสูตรอาหาร (สำหรับ streamlit app)"""
         # วิเคราะห์โภชนาการ
-        nutrition_data = self.analyze_ingredients(ingredients)
+        nutrition_data = self.analyze_ingredients(ingredients, recipe_name, apply_cooking_adjustments)
         total_nutrition = self.calculate_total_nutrition(nutrition_data)
         
         # สร้างผลลัพธ์ในรูปแบบ dict
@@ -750,7 +1023,8 @@ class NutritionAnalyzer:
                 }
             },
             'ingredients': [],
-            'ingredient_count': len(nutrition_data)
+            'ingredient_count': len(nutrition_data),
+            'enhanced': apply_cooking_adjustments
         }
         
         # เพิ่มรายละเอียดแต่ละวัตถุดิบ
@@ -799,3 +1073,9 @@ if __name__ == "__main__":
     print(f"\nรวมทั้งหมด:")
     print(f"  พลังงาน: {total.calories:.1f} แคลอรี่")
     print(f"  โปรตีน: {total.protein:.1f} กรัม")
+    
+    # ทดสอบการปรับแต่งการทำอาหาร
+    print(f"\n=== ทดสอบการปรับแต่งการทำอาหาร ===")
+    enhanced_data = analyzer.analyze_ingredients(ingredients_text, "ไข่เจียว", apply_cooking_adjustments=True)
+    enhanced_total = analyzer.calculate_total_nutrition(enhanced_data)
+    print(f"พลังงานหลังปรับแต่ง: {enhanced_total.calories:.1f} แคลอรี่")
