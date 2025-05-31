@@ -11,36 +11,13 @@ transformers>=4.30.0
 
 # การประมวลผลข้อมูล
 requests>=2.31.0
-difflib2>=0.1.0
-pickle-mixin>=1.0.2
 
 # การแสดงผลกราฟและชาร์ต
 plotly>=5.15.0
-matplotlib>=3.7.0
-seaborn>=0.12.0
-
-# การจัดการไฟล์และข้อมูล
-openpyxl>=3.1.0
-xlrd>=2.0.0
-python-dateutil>=2.8.0
-
-# API และ HTTP
-urllib3>=2.0.0
-certifi>=2023.5.7
 
 # การจัดการข้อความและการค้นหา
-regex>=2023.6.3
 fuzzywuzzy>=0.18.0
 python-levenshtein>=0.21.0
 
-# สำหรับการประมวลผลภาษาไทย
-pythainlp>=4.0.0
-
-# อื่นๆ ที่อาจต้องใช้
-tqdm>=4.65.0
-colorama>=0.4.6
+# อื่นๆ ที่จำเป็น
 python-dotenv>=1.0.0
-
-# สำหรับการทดสอบ (optional)
-pytest>=7.4.0
-pytest-cov>=4.1.0
