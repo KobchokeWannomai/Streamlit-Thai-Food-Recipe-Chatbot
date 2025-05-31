@@ -714,107 +714,63 @@ def format_ingredients(ingredients_text):
     return formatted
 
 def format_cooking_method(method_text):
-    """จัดรูปแบบวิธีทำ"""
+    """จัดรูปแบบวิธีทำใหม่ - รองรับหัวข้อย่อยและย่อหน้า"""
     if not method_text:
         return "<p>ไม่มีข้อมูลวิธีทำ</p>"
-        
-    sentences = re.split(r'(?<=[ๆ.।])\s+|(?<=\w)\s{2,}', method_text)
-    formatted = "<ol style='margin: 0; padding-left: 1.5rem;'>"
-    for sentence in sentences:
-        if sentence.strip():
-            formatted += f"<li style='margin: 0.3rem 0;'>{sentence.strip()}</li>"
-    formatted += "</ol>"
+    
+    # ตรวจสอบว่ามีเลขขั้นตอนอยู่แล้วหรือไม่
+    has_numbers = bool(re.search(r'^\s*\d+\.', method_text, re.MULTILINE))
+    
+    # แบ่งตามบรรทัดใหม่
+    lines = method_text.split('\n')
+    formatted = "<div style='margin: 0; line-height: 1.6;'>"
+    
+    current_paragraph = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # ตรวจสอบหัวข้อย่อย (ขึ้นต้นด้วย # หรือมีลักษณะเป็นหมายเหตุ)
+        if line.startswith('#') or re.match(r'^[หมายเหตุ|สำคัญ|ข้อสังเกต|วิธีทำ|เตรียม]', line):
+            # เพิ่มย่อหน้าปัจจุบันก่อน
+            if current_paragraph:
+                paragraph_text = ' '.join(current_paragraph)
+                if has_numbers:
+                    formatted += f"<p style='margin: 0.5rem 0;'>{paragraph_text}</p>"
+                else:
+                    formatted += f"<p style='margin: 0.5rem 0;'>{paragraph_text}</p>"
+                current_paragraph = []
+            
+            # เพิ่มหัวข้อย่อย
+            clean_header = line.lstrip('#').strip()
+            formatted += f"<h4 style='margin: 1rem 0 0.5rem 0; font-size: 1rem; color: #333;'>{clean_header}</h4>"
+        else:
+            # ถ้ามีเลขขั้นตอนอยู่แล้ว ให้แสดงตามเดิม
+            if has_numbers and re.match(r'^\d+\.', line):
+                if current_paragraph:
+                    paragraph_text = ' '.join(current_paragraph)
+                    formatted += f"<p style='margin: 0.5rem 0;'>{paragraph_text}</p>"
+                    current_paragraph = []
+                formatted += f"<p style='margin: 0.3rem 0; padding-left: 1rem;'>{line}</p>"
+            else:
+                # รวมเป็นย่อหน้าเดียว
+                current_paragraph.append(line)
+    
+    # เพิ่มย่อหน้าสุดท้าย
+    if current_paragraph:
+        paragraph_text = ' '.join(current_paragraph)
+        formatted += f"<p style='margin: 0.5rem 0;'>{paragraph_text}</p>"
+    
+    formatted += "</div>"
     return formatted
 
-def display_nutrition_chart(nutrition_data, recipe_name):
-    """แสดงกราฟโภชนาการ"""
+def display_nutrition_info(nutrition_data, recipe_name):
+    """แสดงข้อมูลโภชนาการแบบบัตร"""
     total_nutrition = nutrition_data['total_nutrition']
     
-    fig = make_subplots(
-        rows=2, cols=2,
-        subplot_titles=('สารอาหารหลัก (กรัม)', 'วิตามิน (mg/IU)', 'แร่ธาตุ (mg)', 'แคลอรี่และใยอาหาร'),
-        specs=[[{"type": "pie"}, {"type": "bar"}],
-               [{"type": "bar"}, {"type": "indicator"}]]
-    )
-    
-    # กราฟ Macronutrients
-    macro_labels = ['โปรตีน', 'คาร์โบไฮเดรต', 'ไขมัน']
-    macro_values = [total_nutrition['protein'], total_nutrition['carbs'], total_nutrition['fat']]
-    macro_colors = ['#FF6B6B', '#4ECDC4', '#45B7D1']
-    
-    fig.add_trace(go.Pie(
-        labels=macro_labels, 
-        values=macro_values,
-        marker_colors=macro_colors,
-        hole=0.3
-    ), row=1, col=1)
-    
-    # กราฟวิตามิน
-    vitamin_labels = ['วิตามิน A', 'วิตามิน C', 'วิตามิน B1', 'วิตามิน B2']
-    vitamin_values = [
-        total_nutrition['vitamin_a'], total_nutrition['vitamin_c'],
-        total_nutrition['vitamin_b1']*1000, total_nutrition['vitamin_b2']*1000
-    ]
-    
-    fig.add_trace(go.Bar(
-        x=vitamin_labels,
-        y=vitamin_values,
-        marker_color=['#FF9F43', '#10AC84', '#5F27CD', '#00D2D3'],
-        name='วิตามิน'
-    ), row=1, col=2)
-    
-    # กราฟแร่ธาตุ
-    mineral_labels = ['แคลเซียม', 'เหล็ก', 'โปแตสเซียม', 'โซเดียม']
-    mineral_values = [
-        total_nutrition['calcium'], total_nutrition['iron'],
-        total_nutrition['potassium'], total_nutrition['sodium']
-    ]
-    
-    fig.add_trace(go.Bar(
-        x=mineral_labels,
-        y=mineral_values,
-        marker_color=['#2D3436', '#636E72', '#00B894', '#E17055'],
-        name='แร่ธาตุ'
-    ), row=2, col=1)
-    
-    # แสดงแคลอรี่
-    fig.add_trace(go.Indicator(
-        mode="gauge+number+delta",
-        value=total_nutrition['calories'],
-        domain={'x': [0, 1], 'y': [0, 1]},
-        title={'text': f"แคลอรี่<br><span style='font-size:0.8em;color:gray'>ใยอาหาร: {total_nutrition['fiber']:.1f}g</span>"},
-        gauge={
-            'axis': {'range': [None, 500]},
-            'bar': {'color': "darkblue"},
-            'steps': [
-                {'range': [0, 200], 'color': "lightgray"},
-                {'range': [200, 350], 'color': "gray"}
-            ],
-            'threshold': {
-                'line': {'color': "red", 'width': 4},
-                'thickness': 0.75,
-                'value': 400
-            }
-        }
-    ), row=2, col=2)
-    
-    fig.update_layout(
-        title_text=f"ข้อมูลโภชนาการ - {recipe_name}",
-        showlegend=False,
-        height=800
-    )
-    
-    return fig
-
-def display_nutrition_info(nutrition_data, recipe_name, show_charts=True):
-    """แสดงข้อมูลโภชนาการ"""
-    total_nutrition = nutrition_data['total_nutrition']
-    
-    if show_charts:
-        fig = display_nutrition_chart(nutrition_data, recipe_name)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown(f"""
@@ -838,6 +794,17 @@ def display_nutrition_info(nutrition_data, recipe_name, show_charts=True):
             <p><strong>วิตามิน B2:</strong> {total_nutrition['vitamin_b2']:.2f} mg</p>
         </div>
         """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown(f"""
+        <div class="mineral-card">
+            <h4>⚡ แร่ธาตุ</h4>
+            <p><strong>แคลเซียม:</strong> {total_nutrition['calcium']:.1f} mg</p>
+            <p><strong>เหล็ก:</strong> {total_nutrition['iron']:.1f} mg</p>
+            <p><strong>โปแตสเซียม:</strong> {total_nutrition['potassium']:.1f} mg</p>
+            <p><strong>โซเดียม:</strong> {total_nutrition['sodium']:.1f} mg</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 def get_similarity_badge_class(similarity):
     """ได้รับ CSS class สำหรับ badge ตามคะแนนความคล้ายคลึง"""
@@ -848,21 +815,33 @@ def get_similarity_badge_class(similarity):
     else:
         return "similarity-badge-low"
 
-def display_settings_panel():
-    """แสดงแถบการตั้งค่า"""
+def display_settings_panel(data, model, settings_state):
+    """แสดงแถบการตั้งค่าพร้อมสถิติ"""
     st.sidebar.title("🔧 การตั้งค่าขั้นสูง")
     
+    # แสดงสถิติโดยรวม
+    st.sidebar.markdown("### 📊 สถิติโดยรวม")
+    st.sidebar.metric("📖 จำนวนสูตร", len(data))
+    st.sidebar.metric("🤖 AI Model", "✅ พร้อม" if model else "❌ ไม่พร้อม")
+    
+    api_status = "🟢 เชื่อมต่อ" if settings_state.get('use_api', False) else "🔴 ปิดใช้งาน"
+    st.sidebar.metric("🌐 API", api_status)
+    st.sidebar.metric("🔍 การค้นหา", "✨ ปรับปรุงแล้ว")
+    
+    st.sidebar.markdown("---")
+    
+    # การตั้งค่า API
     st.sidebar.markdown("### 🌐 API ข้อมูลโภชนาการ")
     use_api = st.sidebar.checkbox("เปิดใช้งาน API ภายนอก", value=False, key="use_api")
     
-    api_status = "🔴 ไม่ได้เชื่อมต่อ"
+    api_status_detail = "🔴 ไม่ได้เชื่อมต่อ"
     if use_api:
         api_key = st.sidebar.text_input("USDA API Key", type="password", key="usda_api_key")
         if api_key:
-            api_status = "🟡 ตั้งค่าแล้ว"
+            api_status_detail = "🟡 ตั้งค่าแล้ว"
     
-    status_class = "api-status-connected" if "🟢" in api_status else "api-status-disconnected"
-    st.sidebar.markdown(f'<div class="{status_class}">สถานะ: {api_status}</div>', unsafe_allow_html=True)
+    status_class = "api-status-connected" if "🟢" in api_status_detail else "api-status-disconnected"
+    st.sidebar.markdown(f'<div class="{status_class}">สถานะ: {api_status_detail}</div>', unsafe_allow_html=True)
     
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🧮 การคำนวณโภชนาการ")
@@ -874,10 +853,6 @@ def display_settings_panel():
     enhance_missing = st.sidebar.checkbox(
         "เพิ่มวัตถุดิบที่ขาดหาย", value=False, key="enhance_missing"
     )
-    
-    st.sidebar.markdown("### 🎨 การแสดงผล")
-    show_charts = st.sidebar.checkbox("แสดงกราฟโภชนาการ", value=True, key="show_charts")
-    show_details = st.sidebar.checkbox("แสดงรายละเอียดวัตถุดิบ", value=True, key="show_details")
     
     st.sidebar.markdown("### 🔍 การค้นหาที่ปรับปรุงแล้ว")
     
@@ -904,12 +879,16 @@ def display_settings_panel():
     • แสดงเปอร์เซนต์แม่นยำ
     • ระบบให้คะแนนใหม่
     • กรองผลซ้ำซ้อน
+    
+    📋 **ปรับปรุงการแสดงผล:**
+    • วิธีทำแสดงผลดีขึ้น
+    • โภชนาการครบถ้วน
+    • รวมแร่ธาตุในโภชนาการ
     """)
     
     return {
         'use_api': use_api, 'adjust_consumption': adjust_consumption,
-        'enhance_missing': enhance_missing, 'show_charts': show_charts,
-        'show_details': show_details, 'fuzzy_threshold': fuzzy_threshold,
+        'enhance_missing': enhance_missing, 'fuzzy_threshold': fuzzy_threshold,
         'max_results': max_results
     }
 
@@ -1029,12 +1008,12 @@ def display_recipe_with_nutrition(recipe, nutrition_data, settings, similarity_s
     
     with tab2:
         if nutrition_data:
-            display_nutrition_info(nutrition_data, recipe['name'], settings['show_charts'])
+            display_nutrition_info(nutrition_data, recipe['name'])
         else:
             st.info("ไม่มีข้อมูลโภชนาการ หรือเกิดข้อผิดพลาดในการคำนวณ")
     
     with tab3:
-        if nutrition_data and settings['show_details']:
+        if nutrition_data:
             st.markdown("#### 🔬 รายละเอียดวัตถุดิบแต่ละชนิด")
             
             ingredient_df = []
@@ -1052,13 +1031,13 @@ def display_recipe_with_nutrition(recipe, nutrition_data, settings, similarity_s
                 df = pd.DataFrame(ingredient_df)
                 st.dataframe(df, use_container_width=True)
         else:
-            st.info("เปิดใช้งานการแสดงรายละเอียดในการตั้งค่าเพื่อดูข้อมูลเพิ่มเติม")
+            st.info("ไม่มีข้อมูลรายละเอียดวัตถุดิบ")
 
 def main():
     """ฟังก์ชันหลักของแอปพลิเคชัน"""
     
-    st.markdown('<h1 class="main-title">🍲 Thai Food Recipe Chatbot</h1>', unsafe_allow_html=True)
-    st.markdown("### 🥘 ระบบค้นหาสูตรอาหารไทย")
+    st.markdown('<h1 class="main-title">🍲 Thai Food Recipe Chatbot</h1>')
+    st.markdown("### 🥘 ระบบค้นหาสูตรอาหารไทยที่ปรับปรุงใหม่")
     
     # เริ่มต้นระบบ
     with st.spinner("กำลังเริ่มต้นระบบที่ปรับปรุงแล้ว..."):
@@ -1074,7 +1053,14 @@ def main():
             return
         
         embeddings = get_embeddings(model, data)
-        settings = display_settings_panel()
+        
+        # สร้าง session state สำหรับการจัดการ settings
+        if 'settings_state' not in st.session_state:
+            st.session_state.settings_state = {}
+        
+        # แถบการตั้งค่าพร้อมสถิติ
+        settings = display_settings_panel(data, model, st.session_state.settings_state)
+        st.session_state.settings_state = settings
         
         nutrition_api = initialize_nutrition_api()
         search_engine = initialize_search_engine(data, nutrition_api)
