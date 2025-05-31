@@ -1,18 +1,37 @@
 import streamlit as st
 import pandas as pd
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import os
 import pickle
 import re
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+
+# การจัดการ import สำหรับ optional dependencies
+try:
+    from sentence_transformers import SentenceTransformer
+    from sklearn.metrics.pairwise import cosine_similarity
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    st.warning("sentence-transformers ไม่พร้อมใช้งาน จะใช้การค้นหาแบบพื้นฐาน")
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    st.warning("plotly ไม่พร้อมใช้งาน กราฟจะไม่แสดง")
+    PLOTLY_AVAILABLE = False
 
 # นำเข้าไฟล์ที่สร้างขึ้นใหม่
-from nutrition_api import NutritionAPI
-from recipe_search import RecipeSearchEngine
+try:
+    from nutrition_api import NutritionAPI
+    from recipe_search import RecipeSearchEngine
+    NUTRITION_API_AVAILABLE = True
+except ImportError as e:
+    st.error(f"ไม่สามารถโหลดโมดูลที่จำเป็น: {str(e)}")
+    st.info("กรุณาตรวจสอบว่าไฟล์ nutrition_api.py และ recipe_search.py อยู่ในโฟลเดอร์เดียวกัน")
+    NUTRITION_API_AVAILABLE = False
 
 # การตั้งค่าหน้าเว็บ
 st.set_page_config(
@@ -110,6 +129,10 @@ MODEL_PATH = "model"
 @st.cache_resource
 def load_model():
     """โหลดหรือดาวน์โหลดโมเดล sentence transformer"""
+    if not SENTENCE_TRANSFORMERS_AVAILABLE:
+        st.warning("sentence-transformers ไม่พร้อมใช้งาน ระบบจะใช้การค้นหาแบบพื้นฐาน")
+        return None
+        
     try:
         if os.path.exists(MODEL_PATH):
             return SentenceTransformer(MODEL_PATH)
@@ -138,7 +161,7 @@ def load_data():
 @st.cache_data
 def get_embeddings(_model, data):
     """สร้างหรือโหลด embeddings สำหรับสูตรอาหาร"""
-    if _model is None or data.empty:
+    if not SENTENCE_TRANSFORMERS_AVAILABLE or _model is None or data.empty:
         return np.array([])
         
     if os.path.exists(EMBEDDINGS_PATH):
@@ -170,14 +193,24 @@ def get_embeddings(_model, data):
 @st.cache_resource
 def initialize_nutrition_api():
     """เริ่มต้นระบบข้อมูลโภชนาการ"""
-    return NutritionAPI()
+    if not NUTRITION_API_AVAILABLE:
+        return None
+    try:
+        return NutritionAPI()
+    except Exception as e:
+        st.error(f"ไม่สามารถเริ่มต้น NutritionAPI: {str(e)}")
+        return None
 
 @st.cache_resource
 def initialize_search_engine(_data, _nutrition_api):
     """เริ่มต้นระบบค้นหา"""
-    if _data.empty:
+    if not NUTRITION_API_AVAILABLE or _data.empty or _nutrition_api is None:
         return None
-    return RecipeSearchEngine(_data, _nutrition_api)
+    try:
+        return RecipeSearchEngine(_data, _nutrition_api)
+    except Exception as e:
+        st.error(f"ไม่สามารถเริ่มต้น RecipeSearchEngine: {str(e)}")
+        return None
 
 def format_ingredients(ingredients_text):
     """จัดรูปแบบรายการวัตถุดิบให้แสดงผลดี"""
@@ -210,6 +243,10 @@ def format_cooking_method(method_text):
 
 def display_nutrition_chart(nutrition_data, recipe_name):
     """แสดงกราฟโภชนาการที่สวยงาม"""
+    if not PLOTLY_AVAILABLE:
+        st.info("กราฟไม่สามารถแสดงได้เนื่องจาก plotly ไม่พร้อมใช้งาน")
+        return None
+        
     total_nutrition = nutrition_data['total_nutrition']
     
     # สร้างกราฟแบบ subplot
