@@ -3,7 +3,13 @@ import pandas as pd
 from typing import List, Dict, Tuple, Optional
 from difflib import SequenceMatcher
 import streamlit as st
-from nutrition_api import NutritionAPI
+
+# การจัดการ import สำหรับ optional dependencies
+try:
+    from nutrition_api import NutritionAPI
+except ImportError:
+    st.error("ไม่สามารถโหลด nutrition_api ได้ กรุณาตรวจสอบการติดตั้ง")
+    st.stop()
 
 class RecipeSearchEngine:
     """เครื่องมือค้นหาและแนะนำสูตรอาหารแบบชาญฉลาดขั้นสูง"""
