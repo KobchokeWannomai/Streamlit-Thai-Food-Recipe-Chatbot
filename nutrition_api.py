@@ -4,7 +4,6 @@ import pandas as pd
 import re
 import os
 from typing import Dict, List, Optional, Tuple
-import streamlit as st
 
 class NutritionAPI:
     """คลาสสำหรับจัดการข้อมูลโภชนาการจาก API และฐานข้อมูลท้องถิ่น"""
@@ -156,11 +155,12 @@ class NutritionAPI:
                     }
                     nutrition_db[ingredient_name] = nutrition_data
                     
-                st.success(f"โหลดข้อมูลโภชนาการจากไฟล์ CSV เรียบร้อย ({len(nutrition_db)} รายการ)")
+                # ลบข้อความแจ้งเตือนออกไป - ไม่แสดงข้อความใดๆ
                 return nutrition_db
                 
             except Exception as e:
-                st.warning(f"ไม่สามารถอ่านไฟล์ CSV: {str(e)}")
+                # ไม่แสดงข้อความเตือน เพื่อให้การทำงานเป็นไปอย่างเงียบๆ
+                pass
         
         # หากไม่มีไฟล์ CSV ใช้ข้อมูลเริ่มต้น
         return self.get_default_nutrition_database()
@@ -317,7 +317,7 @@ class NutritionAPI:
             return None
             
         except Exception as e:
-            st.warning(f"ไม่สามารถเชื่อมต่อ USDA API: {str(e)}")
+            # ไม่แสดงข้อความเตือน เพื่อให้การทำงานเป็นไปอย่างเงียบๆ
             return None
 
     def search_nutritionix_api(self, ingredient: str) -> Optional[Dict]:
@@ -345,7 +345,7 @@ class NutritionAPI:
             return None
             
         except Exception as e:
-            st.warning(f"ไม่สามารถเชื่อมต่อ Nutritionix API: {str(e)}")
+            # ไม่แสดงข้อความเตือน
             return None
 
     def search_edamam_api(self, ingredient: str) -> Optional[Dict]:
@@ -368,7 +368,7 @@ class NutritionAPI:
             return None
             
         except Exception as e:
-            st.warning(f"ไม่สามารถเชื่อมต่อ Edamam API: {str(e)}")
+            # ไม่แสดงข้อความเตือน
             return None
 
     def get_usda_nutrition_details(self, food_id: int) -> Optional[Dict]:
@@ -385,7 +385,7 @@ class NutritionAPI:
             return None
             
         except Exception as e:
-            st.warning(f"ไม่สามารถดึงรายละเอียดจาก USDA API: {str(e)}")
+            # ไม่แสดงข้อความเตือน
             return None
 
     def parse_usda_nutrition_data(self, data: Dict) -> Dict:
