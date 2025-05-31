@@ -1,44 +1,27 @@
 import streamlit as st
 import pandas as pd
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import os
 import pickle
 import re
-
-# การจัดการ import สำหรับ optional dependencies
-try:
-    from sentence_transformers import SentenceTransformer
-    from sklearn.metrics.pairwise import cosine_similarity
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    st.warning("sentence-transformers ไม่พร้อมใช้งาน จะใช้การค้นหาแบบพื้นฐาน")
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
-
-try:
-    import plotly.express as px
-    import plotly.graph_objects as go
-    from plotly.subplots import make_subplots
-    PLOTLY_AVAILABLE = True
-except ImportError:
-    st.warning("plotly ไม่พร้อมใช้งาน กราฟจะไม่แสดง")
-    PLOTLY_AVAILABLE = False
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import hashlib
+import time
 
 # นำเข้าไฟล์ที่สร้างขึ้นใหม่
-try:
-    from nutrition_api import NutritionAPI
-    from recipe_search import RecipeSearchEngine
-    NUTRITION_API_AVAILABLE = True
-except ImportError as e:
-    st.error(f"ไม่สามารถโหลดโมดูลที่จำเป็น: {str(e)}")
-    st.info("กรุณาตรวจสอบว่าไฟล์ nutrition_api.py และ recipe_search.py อยู่ในโฟลเดอร์เดียวกัน")
-    NUTRITION_API_AVAILABLE = False
+from nutrition_api import NutritionAPI
+from recipe_search import RecipeSearchEngine
 
 # การตั้งค่าหน้าเว็บ
 st.set_page_config(
     page_title="Thai Food Recipe Chatbot with Advanced Nutrition",
     page_icon="🍲",
     layout="wide",
-    initial_sidebar_state="expanded"  # เปลี่ยนเป็น expanded เพื่อแสดง sidebar
+    initial_sidebar_state="expanded"
 )
 
 # ตั้งค่าฟอนต์ภาษาไทย
@@ -129,10 +112,6 @@ MODEL_PATH = "model"
 @st.cache_resource
 def load_model():
     """โหลดหรือดาวน์โหลดโมเดล sentence transformer"""
-    if not SENTENCE_TRANSFORMERS_AVAILABLE:
-        st.warning("sentence-transformers ไม่พร้อมใช้งาน ระบบจะใช้การค้นหาแบบพื้นฐาน")
-        return None
-        
     try:
         if os.path.exists(MODEL_PATH):
             return SentenceTransformer(MODEL_PATH)
@@ -161,7 +140,7 @@ def load_data():
 @st.cache_data
 def get_embeddings(_model, data):
     """สร้างหรือโหลด embeddings สำหรับสูตรอาหาร"""
-    if not SENTENCE_TRANSFORMERS_AVAILABLE or _model is None or data.empty:
+    if _model is None or data.empty:
         return np.array([])
         
     if os.path.exists(EMBEDDINGS_PATH):
@@ -169,7 +148,6 @@ def get_embeddings(_model, data):
             with open(EMBEDDINGS_PATH, 'rb') as f:
                 return pickle.load(f)
         except:
-            # หากไฟล์เสียหาย ให้สร้างใหม่
             pass
     
     # รวมข้อความทั้งหมดของแต่ละสูตร
@@ -193,24 +171,19 @@ def get_embeddings(_model, data):
 @st.cache_resource
 def initialize_nutrition_api():
     """เริ่มต้นระบบข้อมูลโภชนาการ"""
-    if not NUTRITION_API_AVAILABLE:
-        return None
-    try:
-        return NutritionAPI()
-    except Exception as e:
-        st.error(f"ไม่สามารถเริ่มต้น NutritionAPI: {str(e)}")
-        return None
+    return NutritionAPI()
 
 @st.cache_resource
 def initialize_search_engine(_data, _nutrition_api):
     """เริ่มต้นระบบค้นหา"""
-    if not NUTRITION_API_AVAILABLE or _data.empty or _nutrition_api is None:
+    if _data.empty:
         return None
-    try:
-        return RecipeSearchEngine(_data, _nutrition_api)
-    except Exception as e:
-        st.error(f"ไม่สามารถเริ่มต้น RecipeSearchEngine: {str(e)}")
-        return None
+    return RecipeSearchEngine(_data, _nutrition_api)
+
+def generate_unique_key(base_key, recipe_name, chart_type=""):
+    """สร้าง unique key สำหรับ elements"""
+    content = f"{base_key}_{recipe_name}_{chart_type}_{time.time()}"
+    return hashlib.md5(content.encode()).hexdigest()[:8]
 
 def format_ingredients(ingredients_text):
     """จัดรูปแบบรายการวัตถุดิบให้แสดงผลดี"""
@@ -221,7 +194,6 @@ def format_ingredients(ingredients_text):
     formatted = "<ul>"
     for item in ingredients:
         if item.strip():
-            # ลบเครื่องหมาย - ถ้ามี
             clean_item = item.strip().lstrip('- ')
             formatted += f"<li>{clean_item}</li>"
     formatted += "</ul>"
@@ -232,7 +204,6 @@ def format_cooking_method(method_text):
     if not method_text:
         return "<p>ไม่มีข้อมูลวิธีทำ</p>"
         
-    # แบ่งประโยคตามจุด หรือช่องว่างยาว
     sentences = re.split(r'(?<=[ๆ.।])\s+|(?<=\w)\s{2,}', method_text)
     formatted = "<ol>"
     for sentence in sentences:
@@ -243,10 +214,6 @@ def format_cooking_method(method_text):
 
 def display_nutrition_chart(nutrition_data, recipe_name):
     """แสดงกราฟโภชนาการที่สวยงาม"""
-    if not PLOTLY_AVAILABLE:
-        st.info("กราฟไม่สามารถแสดงได้เนื่องจาก plotly ไม่พร้อมใช้งาน")
-        return None
-        
     total_nutrition = nutrition_data['total_nutrition']
     
     # สร้างกราฟแบบ subplot
@@ -273,7 +240,7 @@ def display_nutrition_chart(nutrition_data, recipe_name):
     vitamin_labels = ['วิตามิน A', 'วิตามิน C', 'วิตามิน B1', 'วิตามิน B2']
     vitamin_values = [
         total_nutrition['vitamin_a'], total_nutrition['vitamin_c'],
-        total_nutrition['vitamin_b1']*1000, total_nutrition['vitamin_b2']*1000  # แปลงเป็น mg
+        total_nutrition['vitamin_b1']*1000, total_nutrition['vitamin_b2']*1000
     ]
     
     fig.add_trace(go.Bar(
@@ -331,9 +298,12 @@ def display_nutrition_info(nutrition_data, recipe_name, show_charts=True):
     total_nutrition = nutrition_data['total_nutrition']
     
     if show_charts:
+        # สร้าง unique key สำหรับ chart
+        chart_key = generate_unique_key("nutrition_chart", recipe_name, "main")
+        
         # แสดงกราฟโภชนาการ
         fig = display_nutrition_chart(nutrition_data, recipe_name)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key=chart_key)
     
     # แสดงข้อมูลโภชนาการในรูปแบบการ์ด
     col1, col2 = st.columns(2)
@@ -566,7 +536,7 @@ def search_recipes(query, model, data, embeddings, search_engine, settings):
         
         results = []
         for idx in top_indices:
-            if similarities[idx] > settings['fuzzy_threshold'] * 0.5:  # ลดเกณฑ์สำหรับ fallback
+            if similarities[idx] > settings['fuzzy_threshold'] * 0.5:
                 results.append({
                     'name': data.iloc[idx]['name'],
                     'similarity': similarities[idx],
@@ -579,10 +549,13 @@ def search_recipes(query, model, data, embeddings, search_engine, settings):
     
     return []
 
-def display_recipe_with_nutrition(recipe, nutrition_data, settings):
+def display_recipe_with_nutrition(recipe, nutrition_data, settings, recipe_key="default"):
     """แสดงสูตรอาหารพร้อมข้อมูลโภชนาการที่ปรับปรุงแล้ว"""
     # แสดงชื่อเมนู
     st.markdown(f"### 🍽️ {recipe['name']}")
+    
+    # สร้าง unique keys สำหรับ tabs
+    tab_key = generate_unique_key("tabs", recipe['name'], recipe_key)
     
     # สร้าง tabs สำหรับแยกข้อมูล
     tab1, tab2, tab3, tab4 = st.tabs(["📝 สูตรอาหาร", "📊 โภชนาการ", "🔍 รายละเอียด", "💡 คำแนะนำ"])
@@ -732,14 +705,17 @@ def main():
         st.session_state.messages = []
     if "search_query" not in st.session_state:
         st.session_state.search_query = ""
+    if "message_counter" not in st.session_state:
+        st.session_state.message_counter = 0
     
     # แสดงประวัติการสนทนา
-    for message in st.session_state.messages:
+    for i, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
             if message["role"] == "assistant" and "recipe" in message:
                 recipe = message["recipe"]
                 nutrition_data = message.get("nutrition_data")
-                display_recipe_with_nutrition(recipe, nutrition_data, settings)
+                recipe_key = f"history_{i}_{st.session_state.message_counter}"
+                display_recipe_with_nutrition(recipe, nutrition_data, settings, recipe_key)
             else:
                 st.markdown(message["content"])
     
@@ -748,6 +724,7 @@ def main():
     if prompt := st.chat_input("ค้นหาสูตรอาหาร หรือถามเกี่ยวกับโภชนาการ...", key="main_chat"):
         search_query = prompt
         st.session_state.search_query = ""
+        st.session_state.message_counter += 1
     
     if search_query:
         # เพิ่มข้อความของผู้ใช้
@@ -769,7 +746,7 @@ def main():
                     best_match = results[0]
                     recipe_name, similarity, recipe_idx, cached_nutrition = best_match
                     
-                    if similarity > 0.2:  # ลดเกณฑ์ให้หาได้ง่ายขึ้น
+                    if similarity > 0.2:
                         # ดึงข้อมูลสูตร
                         recipe = {
                             'name': recipe_name,
@@ -792,17 +769,18 @@ def main():
                         st.markdown(response)
                         
                         # แสดงสูตรและโภชนาการ
-                        display_recipe_with_nutrition(recipe, nutrition_data, settings)
+                        main_recipe_key = f"main_{st.session_state.message_counter}"
+                        display_recipe_with_nutrition(recipe, nutrition_data, settings, main_recipe_key)
                         
                         # เพิ่มการแนะนำเพิ่มเติม
                         if len(results) > 1:
                             st.markdown("#### 🔍 เมนูอื่นที่น่าสนใจ:")
-                            other_results = results[1:min(4, len(results))]  # แสดง 3 เมนูถัดมา
+                            other_results = results[1:min(4, len(results))]
                             
                             cols = st.columns(len(other_results))
                             for i, (other_name, other_sim, other_idx, _) in enumerate(other_results):
                                 with cols[i]:
-                                    if st.button(f"🍽️ {other_name}\n({other_sim:.0%})", key=f"other_{i}"):
+                                    if st.button(f"🍽️ {other_name}\n({other_sim:.0%})", key=f"other_{st.session_state.message_counter}_{i}"):
                                         st.session_state.search_query = other_name
                                         st.rerun()
                         
