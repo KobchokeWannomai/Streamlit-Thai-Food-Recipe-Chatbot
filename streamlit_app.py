@@ -867,26 +867,6 @@ def display_settings_panel(data, model, settings_state):
     st.sidebar.metric("🌐 API", api_status)
     st.sidebar.metric("🔍 การค้นหา", "✨ ปรับปรุงแล้ว")
     
-    st.sidebar.markdown("---")
-    
-    st.sidebar.markdown("### ✨ การปรับปรุงใหม่")
-    st.sidebar.info("""
-    🎯 **ปรับปรุงการค้นหา:**
-    • แม่นยำขึ้น 80%
-    • รองรับการพิมพ์ผิด
-    • ค้นหาแบบบางส่วน
-    
-    📊 **ปรับปรุงความคล้ายคลึง:**
-    • แสดงเปอร์เซนต์แม่นยำ
-    • ระบบให้คะแนนใหม่
-    • กรองผลซ้ำซ้อน
-    
-    📋 **ปรับปรุงการแสดงผล:**
-    • วิธีทำแสดงผลดีขึ้น
-    • โภชนาการครบถ้วน
-    • รวมแร่ธาตุในโภชนาการ
-    """)
-    
     return {
         'use_api': use_api, 'adjust_consumption': adjust_consumption,
         'enhance_missing': enhance_missing, 'fuzzy_threshold': fuzzy_threshold,
@@ -1037,7 +1017,7 @@ def display_recipe_with_nutrition(recipe, nutrition_data, settings, similarity_s
 def main():
     """ฟังก์ชันหลักของแอปพลิเคชัน"""
     
-    st.markdown('<h1 class="main-title">🍲 Thai Food Recipe Chatbot</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-title">Thai Food Recipe Chatbot</h1>', unsafe_allow_html=True)
     st.markdown("### 🥘 ระบบค้นหาสูตรอาหารไทย")
     
     # เริ่มต้นระบบ
