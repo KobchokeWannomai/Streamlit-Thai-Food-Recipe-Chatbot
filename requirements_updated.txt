@@ -1,0 +1,11 @@
+streamlit
+pandas
+sentence-transformers
+scikit-learn
+numpy
+torch
+transformers
+requests
+plotly
+difflib
+pickle-mixin
