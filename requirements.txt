@@ -1,23 +1,26 @@
-# Core dependencies สำหรับ Thai Food Recipe Chatbot
-streamlit>=1.28.0
+# Core Streamlit dependencies
+streamlit>=1.40.0
 pandas>=2.0.0
 numpy>=1.24.0
 
-# Machine Learning และ AI
+# Machine Learning และ AI (เวอร์ชันที่เสถียร)
 sentence-transformers>=2.2.0
 scikit-learn>=1.3.0
-torch>=2.0.0
-transformers>=4.30.0
+torch>=2.0.0,<2.8.0
+transformers>=4.30.0,<4.53.0
 
-# การประมวลผลข้อมูล
-requests>=2.31.0
-
-# การแสดงผลกราฟและชาร์ต
+# การแสดงผลกราฟ
 plotly>=5.15.0
 
-# การจัดการข้อความและการค้นหา
-fuzzywuzzy>=0.18.0
+# การประมวลผลข้อความ (ใช้เฉพาะที่จำเป็น)
 python-levenshtein>=0.21.0
+fuzzywuzzy>=0.18.0
 
-# อื่นๆ ที่จำเป็น
+# HTTP requests
+requests>=2.31.0
+
+# การจัดการไฟล์และข้อมูล
+python-dateutil>=2.8.0
+
+# การตั้งค่า
 python-dotenv>=1.0.0
