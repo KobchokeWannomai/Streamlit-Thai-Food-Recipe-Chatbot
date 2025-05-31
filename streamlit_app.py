@@ -819,17 +819,6 @@ def display_settings_panel(data, model, settings_state):
     """แสดงแถบการตั้งค่าพร้อมสถิติ"""
     st.sidebar.title("🔧 การตั้งค่าขั้นสูง")
     
-    # แสดงสถิติโดยรวม
-    st.sidebar.markdown("### 📊 สถิติโดยรวม")
-    st.sidebar.metric("📖 จำนวนสูตร", len(data))
-    st.sidebar.metric("🤖 AI Model", "✅ พร้อม" if model else "❌ ไม่พร้อม")
-    
-    api_status = "🟢 เชื่อมต่อ" if settings_state.get('use_api', False) else "🔴 ปิดใช้งาน"
-    st.sidebar.metric("🌐 API", api_status)
-    st.sidebar.metric("🔍 การค้นหา", "✨ ปรับปรุงแล้ว")
-    
-    st.sidebar.markdown("---")
-    
     # การตั้งค่า API
     st.sidebar.markdown("### 🌐 API ข้อมูลโภชนาการ")
     use_api = st.sidebar.checkbox("เปิดใช้งาน API ภายนอก", value=False, key="use_api")
@@ -868,6 +857,18 @@ def display_settings_panel(data, model, settings_state):
     )
     
     st.sidebar.markdown("---")
+
+    # แสดงสถิติโดยรวม
+    st.sidebar.markdown("### 📊 สถิติโดยรวม")
+    st.sidebar.metric("📖 จำนวนสูตร", len(data))
+    st.sidebar.metric("🤖 AI Model", "✅ พร้อม" if model else "❌ ไม่พร้อม")
+    
+    api_status = "🟢 เชื่อมต่อ" if settings_state.get('use_api', False) else "🔴 ปิดใช้งาน"
+    st.sidebar.metric("🌐 API", api_status)
+    st.sidebar.metric("🔍 การค้นหา", "✨ ปรับปรุงแล้ว")
+    
+    st.sidebar.markdown("---")
+    
     st.sidebar.markdown("### ✨ การปรับปรุงใหม่")
     st.sidebar.info("""
     🎯 **ปรับปรุงการค้นหา:**
@@ -1036,8 +1037,8 @@ def display_recipe_with_nutrition(recipe, nutrition_data, settings, similarity_s
 def main():
     """ฟังก์ชันหลักของแอปพลิเคชัน"""
     
-    st.markdown('<h1 class="main-title">🍲 Thai Food Recipe Chatbot</h1>')
-    st.markdown("### 🥘 ระบบค้นหาสูตรอาหารไทยที่ปรับปรุงใหม่")
+    st.markdown('<h1 class="main-title">🍲 Thai Food Recipe Chatbot</h1>', unsafe_allow_html=True)
+    st.markdown("### 🥘 ระบบค้นหาสูตรอาหารไทย")
     
     # เริ่มต้นระบบ
     with st.spinner("กำลังเริ่มต้นระบบที่ปรับปรุงแล้ว..."):
@@ -1064,18 +1065,6 @@ def main():
         
         nutrition_api = initialize_nutrition_api()
         search_engine = initialize_search_engine(data, nutrition_api)
-    
-    # แสดงสถิติ
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("📖 จำนวนสูตร", len(data))
-    with col2:
-        st.metric("🤖 AI Model", "✅ พร้อม" if model else "❌ ไม่พร้อม")
-    with col3:
-        api_status = "🟢 เชื่อมต่อ" if settings['use_api'] else "🔴 ปิดใช้งาน"
-        st.metric("🌐 API", api_status)
-    with col4:
-        st.metric("🔍 การค้นหา", "✨ ปรับปรุงแล้ว")
     
     # ตัวอย่างคำค้นหา
     st.markdown("#### 💡 ลองค้นหาเมนูเหล่านี้:")
