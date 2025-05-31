@@ -162,3 +162,81 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+# ========== Thai Food Recipe Chatbot Specific ==========
+
+# Streamlit specific
+.streamlit/config.toml
+.streamlit/credentials.toml
+
+# Machine Learning Models และ Cache
+model/
+models/
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+embeddings.pkl
+recipe_embeddings.pkl
+
+# ข้อมูลและ logs
+logs/
+cache/
+data/backup/
+*.log
+
+# Large data files ที่อาจทำให้ deployment ช้า
+*.zip
+*.tar.gz
+*.7z
+*.rar
+
+# API Keys และ secrets (เพิ่มความปลอดภัย)
+secrets.toml
+api_keys.txt
+.api_keys
+credentials.json
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+.temp/
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.sublime-*
+
+# การทดสอบ
+test_output/
+test_results/
+coverage_html_report/
+
+# ไฟล์สำรอง
+*.bak
+*.backup
+*~
+
+# Large CSV files (หากไม่ต้องการใน git)
+# uncomment บรรทัดด้านล่างหากไฟล์ CSV ใหญ่เกินไป
+# *.csv
+
+# Development และ debug files
+debug.py
+test.py
+scratch.py
+playground.py
