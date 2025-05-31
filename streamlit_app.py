@@ -99,25 +99,29 @@ st.markdown("""
         bottom: 120px !important;
         right: 30px !important;
         z-index: 99999 !important;
-        background-color: #4CAF50 !important;
+        background: linear-gradient(135deg, #4CAF50, #45a049) !important;
         color: white !important;
         border: none !important;
         border-radius: 50% !important;
-        width: 56px !important;
-        height: 56px !important;
+        width: 60px !important;
+        height: 60px !important;
         cursor: pointer !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+        box-shadow: 0 4px 20px rgba(76, 175, 80, 0.4) !important;
         font-size: 24px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        transition: all 0.3s ease !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         user-select: none !important;
+        backdrop-filter: blur(10px) !important;
     }
     .scroll-to-bottom-btn:hover {
-        background-color: #45a049 !important;
-        transform: scale(1.1) !important;
-        box-shadow: 0 6px 16px rgba(0,0,0,0.4) !important;
+        background: linear-gradient(135deg, #45a049, #3d8b40) !important;
+        transform: scale(1.1) translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(76, 175, 80, 0.6) !important;
+    }
+    .scroll-to-bottom-btn:active {
+        transform: scale(0.95) !important;
     }
     .similarity-score {
         background-color: #e3f2fd;
@@ -137,6 +141,15 @@ st.markdown("""
         font-weight: 600;
         margin-left: 10px;
     }
+    .exact-match-score {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 0.85em;
+        font-weight: 600;
+        margin-left: 10px;
+    }
     /* ปรับปรุงการแสดงผลรายการ */
     ul, ol {
         margin-left: 20px;
@@ -150,6 +163,20 @@ st.markdown("""
         border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
+    /* Animation สำหรับข้อความใหม่ */
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .new-message {
+        animation: slideInUp 0.5s ease-out;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -158,18 +185,172 @@ DATA_PATH = "thai_food_processed.csv"
 EMBEDDINGS_PATH = "embeddings.pkl"
 MODEL_PATH = "model"
 
-class FuzzyMatcher:
-    """คลาสสำหรับจับคู่ข้อความที่คล้ายคลึงกัน"""
+class EnhancedFuzzyMatcher:
+    """คลาสสำหรับจับคู่ข้อความที่คล้ายคลึงกันแบบขั้นสูง พร้อมรองรับการพิมพ์ผิดของเมนูไทย"""
     
-    @staticmethod
-    def calculate_similarity(s1, s2):
-        """คำนวณความคล้ายคลึงระหว่างสองสตริง"""
-        return SequenceMatcher(None, s1.lower(), s2.lower()).ratio()
-    
-    @staticmethod
-    def fix_common_typos(text):
-        """แก้ไขการพิมพ์ผิดที่พบบ่อย"""
-        typo_fixes = {
+    def __init__(self):
+        # รายการเมนูอาหารไทยที่ครอบคลุมจากข้อมูลที่ให้มา
+        self.thai_menu_variations = {
+            'กุ้งทาพริกไทยกระเทียม': ['กุ้งทาพริกไทย', 'กุ้งผัดพริกไทย', 'กุ้งกระเทียม'],
+            'ข้าวเม่าทอด': ['ข้าวเหม่าทอด', 'ข้าวเม่า', 'ข้าวหม้อทอด'],
+            'เปรี้ยวหวานไข่ม้วน': ['เปรี้ยวหวาน', 'ไข่ม้วนเปรี้ยวหวาน', 'ไข่ม้วน'],
+            'ไข่จ่อม': ['ไข่จ๋อม', 'ไข่ซ่อม', 'ไข่ดิบ'],
+            'งบปลาทู': ['งบปลา', 'ปลาทูแกง', 'แกงปลาทู'],
+            'น้ำพริกจิ้มผักดิบ': ['น้ำพริกผักดิบ', 'น้ำพริกจิ้ม', 'น้ำพริกผัก'],
+            'ลอยน้ำดอกไม้สด': ['ลอยน้ำดอกไม้', 'ลอยน้ำ', 'ขนมลอยน้ำ'],
+            'ยำไข่ปลาดุก': ['ยำไข่ปลา', 'ไข่ปลาดุกยำ', 'ยำไข่ดุก'],
+            'ปลาทูทอดปรุง': ['ปลาทูทอด', 'ปลาทูปรุง', 'ปลาทูผัด'],
+            'ต้มยำกะทิ': ['ต้มยำน้ำกะทิ', 'ต้มยำใส่กะทิ', 'ต้มยำขาว'],
+            'ไก่ยำ': ['ยำไก่', 'ไก่ลาบ', 'ยำไก่สด'],
+            'กล้วยบวชชี': ['กล้วยบุชชี', 'กล้วยชุบแป้ง', 'กล้วยทอด'],
+            'แกงคั่วฟักทองกับกุ้งตะเข็บ': ['แกงคั่วฟักทอง', 'แกงคั่วกุ้ง', 'ฟักทองแกงคั่ว'],
+            'ไส้กรอกหมู': ['ไส้กรอก', 'ไส้กรอกอีสาน', 'ไส้กรอกหมูสด'],
+            'เมี่ยงปลาทู': ['เมี่ยงปลา', 'ปลาทูเมี่ยง', 'น้ำเมี่ยงปลาทู'],
+            'นกพิราบตุ๋น': ['นกพิราบ', 'นกตุ๋น', 'พิราบตุ๋น'],
+            'ปลากุเลาทอดปรุงหน้า': ['ปลากุเลาทอด', 'ปลากุเลา', 'กุเลาทอด'],
+            'ห่อหมกหอยแมลงภู่': ['ห่อหมกหอย', 'หอยแมลงภู่ห่อหมก', 'ห่อหมก'],
+            'งบไก่': ['แกงไก่', 'ไก่แกง', 'งบไก่ใส'],
+            'ไข่กระจัง': ['ไข่กระจัง', 'ไข่กระจัด', 'ไข่ผัด'],
+            'หน้าตั้งแขก': ['หน้าตั้ง', 'แขกหน้าตั้ง', 'หน้าตั้งผัด'],
+            'ยำปลาหมึกสด': ['ยำปลาหมึก', 'ปลาหมึกยำ', 'ยำหมึก'],
+            'ฟักตุ๋น': ['ฟักทองตุ๋น', 'ตุ๋นฟัก', 'ฟักต้ม'],
+            'ยำถั่วพู': ['ยำถั่วพู', 'ถั่วพูยำ', 'ยำถั่ว'],
+            'ซ้อสมะเขือเทศซุป': ['ซอสมะเขือเทศ', 'ซุปมะเขือเทศ', 'ซ้อสมะเขือ'],
+            'ปลาทูชุบแป้งทอด': ['ปลาทูชุบแป้ง', 'ปลาทูทอดแป้ง', 'ปลาทูทอดกรอบ'],
+            'บะหมี่ทรงเครื่อง': ['บะหมี่ใส่ของ', 'บะหมี่พิเศษ', 'บะหมี่ครบรส'],
+            'มะตูมเชื่อม': ['มะตูม', 'มะตูมหวาน', 'มะตูมแช่อิ่ม'],
+            'สังขยา': ['สังขยาใบเตย', 'สังขยาฟักทอง', 'ขนมสังขยา'],
+            'กุ้งแห้งปรุงขิง': ['กุ้งแห้งผัดขิง', 'กุ้งแห้งใส่ขิง', 'กุ้งแห้งขิง'],
+            'แกงเผ็ดน้ำมันหมู': ['แกงเผ็ดหมู', 'แกงเผ็ดใส่น้ำมันหมู', 'แกงเผ็ดไขมันหมู'],
+            'ผัดต้นผักกาดดอง': ['ผัดผักกาดดอง', 'ต้นผักกาดผัด', 'ผักกาดดองผัด'],
+            'ยำขมิ้นขาวกับกุ้งเค็ม': ['ยำขมิ้นขาว', 'ขมิ้นขาวยำ', 'ยำขมิ้น'],
+            'เกี๊ยวกุ้ง': ['เกี๊ยวหอม', 'เกี้ยวกุ้ง', 'เกี๋ยวกุ้ง'],
+            'ข้าวต้มน้ำวุ้น': ['ข้าวต้มวุ้น', 'ข้าวต้มใส', 'ข้าวต้มน้ำใส'],
+            'หมี่หน้าเนื้อ': ['หมี่หน้า', 'หมี่ราดหน้าเนื้อ', 'หมี่ผัดหน้าเนื้อ'],
+            'ขนมสาลี่โคโก้': ['ขนมสาลี่', 'สาลี่โคโก้', 'ขนมโคโก้'],
+            'สาคูเปียก': ['ขนมสาคู', 'สาคูหวาน', 'สาคูน้ำกะทิ'],
+            'ห่อหมกไข่': ['ห่อหมกไข่แดง', 'ไข่ห่อหมก', 'ห่อหมกไข่เจียว'],
+            'แกงยา': ['แกงยาใต้', 'แกงยาปลา', 'แกงยาผัก'],
+            'เนื้อเครื่องเทศทอด': ['เนื้อทอดเครื่องเทศ', 'เนื้อผัดเครื่องเทศ', 'เนื้อปรุงรส'],
+            'ขนมต้มแดง': ['ขนมต้ม', 'ต้มแดง', 'ขนมไทยต้มแดง'],
+            'ปลาอบ': ['ปลาย่าง', 'ปลาปิ้ง', 'ปลาเผา'],
+            'ตับตุ๋น': ['ตับหมูตุ๋น', 'ตับไก่ตุ๋น', 'ตับตุ๋นกะทิ'],
+            'ไก่หยอง': ['ไก่หยองใต้', 'ไก่ผัดพริกแกง', 'ไก่ใส่พริกแกง'],
+            'สลัดหมูกรอบ': ['สลัดหมู', 'หมูกรอบสลัด', 'ยำหมูกรอบ'],
+            'ไข่ดาว': ['ไข่ดาวกรอบ', 'ไข่ทอด', 'ไข่ฟูดาว'],
+            'ยอดแคผัดกรอบ': ['ยอดแค', 'ผักยอดแค', 'แคผัด'],
+            'ข้าวชวา': ['ข้าวชาววัง', 'ข้าวชาวบ้าน', 'ข้าวผัดชวา'],
+            'มะเขือเทศกุ้งเผา': ['มะเขือเทศใส่กุ้ง', 'กุ้งเผามะเขือเทศ', 'มะเขือเทศผัดกุ้ง'],
+            'ไข่ต้มปรุงจับฉ่าย': ['ไข่ต้มปรุงรส', 'ไข่ต้มใส่จับฉ่าย', 'ไข่ต้มผัก'],
+            'ยำไข่ดาว': ['ไข่ดาวยำ', 'ยำไข่ทอด', 'ไข่ดาวผัด'],
+            'นกปากซ่อมสับ': ['นกปากซ่อม', 'นกสับ', 'เนื้อนกสับ'],
+            'แกงจืดชนิดตีน้ำมัน': ['แกงจืดใส', 'แกงจืดไม่ใส่กะทิ', 'แกงจืดเรียบ'],
+            'กะหรี่พัฟฟ์': ['กะหรี่ปัฟฟ์', 'กะหรี่พาฟ', 'กะหรี่ย่าม'],
+            'ปลาทูแนม': ['ปลาทูเค็ม', 'ปลาทูหมัก', 'ปลาทูดอง'],
+            'ขนมกลีบลำดวน': ['ขนมกลีบ', 'กลีบลำดวน', 'ขนมไทยกลีบ'],
+            'แกงเผ็ดหมู': ['แกงเผ็ดใส่หมู', 'หมูแกงเผ็ด', 'แกงเผ็ดเนื้อหมู'],
+            'หมูแนมสด': ['หมูแนม', 'หมูเค็มสด', 'หมูดองสด'],
+            'มะเขือยาวเครื่องเทศ': ['มะเขือยาวผัด', 'มะเขือยาวปรุงรส', 'มะเขือผัดเครื่องเทศ'],
+            'ไส้กรอกข้าว': ['ไส้กรอกใส่ข้าว', 'ไส้กรอกอีสานข้าว', 'ไส้กรอกข้าวโพด'],
+            'น้ำเมี่ยง': ['น้ำเมี่ยงปลา', 'เมี่ยงน้ำ', 'น้ำจิ้มเมี่ยง'],
+            'ปลานึ่งกับมะเขือเทศ': ['ปลานึ่งมะเขือเทศ', 'ปลาใส่มะเขือเทศ', 'ปลานึ่งผัก'],
+            'น้ำพริกพะม่า': ['น้ำพริกพะหม่า', 'พะม่า', 'น้ำพริกใต้'],
+            'ไก่ต้มขนมจีน': ['ไก่ต้มใส', 'ขนมจีนไก่ต้ม', 'ไก่ต้มสด'],
+            'ข้าวเม่าคลุก': ['ข้าวเหม่าคลุก', 'ข้าวเม่าผัด', 'ข้าวคลุกเครื่อง'],
+            'กุ้งเผากับมะเขือเปราะ': ['กุ้งเผามะเขือ', 'กุ้งผัดมะเขือเปราะ', 'กุ้งใส่มะเขือ'],
+            'มะละกอโถบรรจุใส้': ['มะละกอใส้', 'มะละกอไส้', 'มะละกอยัดไส้'],
+            'พุดชาจีนเชื่อมไส้เกาลัด': ['พุดชาจีน', 'ขนมจีนหวาน', 'พุดชาเกาลัด'],
+            'ข้าวต้มไข่': ['ข้าวต้มใส่ไข่', 'ข้าวต้มไข่ดาว', 'ข้าวต้มไข่เจียว'],
+            'ปลาแนม': ['ปลาเค็ม', 'ปลาดอง', 'ปลาหมัก'],
+            'แกงต้มกะทิฟักทอง': ['แกงต้มฟักทอง', 'ฟักทองแกงกะทิ', 'แกงฟักทองกะทิ'],
+            'ละมุดมีใส้': ['ละมุดไส้', 'ละมุดยัดไส้', 'ละมุดใส้หวาน'],
+            'บะหมี่สำเร็จ': ['บะหมี่กึ่งสำเร็จ', 'บะหมี่แพ็ค', 'บะหมี่ผัด'],
+            'ก๋วยเตี๋ยวไส้ไข่': ['ก๋วยเตี๋ยวไข่', 'เส้นใส่ไข่', 'ก๋วยเตี๋ยวไข่ดาว'],
+            'ต้มหน่อไม้ไผ่ตงกับหมู': ['ต้มหน่อไม้', 'หน่อไม้ต้มหมู', 'ต้มหน่อไผ่'],
+            'ผัดห่วงอาลัย': ['ผัดห่วง', 'ห่วงอาลัยผัด', 'ผักห่วงผัด'],
+            'ยำพริก': ['ยำพริกสด', 'พริกยำ', 'ยำพริกแห้ง'],
+            'น้ำพริกเผา': ['พริกเผา', 'น้ำพริกเผาแห้ง', 'น้ำพริกเผาสด'],
+            'หมูทอดเค็ม': ['หมูทอดกรอบ', 'หมูทอดแห้ง', 'หมูเค็มทอด'],
+            'เต้าหู้ยี้ปรุงรส': ['เต้าหู้ยี้', 'เต้าหู้ผัด', 'เต้าหู้ปรุง'],
+            'กล้วยทอด': ['กล้วยทอดกรอบ', 'กล้วยทอดแป้ง', 'กล้วยชุบแป้งทอด'],
+            'แกงต้มส้ม': ['แกงส้ม', 'ต้มส้ม', 'แกงส้มใส'],
+            'ต้มยำปลา': ['ต้มยำใส่ปลา', 'ปลาต้มยำ', 'ต้มยำปลาดุก'],
+            'แกงเห็ดฟางกับมะเขือเทศ': ['แกงเห็ดฟาง', 'เห็ดฟางแกง', 'แกงเห็ดมะเขือ'],
+            'ต้มโคล้งกุ้ง': ['ต้มโคล้ง', 'กุ้งต้มโคล้ง', 'ต้มโคล้งใส่กุ้ง'],
+            'แกงจืดลูกชิ้นกับจีฉ่าย': ['แกงจืดลูกชิ้น', 'ลูกชิ้นแกงจืด', 'แกงจืดใส่จีฉ่าย'],
+            'ไข่สามชั้น': ['ไข่สามชั้นผัด', 'หมูสามชั้นไข่', 'ไข่ผัดสามชั้น'],
+            'มันผรั่งบดใส่ไส้': ['มันผรั่งไส้', 'มันผรั่งยัดไส้', 'มันผรั่งบด'],
+            'ไข่ในรัง': ['ไข่ซ่อนรัง', 'ไข่รังนก', 'ไข่ทำรัง'],
+            'ปลาโฉมตรู': ['ปลาโฉม', 'ปลาตรู', 'ปลาโฉมผัด'],
+            'ไข่เค็มชั้น': ['ไข่เค็มทอด', 'ไข่เค็มผัด', 'ไข่เค็มปรุง'],
+            'แกงเลียงขี้เหล็ก': ['แกงเลียง', 'ขี้เหล็กแกงเลียง', 'แกงเลียงผัก'],
+            'ผัดคะน้า': ['คะน้าผัด', 'ผักคะน้าผัด', 'คะน้าใส่หมู'],
+            'ปลาช่อนต้มเค็มกับก๋งฉ่าย': ['ปลาช่อนต้มเค็ม', 'ปลาช่อนต้ม', 'ปลาช่อนใส่ก๋งฉ่าย'],
+            'ก๋วยเตี๋ยวผัด': ['ผัดเส้น', 'เส้นผัด', 'ก๋วยเตี๋ยวคั่ว'],
+            'ไข่เค็มทอดกรอบ': ['ไข่เค็มทอด', 'ไข่เค็มกรอบ', 'ไข่เค็มฟู'],
+            'แกงจืดต้นคะน้า': ['แกงจืดคะน้า', 'ต้นคะน้าแกงจืด', 'คะน้าต้มใส'],
+            'สาเกเชื่อม': ['สาเกหวาน', 'สาเกแช่อิ่ม', 'สาเกขาว'],
+            'ไข่สวรรค์': ['ไข่ฟ้า', 'ไข่สวรรค์ทอง', 'ไข่แสงสวรรค์'],
+            'มักกะโรนีรังแตน': ['มักกะโรนี', 'รังแตนมักกะโรนี', 'พาสต้ารังแตน'],
+            'น้ำพริกเครื่องสด': ['น้ำพริกสด', 'เครื่องสดน้ำพริก', 'น้ำพริกผักสด'],
+            'ปลาทูร่องสวน': ['ปลาทูร่อง', 'ปลาทูสวน', 'ปลาทูใส่ผัก'],
+            'ผัดกะเพรา': ['กะเพราผัด', 'ผัดใบกะเพรา', 'กะเพราหมูสับ'],
+            'ไข่เจียว': ['ไข่เจียวฟู', 'ไข่เจียวกรอบ', 'ไข่เจียวใส่หอม'],
+            'แกงเปลือกแตงโม': ['แกงเปลือกแตง', 'เปลือกแตงโมแกง', 'แกงแตงโม'],
+            'ต้มยำหอยแมลงภู่': ['ต้มยำหอย', 'หอยแมลงภู่ต้มยำ', 'ต้มยำหอยใหญ่'],
+            'แกงเลียง': ['แกงเลียงผัก', 'แกงเลียงกุ้ง', 'แกงเลียงใต้'],
+            'แกงต้มกะทิฟันเขียว': ['แกงต้มฟันเขียว', 'ฟันเขียวแกงกะทิ', 'แกงฟันเขียว'],
+            'ถั่วแนม': ['ถั่วเค็ม', 'ถั่วดอง', 'ถั่วหมัก'],
+            'ผัดไข่ปลาตะเพียน': ['ไข่ปลาตะเพียนผัด', 'ไข่ปลาผัด', 'ตะเพียนไข่ผัด'],
+            'ส้มตำแตงร้าน': ['ส้มตำแตง', 'แตงกวาส้มตำ', 'ส้มตำแตงกวา'],
+            'ผัดคะน้ากับซีเซ็กฉ่าย': ['ผัดคะน้าซีเซ็ก', 'คะน้าผัดซีเซ็ก', 'ผัดคะน้าฉ่าย'],
+            'ต้มโคล้ง': ['ต้มโคล้งผัก', 'โคล้งต้ม', 'ต้มโคล้งกุ้ง'],
+            'ยำทวายสมัยใหม่': ['ยำทวาย', 'ทวายยำ', 'ยำทวายใหม่'],
+            'ผัดผักกาดขาว': ['ผักกาดขาวผัด', 'ผัดผักกาด', 'ผักกาดผัด'],
+            'ผัดหัวผักกาดเค็ม': ['หัวผักกาดผัด', 'ผักกาดเค็มผัด', 'ผัดหัวไชเท้า'],
+            'ไข่ช่อนรูป': ['ไข่ช่อน', 'ไข่รูปช่อน', 'ไข่ทำรูป'],
+            'ยำไข่เจียวเครื่องหมี่': ['ยำไข่เจียว', 'ไข่เจียวยำ', 'ยำไข่เจียวผัก'],
+            'กุ้งแฝง': ['กุ้งแฝงใต้', 'กุ้งผัดแฝง', 'กุ้งปรุงแฝง'],
+            'บี๊ฟที': ['บีฟสเต็ก', 'เนื้อทีโบน', 'เนื้อย่าง'],
+            'กงเชียงสด': ['กงเชียง', 'ไส้กรอกจีน', 'กงเชียงทอด'],
+            'ไข่ตุ๋น': ['ไข่ตุ๋นกะทิ', 'ไข่ตุ๋นหวาน', 'ไข่ตุ๋นนึ่ง'],
+            'แกงต้มเค็ม': ['แกงต้มใส', 'ต้มเค็ม', 'แกงต้มผัก'],
+            'กุ้งทอดปรุงรส': ['กุ้งทอด', 'กุ้งทอดกรอบ', 'กุ้งทอดเกลือ'],
+            'ยำไข่แมงดา': ['ไข่แมงดายำ', 'ยำไข่มด', 'ไข่แมงดาผัด'],
+            'ยำส้มโอ': ['ส้มโอยำ', 'ยำส้มโอกุ้ง', 'ส้มโอผัด'],
+            'ไข่หวานฝอย': ['ไข่ฝอย', 'ไข่หวาน', 'ฝอยทอง'],
+            'ฟักทองทอด': ['ฟักทองทอดกรอบ', 'ฟักทองชุบแป้ง', 'ฟักทองผัด'],
+            'แกงไส้กรอกหมูแห้ง': ['แกงไส้กรอก', 'ไส้กรอกแกง', 'แกงหมูแห้ง'],
+            'มะเขือเทศหน้านวล': ['มะเขือเทศหน้า', 'มะเขือเทศนวล', 'มะเขือเทศต้ม'],
+            'ปลาแห้งปรุงกระเทียมดอง': ['ปลาแห้งปรุง', 'ปลาแห้งกระเทียม', 'ปลาแห้งผัด'],
+            'ฉี่ฉู่เมืองปราณ': ['ฉี่ฉู่', 'เมืองปราณ', 'ขนมฉี่ฉู่'],
+            'ทองม้วนเค็ม': ['ทองม้วน', 'ไข่ม้วนเค็ม', 'ทองม้วนคาว'],
+            'เปลือกส้มโอแช่อิ่ม': ['เปลือกส้มโอ', 'ส้มโอแช่อิ่ม', 'เปลือกส้มโอหวาน'],
+            'ยำทวาย': ['ทวายยำ', 'ยำทวายใต้', 'ยำผลไม้'],
+            'ไข่น้อค': ['ไข่น้อคใต้', 'ไข่ย่าง', 'ไข่เผา'],
+            'เมี่ยงฝัน': ['เมี่ยงหวาน', 'ฝันเมี่ยง', 'เมี่ยงขนม'],
+            'ไข่ม้วน': ['ไข่ม้วนหวาน', 'ไข่ม้วนคาว', 'ไข่ผัดม้วน'],
+            'แป้งจี่': ['ขนมแป้งจี่', 'แป้งจี่หวาน', 'แป้งย่าง'],
+            'น้ำพริกปลาเค็ม': ['น้ำพริกปลา', 'ปลาเค็มน้ำพริก', 'น้ำพริกใส่ปลา'],
+            'กงเชียงไก่นา': ['กงเชียงไก่', 'ไก่นากงเชียง', 'กงเชียงผัดไก่'],
+            'ไข่ดาวหน้ากุ้ง': ['ไข่ดาวกุ้ง', 'กุ้งไข่ดาว', 'ไข่ดาวใส่กุ้ง'],
+            'น้ำพริกปูเค็ม': ['น้ำพริกปู', 'ปูเค็มน้ำพริก', 'น้ำพริกใส่ปู'],
+            'เต้าเจี้ยวปรุงรส': ['เต้าเจี้ยว', 'เต้าเจี้ยวผัด', 'เต้าเจี้ยวหวาน'],
+            'ขนมจีบหมูสับ': ['ขนมจีบ', 'หมูสับจีบ', 'ขนมจีบหมู'],
+            'แกงส้มถั่วฝักยาว': ['แกงส้มถั่ว', 'ถั่วฝักยาวแกงส้ม', 'แกงส้มใส่ถั่ว'],
+            'แกงต้มหมูกับสัปรส': ['แกงต้มหมู', 'หมูแกงต้ม', 'แกงต้มสัปรส'],
+            'ผัดเต้าหู้เหลือง': ['เต้าหู้เหลืองผัด', 'ผัดเต้าหู้', 'เต้าหู้ผัด'],
+            'ไก่ทันสมัย': ['ไก่สมัยใหม่', 'ไก่ผัดทันสมัย', 'ไก่ปรุงใหม่'],
+            'เนื้อผัดเทียมแหนม': ['เนื้อเทียมแหนม', 'เนื้อผัดแหนม', 'เนื้อใส่แหนม'],
+            'ไข่น้อคอีกอย่างหนึ่ง': ['ไข่น้อคใหม่', 'ไข่น้อคพิเศษ', 'ไข่น้อคแปลก'],
+            'น้ำพริกก้อย': ['พริกก้อย', 'น้ำพริกก้อยใต้', 'น้ำพริกผักก้อย'],
+            'ขนมเปียกปูน': ['ขนมเปียก', 'เปียกปูน', 'ขนมไทยเปียก'],
+            'น้ำเต้าบรรจุไส้': ['น้ำเต้าไส้', 'น้ำเต้าใส้', 'น้ำเต้ายัดไส้'],
+            'น้ำพริกไข่เค็ม': ['น้ำพริกใส่ไข่เค็ม', 'ไข่เค็มน้ำพริก', 'น้ำพริกไข่']
+        }
+        
+        # การแก้ไขการพิมพ์ผิดทั่วไป
+        self.common_typos = {
             'กระเพรา': 'กะเพรา',
             'ผัดกระเพรา': 'ผัดกะเพรา',
             'ต้มยำ': 'ต้มยำ',
@@ -190,34 +371,248 @@ class FuzzyMatcher:
             'ไข่ดาว': 'ไข่ดาว',
             'ลาบหมู': 'ลาบหมู',
             'ลาป': 'ลาบ',
+            'กุ้งทาพริก': 'กุ้งทาพริกไทยกระเทียม',
+            'ข้าวเหม่า': 'ข้าวเม่าทอด',
+            'งบปลา': 'งบปลาทู',
+            'ยำไข่ปลา': 'ยำไข่ปลาดุก',
+            'ปลาทูทอด': 'ปลาทูทอดปรุง',
+            'ต้มยำกะทิ': 'ต้มยำกะทิ',
+            'กล้วยบุชชี': 'กล้วยบวชชี',
+            'แกงคั่วฟักทอง': 'แกงคั่วฟักทองกับกุ้งตะเข็บ',
+            'เมี่ยงปลา': 'เมี่ยงปลาทู',
+            'ห่อหมกหอย': 'ห่อหมกหอยแมลงภู่',
+            'ยำปลาหมึก': 'ยำปลาหมึกสด',
+            'ยำถั่ว': 'ยำถั่วพู',
+            'บะหมี่ทรง': 'บะหมี่ทรงเครื่อง',
+            'เกี๊ยวกุ้ง': 'เกี๊ยวกุ้ง',
+            'หมี่หน้า': 'หมี่หน้าเนื้อ',
+            'สาคู': 'สาคูเปียก',
+            'แกงยา': 'แกงยา',
+            'ขนมต้ม': 'ขนมต้มแดง',
+            'สลัดหมู': 'สลัดหมูกรอบ',
+            'ยอดแค': 'ยอดแคผัดกรอบ',
+            'มะเขือเทศกุ้ง': 'มะเขือเทศกุ้งเผา',
+            'ยำไข่ดาว': 'ยำไข่ดาว',
+            'กะหรี่': 'กะหรี่พัฟฟ์',
+            'ขนมกลีบ': 'ขนมกลีบลำดวน',
+            'หมูแนม': 'หมูแนมสด',
+            'มะเขือยาว': 'มะเขือยาวเครื่องเทศ',
+            'ไส้กรอกข้าว': 'ไส้กรอกข้าว',
+            'ปลานึ่ง': 'ปลานึ่งกับมะเขือเทศ',
+            'น้ำพริกพะม่า': 'น้ำพริกพะม่า',
+            'ไก่ต้ม': 'ไก่ต้มขนมจีน',
+            'กุ้งเผา': 'กุ้งเผากับมะเขือเปราะ',
+            'พุดชาจีน': 'พุดชาจีนเชื่อมไส้เกาลัด',
+            'ข้าวต้มไข่': 'ข้าวต้มไข่',
+            'ปลาแนม': 'ปลาแนม',
+            'แกงต้มกะทิ': 'แกงต้มกะทิฟักทอง',
+            'ละมุด': 'ละมุดมีใส้',
+            'บะหมี่สำเร็จ': 'บะหมี่สำเร็จ',
+            'ก๋วยเตี๋ยวไส้': 'ก๋วยเตี๋ยวไส้ไข่',
+            'ต้มหน่อไม้': 'ต้มหน่อไม้ไผ่ตงกับหมู',
+            'ผัดห่วง': 'ผัดห่วงอาลัย',
+            'ยำพริก': 'ยำพริก',
+            'หมูทอดเค็ม': 'หมูทอดเค็ม',
+            'เต้าหู้ยี้': 'เต้าหู้ยี้ปรุงรส',
+            'กล้วยทอด': 'กล้วยทอด',
+            'แกงต้มส้ม': 'แกงต้มส้ม',
+            'ต้มยำปลา': 'ต้มยำปลา',
+            'แกงเห็ดฟาง': 'แกงเห็ดฟางกับมะเขือเทศ',
+            'ต้มโคล้งกุ้ง': 'ต้มโคล้งกุ้ง',
+            'แกงจืดลูกชิ้น': 'แกงจืดลูกชิ้นกับจีฉ่าย',
+            'ไข่สามชั้น': 'ไข่สามชั้น',
+            'มันผรั่ง': 'มันผรั่งบดใส่ไส้',
+            'ไข่ในรัง': 'ไข่ในรัง',
+            'ปลาโฉม': 'ปลาโฉมตรู',
+            'ไข่เค็มชั้น': 'ไข่เค็มชั้น',
+            'แกงเลียงขี้เหล็ก': 'แกงเลียงขี้เหล็ก',
+            'ผัดคะน้า': 'ผัดคะน้า',
+            'ปลาช่อนต้ม': 'ปลาช่อนต้มเค็มกับก๋งฉ่าย',
+            'ก๋วยเตี๋ยวผัด': 'ก๋วยเตี๋ยวผัด',
+            'ไข่เค็มทอด': 'ไข่เค็มทอดกรอบ',
+            'แกงจืดต้นคะน้า': 'แกงจืดต้นคะน้า',
+            'สาเก': 'สาเกเชื่อม',
+            'ไข่สวรรค์': 'ไข่สวรรค์',
+            'มักกะโรนี': 'มักกะโรนีรังแตน',
+            'น้ำพริกเครื่อง': 'น้ำพริกเครื่องสด',
+            'ปลาทูร่อง': 'ปลาทูร่องสวน',
+            'แกงเปลือกแตง': 'แกงเปลือกแตงโม',
+            'ต้มยำหอย': 'ต้มยำหอยแมลงภู่',
+            'แกงเลียง': 'แกงเลียง',
+            'แกงต้มกะทิฟัน': 'แกงต้มกะทิฟันเขียว',
+            'ถั่วแนม': 'ถั่วแนม',
+            'ผัดไข่ปลา': 'ผัดไข่ปลาตะเพียน',
+            'ส้มตำแตง': 'ส้มตำแตงร้าน',
+            'ผัดคะน้าซี': 'ผัดคะน้ากับซีเซ็กฉ่าย',
+            'ต้มโคล้ง': 'ต้มโคล้ง',
+            'ยำทวายสมัย': 'ยำทวายสมัยใหม่',
+            'ผัดผักกาดขาว': 'ผัดผักกาดขาว',
+            'ผัดหัวผักกาด': 'ผัดหัวผักกาดเค็ม',
+            'ไข่ช่อน': 'ไข่ช่อนรูป',
+            'ยำไข่เจียวเครื่อง': 'ยำไข่เจียวเครื่องหมี่',
+            'กุ้งแฝง': 'กุ้งแฝง',
+            'บี๊ฟที': 'บี๊ฟที',
+            'กงเชียงสด': 'กงเชียงสด',
+            'ไข่ตุ๋น': 'ไข่ตุ๋น',
+            'แกงต้มเค็ม': 'แกงต้มเค็ม',
+            'กุ้งทอดปรุง': 'กุ้งทอดปรุงรส',
+            'ยำไข่แมงดา': 'ยำไข่แมงดา',
+            'ยำส้มโอ': 'ยำส้มโอ',
+            'ไข่หวานฝอย': 'ไข่หวานฝอย',
+            'ฟักทองทอด': 'ฟักทองทอด',
+            'แกงไส้กรอก': 'แกงไส้กรอกหมูแห้ง',
+            'มะเขือเทศหน้า': 'มะเขือเทศหน้านวล',
+            'ปลาแห้งปรุง': 'ปลาแห้งปรุงกระเทียมดอง',
+            'ฉี่ฉู่': 'ฉี่ฉู่เมืองปราณ',
+            'ทองม้วนเค็ม': 'ทองม้วนเค็ม',
+            'เปลือกส้มโอ': 'เปลือกส้มโอแช่อิ่ม',
+            'ยำทวาย': 'ยำทวาย',
+            'ไข่น้อค': 'ไข่น้อค',
+            'เมี่ยงฝัน': 'เมี่ยงฝัน',
+            'แป้งจี่': 'แป้งจี่',
+            'น้ำพริกปลาเค็ม': 'น้ำพริกปลาเค็ม',
+            'กงเชียงไก่': 'กงเชียงไก่นา',
+            'ไข่ดาวหน้า': 'ไข่ดาวหน้ากุ้ง',
+            'น้ำพริกปูเค็ม': 'น้ำพริกปูเค็ม',
+            'เต้าเจี้ยวปรุง': 'เต้าเจี้ยวปรุงรส',
+            'ขนมจีบหมู': 'ขนมจีบหมูสับ',
+            'แกงส้มถั่ว': 'แกงส้มถั่วฝักยาว',
+            'แกงต้มหมู': 'แกงต้มหมูกับสัปรส',
+            'ผัดเต้าหู้เหลือง': 'ผัดเต้าหู้เหลือง',
+            'ไก่ทันสมัย': 'ไก่ทันสมัย',
+            'เนื้อผัดเทียม': 'เนื้อผัดเทียมแหนม',
+            'ไข่น้อคอีก': 'ไข่น้อคอีกอย่างหนึ่ง',
+            'น้ำพริกก้อย': 'น้ำพริกก้อย',
+            'ขนมเปียกปูน': 'ขนมเปียกปูน',
+            'น้ำเต้าบรรจุ': 'น้ำเต้าบรรจุไส้',
+            'น้ำพริกไข่เค็ม': 'น้ำพริกไข่เค็ม'
         }
+    
+    def calculate_similarity(self, s1, s2):
+        """คำนวณความคล้ายคลึงระหว่างสองสตริงด้วยวิธีการหลายแบบ"""
+        # ความคล้ายคลึงพื้นฐาน
+        basic_similarity = SequenceMatcher(None, s1.lower(), s2.lower()).ratio()
         
+        # ความคล้ายคลึงแบบละเว้นพื้นที่ว่าง
+        s1_no_space = re.sub(r'\s+', '', s1.lower())
+        s2_no_space = re.sub(r'\s+', '', s2.lower())
+        no_space_similarity = SequenceMatcher(None, s1_no_space, s2_no_space).ratio()
+        
+        # ความคล้ายคลึงแบบคำ
+        words1 = set(s1.lower().split())
+        words2 = set(s2.lower().split())
+        if words1 and words2:
+            word_similarity = len(words1.intersection(words2)) / len(words1.union(words2))
+        else:
+            word_similarity = 0
+        
+        # คำนวณคะแนนรวม
+        final_score = max(basic_similarity, no_space_similarity, word_similarity * 0.8)
+        
+        return final_score
+    
+    def fix_common_typos(self, text):
+        """แก้ไขการพิมพ์ผิดที่พบบ่อย"""
         fixed_text = text
-        for typo, correct in typo_fixes.items():
-            fixed_text = fixed_text.replace(typo, correct)
+        for typo, correct in self.common_typos.items():
+            if typo in fixed_text:
+                fixed_text = fixed_text.replace(typo, correct)
         
         return fixed_text
     
-    @staticmethod
-    def find_best_match(query, candidates, threshold=0.6):
-        """หาผลลัพธ์ที่ตรงกันมากที่สุด"""
-        query = FuzzyMatcher.fix_common_typos(query.lower())
+    def find_menu_variations(self, query):
+        """หาเมนูที่ตรงกับหรือคล้ายกับคำค้นหา"""
+        query_lower = query.lower().strip()
+        matches = []
+        
+        # ตรวจสอบการตรงกันแบบตรงตัว
+        for main_menu, variations in self.thai_menu_variations.items():
+            if query_lower == main_menu.lower():
+                matches.append({
+                    'menu': main_menu,
+                    'similarity': 1.0,
+                    'match_type': 'exact'
+                })
+            elif query_lower in [v.lower() for v in variations]:
+                matches.append({
+                    'menu': main_menu,
+                    'similarity': 0.95,
+                    'match_type': 'variation'
+                })
+            else:
+                # ตรวจสอบความคล้ายคลึง
+                main_similarity = self.calculate_similarity(query_lower, main_menu.lower())
+                if main_similarity >= 0.7:
+                    matches.append({
+                        'menu': main_menu,
+                        'similarity': main_similarity,
+                        'match_type': 'fuzzy_main'
+                    })
+                
+                # ตรวจสอบกับรูปแบบต่างๆ
+                for variation in variations:
+                    var_similarity = self.calculate_similarity(query_lower, variation.lower())
+                    if var_similarity >= 0.7:
+                        matches.append({
+                            'menu': main_menu,
+                            'similarity': var_similarity,
+                            'match_type': 'fuzzy_variation'
+                        })
+        
+        # เรียงลำดับตามความคล้ายคลึง
+        matches.sort(key=lambda x: x['similarity'], reverse=True)
+        
+        # ลบรายการซ้ำ
+        seen_menus = set()
+        unique_matches = []
+        for match in matches:
+            if match['menu'] not in seen_menus:
+                unique_matches.append(match)
+                seen_menus.add(match['menu'])
+        
+        return unique_matches[:5]  # คืนค่าสูงสุด 5 ผลลัพธ์
+    
+    def find_best_match(self, query, candidates, threshold=0.6):
+        """หาผลลัพธ์ที่ตรงกันมากที่สุดจากรายการผู้สมัคร"""
+        # แก้ไขการพิมพ์ผิดก่อน
+        query = self.fix_common_typos(query.lower())
+        
+        # หาเมนูที่ตรงกับรูปแบบต่างๆ ก่อน
+        menu_matches = self.find_menu_variations(query)
+        
         best_matches = []
         
+        # เพิ่มผลลัพธ์จากการจับคู่เมนู
+        for menu_match in menu_matches:
+            # หาเมนูนี้ในรายการผู้สมัคร
+            for i, candidate in enumerate(candidates):
+                if menu_match['menu'].lower() in candidate.lower() or candidate.lower() in menu_match['menu'].lower():
+                    best_matches.append({
+                        'index': i,
+                        'text': candidate,
+                        'similarity': menu_match['similarity'],
+                        'match_type': f"menu_{menu_match['match_type']}"
+                    })
+        
+        # เพิ่มการจับคู่แบบทั่วไป
         for i, candidate in enumerate(candidates):
             candidate_clean = candidate.lower()
-            similarity = FuzzyMatcher.calculate_similarity(query, candidate_clean)
+            similarity = self.calculate_similarity(query, candidate_clean)
             
             if similarity >= threshold:
-                best_matches.append({
-                    'index': i,
-                    'text': candidate,
-                    'similarity': similarity,
-                    'match_type': 'fuzzy'
-                })
+                # ตรวจสอบว่าไม่ซ้ำกับที่มีอยู่แล้ว
+                is_duplicate = any(match['index'] == i for match in best_matches)
+                if not is_duplicate:
+                    best_matches.append({
+                        'index': i,
+                        'text': candidate,
+                        'similarity': similarity,
+                        'match_type': 'fuzzy'
+                    })
         
         # เรียงลำดับตามความคล้ายคลึง
         best_matches.sort(key=lambda x: x['similarity'], reverse=True)
+        
         return best_matches
 
 class APIManager:
@@ -443,6 +838,11 @@ def load_api_manager():
     """โหลด API Manager"""
     return APIManager()
 
+@st.cache_resource
+def load_enhanced_fuzzy_matcher():
+    """โหลด Enhanced Fuzzy Matcher"""
+    return EnhancedFuzzyMatcher()
+
 @st.cache_data
 def load_data():
     """โหลดชุดข้อมูลอาหารไทย"""
@@ -553,6 +953,13 @@ def create_settings_sidebar():
             key="enhanced_nutrition_calculation"
         )
         
+        enhanced_search = st.checkbox(
+            "ใช้การค้นหาขั้นสูง",
+            help="เปิดใช้งานการค้นหาที่รองรับการพิมพ์ผิดและการจับคู่ที่แม่นยำขึ้น",
+            value=True,
+            key="enhanced_search"
+        )
+        
         st.divider()
         
         # สถานะระบบ
@@ -568,6 +975,10 @@ def create_settings_sidebar():
             st.session_state.search_count = 0
         
         st.metric("การค้นหาในเซสชันนี้", st.session_state.search_count)
+        
+        # สถานะการค้นหาขั้นสูง
+        if enhanced_search:
+            st.info("🔍 การค้นหาขั้นสูงเปิดใช้งาน - รองรับการพิมพ์ผิดและการจับคู่ที่แม่นยำ")
         
         st.divider()
         
@@ -585,6 +996,16 @@ def create_settings_sidebar():
             - สมัครได้ที่: https://www.nutritionix.com/business/api
             """)
         
+        with st.expander("🔍 เกี่ยวกับการค้นหาขั้นสูง"):
+            st.markdown("""
+            **ฟีเจอร์การค้นหาขั้นสูง:**
+            - รองรับการพิมพ์ผิดของเมนูอาหารไทย
+            - จับคู่ชื่อเมนูที่คล้ายคลึงกัน
+            - แก้ไขการพิมพ์ผิดอัตโนมัติ
+            - ค้นหาจากชื่อเมนูและรูปแบบต่างๆ
+            - รองรับการค้นหาแบบคำย่อ
+            """)
+        
         return {
             "usda_enabled": usda_enabled and st.session_state.get("usda_status", False),
             "nutritionix_enabled": nutritionix_enabled and st.session_state.get("nutritionix_status", False),
@@ -594,7 +1015,7 @@ def create_settings_sidebar():
             "enhanced_nutrition_calculation": enhanced_nutrition_calculation,
             "use_external_recipe_data": enhanced_nutrition_calculation,
             "accurate_cooking_calculation": enhanced_nutrition_calculation,
-            "enhanced_search": True  # เปิดใช้งานเสมอ
+            "enhanced_search": enhanced_search
         }
 
 def format_ingredients(ingredients_text):
@@ -807,8 +1228,11 @@ def display_nutrition_info(nutrition_data):
             st.divider()
 
 def search_recipes_enhanced(query, model, data, embeddings, nutrition_analyzer, settings, top_k=5):
-    """ฟังก์ชันค้นหาสูตรอาหารที่ปรับปรุงแล้วด้วย fuzzy matching"""
+    """ฟังก์ชันค้นหาสูตรอาหารที่ปรับปรุงแล้วด้วย enhanced fuzzy matching"""
     query_lower = query.lower().strip()
+    
+    # โหลด Enhanced Fuzzy Matcher
+    enhanced_matcher = load_enhanced_fuzzy_matcher()
     
     # ขยายคำค้นหาด้วยคำที่เกี่ยวข้อง
     query_expansions = {
@@ -830,12 +1254,16 @@ def search_recipes_enhanced(query, model, data, embeddings, nutrition_analyzer, 
         if key in query_lower:
             expanded_terms.extend(expansions)
     
-    # สร้างรายการชื่อเมนูสำหรับ fuzzy matching
+    # สร้างรายการชื่อเมนูสำหรับ enhanced fuzzy matching
     recipe_names = data['name'].tolist()
     
-    # หา fuzzy matches ก่อน
-    fuzzy_matcher = FuzzyMatcher()
-    fuzzy_matches = fuzzy_matcher.find_best_match(query, recipe_names, threshold=0.6)
+    # ใช้ Enhanced Fuzzy Matcher
+    if settings.get('enhanced_search', True):
+        fuzzy_matches = enhanced_matcher.find_best_match(query, recipe_names, threshold=0.6)
+    else:
+        # ใช้ fuzzy matcher เดิม
+        basic_matcher = FuzzyMatcher()
+        fuzzy_matches = basic_matcher.find_best_match(query, recipe_names, threshold=0.6)
     
     # ค้นหาแบบตรงตัว (exact match)
     exact_matches = []
@@ -868,8 +1296,8 @@ def search_recipes_enhanced(query, model, data, embeddings, nutrition_analyzer, 
     results = []
     used_indices = set()
     
-    # เพิ่ม fuzzy matches ก่อน (มีคะแนนความคล้ายคลึงสูง)
-    for match in fuzzy_matches[:2]:  # เอาแค่ 2 ผลลัพธ์ที่ดีที่สุด
+    # เพิ่ม enhanced fuzzy matches ก่อน (มีคะแนนความคล้ายคลึงสูง)
+    for match in fuzzy_matches[:3]:  # เอาแค่ 3 ผลลัพธ์ที่ดีที่สุด
         if len(results) >= top_k:
             break
             
@@ -883,10 +1311,16 @@ def search_recipes_enhanced(query, model, data, embeddings, nutrition_analyzer, 
                 use_external_data=settings.get('use_external_recipe_data', False)
             ) if hasattr(nutrition_analyzer, 'analyze_recipe_enhanced') else nutrition_analyzer.analyze_recipe(recipe_name, ingredients)
             
+            # กำหนดประเภทการจับคู่ที่ชัดเจนขึ้น
+            if match.get('match_type', '').startswith('menu_'):
+                match_type = 'menu_match'
+            else:
+                match_type = 'enhanced_fuzzy'
+            
             results.append({
                 'name': recipe_name,
                 'similarity': match['similarity'],
-                'match_type': 'fuzzy',
+                'match_type': match_type,
                 'ingredients': ingredients,
                 'method': data.iloc[idx]['method'],
                 'nutrition': nutrition_data
@@ -1043,124 +1477,202 @@ def extract_nutrition_criteria_from_text(query):
     
     return criteria
 
-def create_scroll_button():
-    """สร้างปุ่มเลื่อนไปข้อความล่าสุด"""
+def create_enhanced_scroll_button():
+    """สร้างปุ่มเลื่อนที่ปรับปรุงแล้วพร้อมระบบ auto-scroll ที่เสถียร"""
     scroll_button_html = """
     <div id="scroll-to-bottom-container"></div>
     <script>
+    // ตัวแปรสำหรับควบคุมการทำงาน
+    let scrollBtnCreated = false;
+    let autoScrollActive = false;
+    let lastMessageCount = 0;
+    let scrollCheckInterval = null;
+    
     // สร้างปุ่มเลื่อน
-    function createScrollButton() {
-        // ลบปุ่มเก่าถ้ามี
-        const existingBtn = document.getElementById('scroll-btn');
-        if (existingBtn) {
-            existingBtn.remove();
+    function createEnhancedScrollButton() {
+        if (scrollBtnCreated) return;
+        
+        try {
+            // ลบปุ่มเก่าถ้ามี
+            const existingBtn = document.getElementById('enhanced-scroll-btn');
+            if (existingBtn) {
+                existingBtn.remove();
+            }
+            
+            // สร้างปุ่มใหม่
+            const scrollBtn = document.createElement('button');
+            scrollBtn.id = 'enhanced-scroll-btn';
+            scrollBtn.className = 'scroll-to-bottom-btn';
+            scrollBtn.innerHTML = '↓';
+            scrollBtn.title = 'เลื่อนไปข้อความล่าสุด';
+            
+            // เพิ่ม event listener
+            scrollBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                scrollToLatestMessage();
+            });
+            
+            // เพิ่มปุ่มเข้าไปใน DOM
+            document.body.appendChild(scrollBtn);
+            scrollBtnCreated = true;
+            
+            console.log('✅ สร้างปุ่มเลื่อนขั้นสูงสำเร็จ');
+        } catch (error) {
+            console.error('❌ เกิดข้อผิดพลาดในการสร้างปุ่ม:', error);
         }
-        
-        // สร้างปุ่มใหม่
-        const scrollBtn = document.createElement('button');
-        scrollBtn.id = 'scroll-btn';
-        scrollBtn.className = 'scroll-to-bottom-btn';
-        scrollBtn.innerHTML = '↓';
-        scrollBtn.title = 'เลื่อนไปข้อความล่าสุด';
-        
-        // เพิ่ม event listener
-        scrollBtn.addEventListener('click', function() {
-            scrollToLatestMessage();
-        });
-        
-        // เพิ่มปุ่มเข้าไปใน DOM
-        document.body.appendChild(scrollBtn);
-        
-        console.log('✅ สร้างปุ่มเลื่อนสำเร็จ');
     }
     
     // ฟังก์ชันเลื่อนไปข้อความล่าสุด
     function scrollToLatestMessage() {
         try {
-            // หาข้อความล่าสุด
-            const messages = document.querySelectorAll('[data-testid="stChatMessage"]');
-            
-            if (messages.length > 0) {
-                const lastMessage = messages[messages.length - 1];
-                lastMessage.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'start',
-                    inline: 'nearest'
-                });
-                console.log('📜 เลื่อนไปข้อความล่าสุดแล้ว');
-            } else {
-                // ถ้าไม่มี chat message ให้เลื่อนไปด้านล่าง
-                window.scrollTo({
-                    top: document.body.scrollHeight,
-                    behavior: 'smooth'
-                });
-                console.log('📜 เลื่อนไปด้านล่างแล้ว');
-            }
+            // รอให้เนื้อหาโหลดเสร็จก่อน
+            setTimeout(() => {
+                // หาข้อความล่าสุด
+                const chatMessages = document.querySelectorAll('[data-testid="stChatMessage"]');
+                const expanders = document.querySelectorAll('[data-testid="stExpander"]');
+                const allMessages = [...chatMessages, ...expanders];
+                
+                if (allMessages.length > 0) {
+                    // เลื่อนไปข้อความล่าสุด
+                    const lastMessage = allMessages[allMessages.length - 1];
+                    lastMessage.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'end',
+                        inline: 'nearest'
+                    });
+                    console.log('📜 เลื่อนไปข้อความล่าสุดแล้ว');
+                } else {
+                    // ไม่มีข้อความ ให้เลื่อนไปด้านล่าง
+                    window.scrollTo({
+                        top: document.body.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                    console.log('📜 เลื่อนไปด้านล่างแล้ว');
+                }
+            }, 200);
         } catch (error) {
             console.error('❌ เกิดข้อผิดพลาดในการเลื่อน:', error);
+            // Fallback
+            window.scrollTo({
+                top: document.body.scrollHeight,
+                behavior: 'smooth'
+            });
         }
     }
     
-    // Auto-scroll เมื่อมีข้อความใหม่
-    function setupAutoScroll() {
-        let isScrolling = false;
-        
-        const observer = new MutationObserver(function(mutations) {
-            if (isScrolling) return;
+    // ตรวจสอบข้อความใหม่และ auto-scroll
+    function checkForNewMessages() {
+        try {
+            const currentMessages = document.querySelectorAll('[data-testid="stChatMessage"]');
+            const currentCount = currentMessages.length;
             
-            let hasNewMessage = false;
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach(function(node) {
-                        if (node.nodeType === 1 && node.querySelector && 
-                            node.querySelector('[data-testid="stChatMessage"]')) {
-                            hasNewMessage = true;
-                        }
-                    });
+            if (currentCount > lastMessageCount && currentCount > 0) {
+                console.log(`🔔 พบข้อความใหม่: ${currentCount} ข้อความ`);
+                lastMessageCount = currentCount;
+                
+                // Auto-scroll หลังจากมีข้อความใหม่
+                if (!autoScrollActive) {
+                    autoScrollActive = true;
+                    setTimeout(() => {
+                        scrollToLatestMessage();
+                        setTimeout(() => {
+                            autoScrollActive = false;
+                        }, 1000);
+                    }, 500);
+                }
+            } else if (currentCount > 0) {
+                lastMessageCount = currentCount;
+            }
+        } catch (error) {
+            console.error('❌ เกิดข้อผิดพลาดในการตรวจสอบข้อความ:', error);
+        }
+    }
+    
+    // ตั้งค่า MutationObserver สำหรับตรวจจับการเปลี่ยนแปลง
+    function setupAdvancedAutoScroll() {
+        try {
+            const observer = new MutationObserver(function(mutations) {
+                let shouldScroll = false;
+                
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.nodeType === 1) {
+                                // ตรวจสอบว่ามีการเพิ่มข้อความใหม่หรือไม่
+                                if (node.querySelector && 
+                                    (node.querySelector('[data-testid="stChatMessage"]') ||
+                                     node.getAttribute('data-testid') === 'stChatMessage' ||
+                                     node.querySelector('[data-testid="stExpander"]') ||
+                                     node.getAttribute('data-testid') === 'stExpander')) {
+                                    shouldScroll = true;
+                                }
+                            }
+                        });
+                    }
+                });
+                
+                if (shouldScroll && !autoScrollActive) {
+                    autoScrollActive = true;
+                    setTimeout(() => {
+                        scrollToLatestMessage();
+                        setTimeout(() => {
+                            autoScrollActive = false;
+                        }, 1500);
+                    }, 300);
                 }
             });
             
-            if (hasNewMessage) {
-                isScrolling = true;
-                setTimeout(() => {
-                    scrollToLatestMessage();
-                    setTimeout(() => {
-                        isScrolling = false;
-                    }, 1000);
-                }, 300);
-            }
-        });
-        
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-        
-        console.log('🎯 ตั้งค่า auto-scroll แล้ว');
-    }
-    
-    // เรียกใช้งานฟังก์ชัน
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(() => {
-            createScrollButton();
-            setupAutoScroll();
-        }, 1000);
-    });
-    
-    // สำหรับกรณีที่ DOM โหลดเสร็จแล้ว
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(() => {
-            createScrollButton();
-            setupAutoScroll();
-        }, 1000);
-    }
-    
-    // สร้างปุ่มซ้ำทุก 3 วินาที เพื่อให้แน่ใจว่าปุ่มจะอยู่เสมอ
-    setInterval(function() {
-        if (!document.getElementById('scroll-btn')) {
-            createScrollButton();
+            // เริ่มการสังเกตการณ์
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            
+            console.log('🎯 ตั้งค่า auto-scroll ขั้นสูงแล้ว');
+        } catch (error) {
+            console.error('❌ เกิดข้อผิดพลาดในการตั้งค่า auto-scroll:', error);
         }
-    }, 3000);
+    }
+    
+    // เริ่มระบบตรวจสอบข้อความใหม่
+    function startMessageMonitoring() {
+        // ตรวจสอบทุก 1 วินาที
+        scrollCheckInterval = setInterval(checkForNewMessages, 1000);
+        console.log('⏰ เริ่มระบบตรวจสอบข้อความใหม่');
+    }
+    
+    // ฟังก์ชันเริ่มต้น
+    function initializeEnhancedScrollSystem() {
+        createEnhancedScrollButton();
+        setupAdvancedAutoScroll();
+        startMessageMonitoring();
+        
+        // ตรวจสอบและสร้างปุ่มซ้ำทุก 5 วินาที
+        setInterval(() => {
+            if (!document.getElementById('enhanced-scroll-btn')) {
+                scrollBtnCreated = false;
+                createEnhancedScrollButton();
+            }
+        }, 5000);
+    }
+    
+    // เรียกใช้งานเมื่อ DOM พร้อม
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initializeEnhancedScrollSystem, 1000);
+        });
+    } else {
+        // DOM โหลดเสร็จแล้ว
+        setTimeout(initializeEnhancedScrollSystem, 1000);
+    }
+    
+    // เมื่อออกจากหน้า ให้ทำความสะอาด
+    window.addEventListener('beforeunload', function() {
+        if (scrollCheckInterval) {
+            clearInterval(scrollCheckInterval);
+        }
+    });
     </script>
     """
     
@@ -1188,14 +1700,19 @@ def main():
     st.title("🍲 แชทบอทสูตรอาหารไทย")
     st.markdown("**ค้นหาสูตรอาหารไทยพร้อมข้อมูลโภชนาการขั้นสูง** - ถามเกี่ยวกับวิธีทำอาหารไทยหรือค้นหาตามโภชนาการได้เลย!")
     
-    # สร้างปุ่มเลื่อน
-    create_scroll_button()
+    # แสดงสถานะการค้นหาขั้นสูง
+    if settings.get('enhanced_search', True):
+        st.info("🔍 การค้นหาขั้นสูงเปิดใช้งาน - รองรับการพิมพ์ผิดและการจับคู่ที่แม่นยำของเมนูอาหารไทย")
     
-    # ตัวอย่างการค้นหา
+    # สร้างปุ่มเลื่อนขั้นสูง
+    create_enhanced_scroll_button()
+    
+    # ตัวอย่างการค้นหา - เพิ่มเมนูจากชุดข้อมูลที่กำหนด
     example_queries = [
         "ไข่เจียว", "ต้มยำกุ้ง", "ผัดไทย", "ส้มตำ", "แกงเขียวหวาน",
-        "เมนูแคลอรี่ไม่เกิน 300", "อาหารโปรตีนสูง", "เมนูลดน้ำหนัก",
-        "อาหารทอดง่ายๆ", "แกงเผ็ด"
+        "กุ้งทาพริกไทยกระเทียม", "ข้าวเม่าทอด", "เปรี้ยวหวานไข่ม้วน", 
+        "ไข่จ่อม", "งบปลาทู", "ยำไข่ปลาดุก", "กล้วยบวชชี",
+        "เมนูแคลอรี่ไม่เกิน 300", "อาหารโปรตีนสูง", "เมนูลดน้ำหนัก"
     ]
     
     with st.expander("💡 ตัวอย่างการค้นหา", expanded=False):
@@ -1222,7 +1739,9 @@ def main():
                 
                 title_html = f'<div class="recipe-title">{recipe["name"]}'
                 if similarity_score > 0:
-                    if match_type == 'fuzzy':
+                    if match_type == 'enhanced_fuzzy' or match_type == 'menu_match':
+                        title_html += f'<span class="exact-match-score">การจับคู่: {similarity_score:.2f}</span>'
+                    elif match_type == 'fuzzy':
                         title_html += f'<span class="fuzzy-match-score">ความคล้ายคลึง: {similarity_score:.2f}</span>'
                     else:
                         title_html += f'<span class="similarity-score">ความเกี่ยวข้อง: {similarity_score:.2f}</span>'
@@ -1339,21 +1858,29 @@ def main():
                         best_match = results[0]
                         
                         # ตรวจสอบคุณภาพของผลลัพธ์
-                        threshold = 0.3 if best_match.get('match_type') == 'fuzzy' else 0.4
+                        if best_match.get('match_type') in ['menu_match', 'enhanced_fuzzy']:
+                            threshold = 0.3  # ลดเกณฑ์สำหรับการจับคู่ที่แม่นยำ
+                        else:
+                            threshold = 0.4
+                            
                         if best_match["similarity"] > threshold:
                             similarity_score = best_match["similarity"]
                             match_type = best_match.get("match_type", "semantic")
                             
-                            if match_type == 'fuzzy':
+                            if match_type in ['menu_match', 'enhanced_fuzzy']:
+                                response = f"พบสูตรอาหารที่ตรงกับที่คุณค้นหา: **{best_match['name']}**"
+                            elif match_type == 'fuzzy':
                                 response = f"พบสูตรอาหารที่คล้ายกับที่คุณค้นหา: **{best_match['name']}**"
                             else:
-                                response = f"พบสูตรอาหารที่คุณค้นหา: **{best_match['name']}**"
+                                response = f"พบสูตรอาหารที่เกี่ยวข้อง: **{best_match['name']}**"
                             
                             st.markdown(response)
                             
                             # แสดงชื่อเมนูพร้อมค่าความเกี่ยวข้อง
                             title_html = f'<div class="recipe-title">{best_match["name"]}'
-                            if match_type == 'fuzzy':
+                            if match_type in ['menu_match', 'enhanced_fuzzy']:
+                                title_html += f'<span class="exact-match-score">การจับคู่: {similarity_score:.2f}</span>'
+                            elif match_type == 'fuzzy':
                                 title_html += f'<span class="fuzzy-match-score">ความคล้ายคลึง: {similarity_score:.2f}</span>'
                             else:
                                 title_html += f'<span class="similarity-score">ความเกี่ยวข้อง: {similarity_score:.2f}</span>'
@@ -1375,7 +1902,9 @@ def main():
                                 for i, related in enumerate(results[1:4], 1):
                                     similarity = related['similarity']
                                     match_type_related = related.get('match_type', 'semantic')
-                                    if match_type_related == 'fuzzy':
+                                    if match_type_related in ['menu_match', 'enhanced_fuzzy']:
+                                        st.markdown(f"{i}. **{related['name']}** (การจับคู่: {similarity:.2f})")
+                                    elif match_type_related == 'fuzzy':
                                         st.markdown(f"{i}. **{related['name']}** (ความคล้ายคลึง: {similarity:.2f})")
                                     else:
                                         st.markdown(f"{i}. **{related['name']}** (ความเกี่ยวข้อง: {similarity:.2f})")
