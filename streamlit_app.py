@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import hashlib
 import time
+from difflib import SequenceMatcher
 
 # นำเข้าไฟล์ที่สร้างขึ้นใหม่
 from nutrition_api import NutritionAPI
@@ -101,6 +102,16 @@ st.markdown("""
         border-radius: 5px;
         border: 1px solid #f5c6cb;
     }
+    
+    .status-info {
+        background-color: #e7f3ff;
+        color: #004085;
+        padding: 0.5rem;
+        border-radius: 5px;
+        border: 1px solid #b8daff;
+        margin: 0.5rem 0;
+        font-size: 0.9rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -185,6 +196,83 @@ def generate_unique_key(base_key, recipe_name, chart_type=""):
     content = f"{base_key}_{recipe_name}_{chart_type}_{time.time()}"
     return hashlib.md5(content.encode()).hexdigest()[:8]
 
+def advanced_fuzzy_search(query, data, threshold=0.6):
+    """ค้นหาแบบ fuzzy matching ที่ปรับปรุงแล้ว รองรับการพิมพ์ผิดได้ดีขึ้น"""
+    query = query.lower().strip()
+    matches = []
+    
+    for idx, recipe_name in enumerate(data['name']):
+        recipe_name_lower = recipe_name.lower()
+        
+        # คำนวณความคล้ายคลึงหลายแบบ
+        similarity_scores = []
+        
+        # 1. ความคล้ายคลึงโดยรวม
+        overall_similarity = SequenceMatcher(None, query, recipe_name_lower).ratio()
+        similarity_scores.append(overall_similarity)
+        
+        # 2. ตรวจสอบการมีคำคีย์เวิร์ดบางส่วน
+        if query in recipe_name_lower:
+            similarity_scores.append(0.95)
+        
+        # 3. ตรวจสอบคำต่างๆ ในชื่อ (รองรับการค้นหาแบบบางส่วน)
+        query_words = query.split()
+        recipe_words = recipe_name_lower.split()
+        
+        word_matches = 0
+        partial_matches = 0
+        
+        for q_word in query_words:
+            best_word_match = 0
+            for r_word in recipe_words:
+                # การจับคู่แบบเต็ม
+                word_similarity = SequenceMatcher(None, q_word, r_word).ratio()
+                if word_similarity > 0.8:
+                    word_matches += word_similarity
+                    best_word_match = max(best_word_match, word_similarity)
+                # การจับคู่แบบบางส่วน
+                elif (len(q_word) > 2 and q_word in r_word) or (len(r_word) > 2 and r_word in q_word):
+                    partial_matches += 0.6
+                    best_word_match = max(best_word_match, 0.6)
+            
+            # ค้นหาในส่วนผสมและวิธีทำด้วย
+            if best_word_match < 0.5:
+                ingredient_text = str(data.iloc[idx].get('ingredient', '')).lower()
+                method_text = str(data.iloc[idx].get('method', '')).lower()
+                
+                if len(q_word) > 2:
+                    if q_word in ingredient_text:
+                        partial_matches += 0.4
+                    elif q_word in method_text:
+                        partial_matches += 0.3
+        
+        # คำนวณคะแนนรวมจากคำ
+        if len(query_words) > 0:
+            word_score = (word_matches + partial_matches) / len(query_words)
+            similarity_scores.append(word_score)
+        
+        # 4. ตรวจสอบลำดับอักขระ (สำหรับการพิมพ์ผิด)
+        # ลบช่องว่างและเปรียบเทียบ
+        query_no_space = query.replace(' ', '')
+        recipe_no_space = recipe_name_lower.replace(' ', '')
+        
+        if len(query_no_space) > 2:
+            char_similarity = SequenceMatcher(None, query_no_space, recipe_no_space).ratio()
+            similarity_scores.append(char_similarity * 0.8)  # ลดน้ำหนักเล็กน้อย
+        
+        # หาคะแนนสูงสุด
+        max_similarity = max(similarity_scores) if similarity_scores else 0
+        
+        # ตรวจสอบและปรับคะแนนให้ไม่เกิน 1.0
+        max_similarity = min(max_similarity, 1.0)
+        
+        if max_similarity >= threshold:
+            matches.append((recipe_name, max_similarity, idx))
+    
+    # เรียงลำดับตามความคล้ายคลึง
+    matches.sort(key=lambda x: x[1], reverse=True)
+    return matches
+
 def format_ingredients(ingredients_text):
     """จัดรูปแบบรายการวัตถุดิบให้แสดงผลดี"""
     if not ingredients_text:
@@ -200,17 +288,40 @@ def format_ingredients(ingredients_text):
     return formatted
 
 def format_cooking_method(method_text):
-    """จัดรูปแบบวิธีทำให้แสดงผลดี"""
+    """จัดรูปแบบวิธีทำใหม่ตามข้อกำหนด"""
     if not method_text:
         return "<p>ไม่มีข้อมูลวิธีทำ</p>"
-        
-    sentences = re.split(r'(?<=[ๆ.।])\s+|(?<=\w)\s{2,}', method_text)
-    formatted = "<ol>"
-    for sentence in sentences:
-        if sentence.strip():
-            formatted += f"<li>{sentence.strip()}</li>"
-    formatted += "</ol>"
-    return formatted
+    
+    # ตรวจสอบว่ามีเลขขั้นตอนอยู่แล้วหรือไม่
+    has_numbers = bool(re.search(r'^\d+\.', method_text.strip(), re.MULTILINE))
+    
+    # แยกตามการขึ้นบรรทัดใหม่
+    lines = method_text.split('\n')
+    formatted_lines = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # ตรวจสอบหัวข้อย่อย (ขึ้นต้นด้วย # หรือมีหมายเหตุ)
+        if line.startswith('#'):
+            # แปลง # เป็น HTML heading ขนาดเดียวกับหัวข้อหลัก
+            heading_level = len(line) - len(line.lstrip('#'))
+            heading_text = line.lstrip('#').strip()
+            formatted_lines.append(f"<h4>{heading_text}</h4>")
+        elif line.startswith('หมายเหตุ') or 'หมายเหตุ:' in line:
+            formatted_lines.append(f"<h4>{line}</h4>")
+        else:
+            formatted_lines.append(f"<p>{line}</p>")
+    
+    # ถ้าไม่มีเลขขั้นตอนอยู่แล้ว และไม่มีหัวข้อย่อย ให้รวมเป็นย่อหน้าเดียว
+    if not has_numbers and not any(line.startswith('<h4>') for line in formatted_lines):
+        # รวมทุกย่อหน้าเป็นหนึ่งเดียว
+        combined_text = ' '.join([line.replace('<p>', '').replace('</p>', '') for line in formatted_lines if line])
+        return f"<p>{combined_text}</p>"
+    
+    return ''.join(formatted_lines)
 
 def display_nutrition_chart(nutrition_data, recipe_name):
     """แสดงกราฟโภชนาการที่สวยงาม"""
@@ -293,17 +404,16 @@ def display_nutrition_chart(nutrition_data, recipe_name):
     
     return fig
 
-def display_nutrition_info(nutrition_data, recipe_name, show_charts=True):
+def display_nutrition_info(nutrition_data, recipe_name):
     """แสดงข้อมูลโภชนาการแบบครอบคลุม"""
     total_nutrition = nutrition_data['total_nutrition']
     
-    if show_charts:
-        # สร้าง unique key สำหรับ chart
-        chart_key = generate_unique_key("nutrition_chart", recipe_name, "main")
-        
-        # แสดงกราฟโภชนาการ
-        fig = display_nutrition_chart(nutrition_data, recipe_name)
-        st.plotly_chart(fig, use_container_width=True, key=chart_key)
+    # สร้าง unique key สำหรับ chart
+    chart_key = generate_unique_key("nutrition_chart", recipe_name, "main")
+    
+    # แสดงกราฟโภชนาการ
+    fig = display_nutrition_chart(nutrition_data, recipe_name)
+    st.plotly_chart(fig, use_container_width=True, key=chart_key)
     
     # แสดงข้อมูลโภชนาการในรูปแบบการ์ด
     col1, col2 = st.columns(2)
@@ -396,9 +506,22 @@ def generate_nutrition_warnings(nutrition):
     
     return warnings
 
-def display_settings_panel():
-    """แสดงแถบการตั้งค่าขั้นสูง"""
+def display_settings_panel(data, nutrition_api):
+    """แสดงแถบการตั้งค่าขั้นสูง พร้อมสถานะระบบ"""
     st.sidebar.title("🔧 การตั้งค่าขั้นสูง")
+    
+    # แสดงสถานะระบบ
+    st.sidebar.markdown("### 📊 สถานะระบบ")
+    
+    # ข้อมูลฐาน
+    st.sidebar.markdown(f"""
+    <div class="status-info">
+        <strong>📖 จำนวนสูตรอาหาร:</strong> {len(data)} รายการ<br>
+        <strong>🧮 ฐานข้อมูลโภชนาการ:</strong> {len(nutrition_api.local_nutrition_db)} วัตถุดิบ
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.sidebar.markdown("---")
     
     # การตั้งค่า API
     st.sidebar.markdown("### 🌐 API ข้อมูลโภชนาการ")
@@ -469,13 +592,6 @@ def display_settings_panel():
         key="enhance_missing"
     )
     
-    # การตั้งค่าการแสดงผล
-    st.sidebar.markdown("### 🎨 การแสดงผล")
-    
-    show_charts = st.sidebar.checkbox("แสดงกราฟโภชนาการ", value=True, key="show_charts")
-    show_details = st.sidebar.checkbox("แสดงรายละเอียดวัตถุดิบ", value=True, key="show_details")
-    show_recommendations = st.sidebar.checkbox("แสดงคำแนะนำ", value=True, key="show_recommendations")
-    
     # การตั้งค่าการค้นหา
     st.sidebar.markdown("### 🔍 การค้นหา")
     
@@ -502,50 +618,46 @@ def display_settings_panel():
         'use_api': use_api,
         'adjust_consumption': adjust_consumption,
         'enhance_missing': enhance_missing,
-        'show_charts': show_charts,
-        'show_details': show_details,
-        'show_recommendations': show_recommendations,
         'fuzzy_threshold': fuzzy_threshold,
         'max_results': max_results
     }
 
 def search_recipes(query, model, data, embeddings, search_engine, settings):
-    """ค้นหาสูตรอาหารด้วยระบบอัจฉริยะที่ปรับปรุงแล้ว"""
-    if search_engine is None or model is None:
-        return []
+    """ค้นหาสูตรอาหารด้วยระบบที่ปรับปรุงแล้ว"""
+    # ลองใช้ระบบค้นหาอัจฉริยะก่อน
+    if search_engine is not None:
+        smart_results = search_engine.smart_search(
+            query, 
+            settings['use_api'], 
+            settings['adjust_consumption'],
+            settings['enhance_missing'],
+            settings['fuzzy_threshold'],
+            limit=settings['max_results']
+        )
+        
+        if smart_results:
+            return [(result['name'], min(result['similarity'], 1.0), result['index'], result.get('nutrition')) 
+                    for result in smart_results]
     
-    # ใช้ระบบค้นหาอัจฉริยะ
-    smart_results = search_engine.smart_search(
-        query, 
-        settings['use_api'], 
-        settings['adjust_consumption'],
-        settings['enhance_missing'],
-        settings['fuzzy_threshold'],
-        limit=settings['max_results']
-    )
+    # ใช้ระบบ fuzzy search ที่ปรับปรุงแล้ว
+    fuzzy_results = advanced_fuzzy_search(query, data, threshold=settings['fuzzy_threshold'])
     
-    if smart_results:
-        return [(result['name'], result['similarity'], result['index'], result.get('nutrition')) 
-                for result in smart_results]
+    if fuzzy_results:
+        return [(name, similarity, idx, None) for name, similarity, idx in fuzzy_results[:settings['max_results']]]
     
-    # หากไม่พบผลลัพธ์จากระบบอัจฉริยะ ใช้ embedding search
-    if embeddings.size > 0:
+    # หากไม่พบผลลัพธ์ ใช้ embedding search
+    if model is not None and embeddings.size > 0:
         query_embedding = model.encode([query])
         similarities = cosine_similarity(query_embedding, embeddings)[0]
         top_indices = np.argsort(-similarities)[:settings['max_results']]
         
         results = []
         for idx in top_indices:
-            if similarities[idx] > settings['fuzzy_threshold'] * 0.5:
-                results.append({
-                    'name': data.iloc[idx]['name'],
-                    'similarity': similarities[idx],
-                    'index': idx,
-                    'nutrition': None
-                })
+            similarity = min(similarities[idx], 1.0)  # จำกัดให้ไม่เกิน 1.0
+            if similarity > settings['fuzzy_threshold'] * 0.5:
+                results.append((data.iloc[idx]['name'], similarity, idx, None))
         
-        return [(result['name'], result['similarity'], result['index'], result['nutrition']) 
-                for result in results]
+        return results
     
     return []
 
@@ -573,13 +685,13 @@ def display_recipe_with_nutrition(recipe, nutrition_data, settings, recipe_key="
     
     with tab2:
         if nutrition_data:
-            display_nutrition_info(nutrition_data, recipe['name'], settings['show_charts'])
+            display_nutrition_info(nutrition_data, recipe['name'])
         else:
             st.info("กำลังคำนวณข้อมูลโภชนาการ...")
     
     with tab3:
-        if nutrition_data and settings['show_details']:
-            # แสดงรายละเอียดวัตถุดิบ
+        if nutrition_data:
+            # แสดงรายละเอียดวัตถุดิบพร้อมวิตามินและแร่ธาตุ
             st.markdown("#### 🔬 รายละเอียดวัตถุดิบแต่ละชนิด")
             
             ingredient_df = []
@@ -589,19 +701,29 @@ def display_recipe_with_nutrition(recipe, nutrition_data, settings, recipe_key="
                     'ปริมาณ': f"{ingredient['quantity']} {ingredient['unit']}",
                     'น้ำหนัก (กรัม)': f"{ingredient['grams']:.1f}",
                     'น้ำหนักที่บริโภค (กรัม)': f"{ingredient.get('effective_grams', ingredient['grams']):.1f}",
-                    'แคลอรี่': f"{ingredient['nutrition']['calories']:.1f}",
+                    'แคลอรี่ (kcal)': f"{ingredient['nutrition']['calories']:.1f}",
                     'โปรตีน (g)': f"{ingredient['nutrition']['protein']:.1f}",
-                    'ไขมัน (g)': f"{ingredient['nutrition']['fat']:.1f}"
+                    'คาร์โบไฮเดรต (g)': f"{ingredient['nutrition']['carbs']:.1f}",
+                    'ไขมัน (g)': f"{ingredient['nutrition']['fat']:.1f}",
+                    'ใยอาหาร (g)': f"{ingredient['nutrition']['fiber']:.1f}",
+                    'วิตามิน A (IU)': f"{ingredient['nutrition']['vitamin_a']:.1f}",
+                    'วิตามิน C (mg)': f"{ingredient['nutrition']['vitamin_c']:.1f}",
+                    'วิตามิน B1 (mg)': f"{ingredient['nutrition']['vitamin_b1']:.2f}",
+                    'วิตามิน B2 (mg)': f"{ingredient['nutrition']['vitamin_b2']:.2f}",
+                    'แคลเซียม (mg)': f"{ingredient['nutrition']['calcium']:.1f}",
+                    'เหล็ก (mg)': f"{ingredient['nutrition']['iron']:.1f}",
+                    'โปแตสเซียม (mg)': f"{ingredient['nutrition']['potassium']:.1f}",
+                    'โซเดียม (mg)': f"{ingredient['nutrition']['sodium']:.1f}"
                 })
             
             if ingredient_df:
                 df = pd.DataFrame(ingredient_df)
                 st.dataframe(df, use_container_width=True)
         else:
-            st.info("เปิดใช้งานการแสดงรายละเอียดในการตั้งค่าเพื่อดูข้อมูลเพิ่มเติม")
+            st.info("ข้อมูลรายละเอียดวัตถุดิบจะแสดงเมื่อคำนวณโภชนาการเสร็จสิ้น")
     
     with tab4:
-        if nutrition_data and settings['show_recommendations']:
+        if nutrition_data:
             total_nutrition = nutrition_data['total_nutrition']
             
             # คำแนะนำเกี่ยวกับโภชนาการ
@@ -662,26 +784,12 @@ def main():
         
         embeddings = get_embeddings(model, data)
         
-        # แถบการตั้งค่า
-        settings = display_settings_panel()
-        
         # เริ่มต้น API และระบบค้นหา
-        global nutrition_api
         nutrition_api = initialize_nutrition_api()
         search_engine = initialize_search_engine(data, nutrition_api)
-    
-    # แสดงสถิติเบื้องต้น
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("📖 จำนวนสูตร", len(data))
-    with col2:
-        st.metric("🔥 AI Model", "✅ พร้อม" if model else "❌ ไม่พร้อม")
-    with col3:
-        api_status = "🟢 เชื่อมต่อ" if settings['use_api'] else "🔴 ปิดใช้งาน"
-        st.metric("🌐 API", api_status)
-    with col4:
-        nutrition_status = "🟢 ขั้นสูง" if settings['adjust_consumption'] else "🟡 ปกติ"
-        st.metric("🧮 โภชนาการ", nutrition_status)
+        
+        # แถบการตั้งค่าพร้อมสถานะ
+        settings = display_settings_panel(data, nutrition_api)
     
     # ตัวอย่างคำค้นหา
     st.markdown("#### 💡 ตัวอย่างการค้นหา:")
