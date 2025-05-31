@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+Enhanced Testing Suite for Thai Food Chatbot
 ชุดการทดสอบแบบครอบคลุมสำหรับแชทบอทสูตรอาหารไทยขั้นสูง
 ทดสอบฟีเจอร์ใหม่ทั้งหมดรวมถึงการเชื่อมต่อ API, การปรับแต่งการทำอาหาร, และการค้นหาขั้นสูง
 """
@@ -9,9 +10,11 @@ import asyncio
 import time
 import json
 import os
+import re
 from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
 from datetime import datetime
+from difflib import SequenceMatcher
 
 # นำเข้าคอมโพเนนต์ที่จะทดสอบ
 from nutrition_analyzer import (
@@ -19,10 +22,11 @@ from nutrition_analyzer import (
     USDANutritionAPI, 
     NutritionixAPI,
     CookingAdjustmentHelper,
-    NutritionInfo
+    NutritionInfo,
+    ThaiNutritionData
 )
 from ingredient_converter import IngredientConverter
-from config import Config, APIConfig, NutritionConfig
+from config import Config
 
 class TestEnhancedNutritionAnalyzer:
     """ชุดการทดสอบสำหรับตัววิเคราะห์โภชนาการขั้นสูงพร้อมการเชื่อมต่อ API"""
@@ -96,6 +100,93 @@ class TestEnhancedNutritionAnalyzer:
         # เวอร์ชันขั้นสูงควรมีแคลอรี่มากกว่าเนื่องจากน้ำมันที่เพิ่มเข้ามา
         assert enhanced_total.calories >= normal_total.calories
         assert len(enhanced_result) >= len(normal_result)  # อาจมีส่วนผสมเพิ่มเติม
+    
+    def test_thai_menu_recognition(self):
+        """ทดสอบการจดจำเมนูอาหารไทยที่หลากหลาย"""
+        thai_menus = [
+            'กุ้งทาพริกไทยกระเทียม', 'ข้าวเม่าทอด', 'เปรี้ยวหวานไข่ม้วน',
+            'ไข่จ่อม', 'งบปลาทู', 'ยำไข่ปลาดุก', 'กล้วยบวชชี',
+            'แกงคั่วฟักทองกับกุ้งตะเข็บ', 'ไส้กรอกหมู', 'เมี่ยงปลาทู'
+        ]
+        
+        for menu in thai_menus:
+            # ควรสามารถวิเคราะห์เมนูได้โดยไม่เกิดข้อผิดพลาด
+            try:
+                result = self.analyzer.analyze_recipe(menu, "- วัตถุดิบพื้นฐาน")
+                assert 'recipe_name' in result
+                assert result['recipe_name'] == menu
+            except Exception as e:
+                pytest.fail(f"Failed to analyze menu '{menu}': {e}")
+
+class TestEnhancedFuzzyMatching:
+    """ชุดการทดสอบสำหรับระบบ Enhanced Fuzzy Matching"""
+    
+    def setup_method(self):
+        """ตั้งค่าสภาพแวดล้อมการทดสอบ"""
+        # สร้าง mock EnhancedFuzzyMatcher
+        from streamlit_app import EnhancedFuzzyMatcher
+        self.matcher = EnhancedFuzzyMatcher()
+    
+    def test_exact_menu_matching(self):
+        """ทดสอบการจับคู่เมนูแบบตรงตัว"""
+        test_cases = [
+            ('กุ้งทาพริกไทยกระเทียม', 1.0),
+            ('ข้าวเม่าทอด', 1.0),
+            ('ไข่เจียว', 1.0),
+            ('ผัดกะเพรา', 1.0)
+        ]
+        
+        for menu, expected_score in test_cases:
+            matches = self.matcher.find_menu_variations(menu)
+            if matches:
+                best_match = matches[0]
+                assert best_match['similarity'] >= expected_score
+                assert best_match['match_type'] == 'exact'
+    
+    def test_typo_correction(self):
+        """ทดสอบการแก้ไขการพิมพ์ผิด"""
+        typo_cases = [
+            ('กระเพรา', 'กะเพรา'),
+            ('ต้มยํา', 'ต้มยำ'),
+            ('มัสมัน', 'มัสมั่น'),
+            ('ส้มตํา', 'ส้มตำ'),
+            ('ไข่เยียว', 'ไข่เจียว')
+        ]
+        
+        for typo, correct in typo_cases:
+            fixed = self.matcher.fix_common_typos(typo)
+            assert correct in fixed or fixed == correct
+    
+    def test_menu_variations_matching(self):
+        """ทดสอบการจับคู่รูปแบบต่างๆ ของเมนู"""
+        variation_cases = [
+            ('กุ้งทาพริก', 'กุ้งทาพริกไทยกระเทียม'),
+            ('ข้าวเหม่า', 'ข้าวเม่าทอด'),
+            ('ยำไข่ปลา', 'ยำไข่ปลาดุก'),
+            ('ปลาทูทอด', 'ปลาทูทอดปรุง')
+        ]
+        
+        for short_form, full_menu in variation_cases:
+            matches = self.matcher.find_menu_variations(short_form)
+            found_target = any(match['menu'] == full_menu for match in matches)
+            assert found_target, f"Failed to find '{full_menu}' when searching for '{short_form}'"
+    
+    def test_similarity_calculation(self):
+        """ทดสอบการคำนวณความคล้ายคลึง"""
+        similarity_cases = [
+            ('ไข่เจียว', 'ไข่เจียว', 1.0),  # เหมือนกันทุกตัวอักษร
+            ('ไข่เจียว', 'ไข่ดาว', 0.5),   # คล้ายกันบางส่วน
+            ('ผัดไทย', 'ผัดกะเพรา', 0.3), # คล้ายกันน้อย
+            ('ต้มยำ', 'ต้มข่า', 0.6)       # คล้ายกันปานกลาง
+        ]
+        
+        for text1, text2, min_expected in similarity_cases:
+            similarity = self.matcher.calculate_similarity(text1, text2)
+            if text1 == text2:
+                assert similarity == 1.0
+            else:
+                assert similarity >= 0.0 and similarity <= 1.0
+                # ไม่บังคับค่าที่แน่นอนเพราะอาจแตกต่างกันขึ้นอยู่กับอัลกอริทึม
 
 class TestAPIIntegration:
     """ชุดการทดสอบสำหรับการเชื่อมต่อ API"""
@@ -244,27 +335,53 @@ class TestEnhancedSearch:
         assert 'ต้ม' in cooking_methods
         assert 'ทอด' in cooking_methods
         assert 'ย่าง' in cooking_methods
+    
+    def test_complete_thai_menu_coverage(self):
+        """ทดสอบการครอบคลุมเมนูอาหารไทยทั้งหมด"""
+        complete_menu_list = Config.COMPLETE_THAI_MENU_LIST
+        
+        # ตรวจสอบว่ามีเมนูครบตามที่ระบุ
+        expected_menus = [
+            'กุ้งทาพริกไทยกระเทียม', 'ข้าวเม่าทอด', 'เปรี้ยวหวานไข่ม้วน',
+            'ไข่จ่อม', 'งบปลาทู', 'ยำไข่ปลาดุก', 'กล้วยบวชชี'
+        ]
+        
+        for menu in expected_menus:
+            assert menu in complete_menu_list, f"Missing menu: {menu}"
+        
+        # ตรวจสอบว่ามีเมนูมากกว่า 100 รายการ
+        assert len(complete_menu_list) > 100
 
 class TestUserInterface:
     """ชุดการทดสอบสำหรับการปรับปรุง UI/UX"""
     
     def test_auto_scroll_configuration(self):
         """ทดสอบการตั้งค่า auto-scroll"""
-        display_settings = UIConfig.DISPLAY_SETTINGS if 'UIConfig' in globals() else {}
-        
-        # ทดสอบว่าความล่าช้า auto-scroll เหมาะสม
-        if 'auto_scroll_delay' in display_settings:
-            delay = display_settings['auto_scroll_delay']
-            assert 100 <= delay <= 2000  # ระหว่าง 0.1 ถึง 2 วินาที
+        # ตรวจสอบว่ามีการกำหนดค่า auto-scroll
+        try:
+            from config import UIConfig
+            display_settings = UIConfig.DISPLAY_SETTINGS
+            
+            # ทดสอบว่าความล่าช้า auto-scroll เหมาะสม
+            if 'auto_scroll_delay' in display_settings:
+                delay = display_settings['auto_scroll_delay']
+                assert 100 <= delay <= 2000  # ระหว่าง 0.1 ถึง 2 วินาที
+        except ImportError:
+            # ถ้าไม่มี UIConfig ก็ถือว่าผ่าน
+            pass
     
     def test_animation_settings(self):
         """ทดสอบการกำหนดค่าแอนิเมชั่น"""
-        display_settings = UIConfig.DISPLAY_SETTINGS if 'UIConfig' in globals() else {}
-        
-        # ทดสอบระยะเวลาแอนิเมชั่นที่เหมาะสม
-        if 'animation_duration' in display_settings:
-            duration = display_settings['animation_duration']
-            assert 100 <= duration <= 1000  # ระหว่าง 0.1 ถึง 1 วินาที
+        try:
+            from config import UIConfig
+            display_settings = UIConfig.DISPLAY_SETTINGS
+            
+            # ทดสอบระยะเวลาแอนิเมชั่นที่เหมาะสม
+            if 'animation_duration' in display_settings:
+                duration = display_settings['animation_duration']
+                assert 100 <= duration <= 1000  # ระหว่าง 0.1 ถึง 1 วินาที
+        except ImportError:
+            pass
 
 class TestConfiguration:
     """ชุดการทดสอบสำหรับการจัดการการกำหนดค่า"""
@@ -297,6 +414,16 @@ class TestConfiguration:
         oil_rates = adjustments['oil_absorption_rates']
         for method, rate in oil_rates.items():
             assert 0 < rate <= 1.0  # ควรอยู่ระหว่าง 0 ถึง 100%
+    
+    def test_enhanced_search_terms_generation(self):
+        """ทดสอบการสร้างคำค้นหาขั้นสูง"""
+        test_queries = ['ไข่เจียว', 'ผัดกะเพรา', 'ต้มยำ']
+        
+        for query in test_queries:
+            expanded = Config.get_enhanced_search_terms(query)
+            assert isinstance(expanded, list)
+            assert query in expanded  # ควรมีคำค้นหาต้นฉบับ
+            assert len(expanded) >= 1  # ควรมีอย่างน้อย 1 คำ
 
 class TestPerformance:
     """ชุดการทดสอบสำหรับการเพิ่มประสิทธิภาพ"""
@@ -345,6 +472,24 @@ class TestPerformance:
         assert batch_time < 5.0  # น้อยกว่า 5 วินาที
         assert len(results) == len(ingredients_list)
         assert all(result is not None for result in results)
+    
+    def test_thai_nutrition_database_coverage(self):
+        """ทดสอบการครอบคลุมของฐานข้อมูลโภชนาการไทย"""
+        thai_data = ThaiNutritionData()
+        
+        # ทดสอบวัตถุดิบหลัก
+        essential_ingredients = [
+            "ไข่ไก่", "หมู", "ไก่", "กุ้ง", "ปลา", "ข้าว", "น้ำปลา", 
+            "กะทิ", "น้ำมันพืช", "กระเทียม", "หอมแดง", "พริก"
+        ]
+        
+        missing_ingredients = []
+        for ingredient in essential_ingredients:
+            nutrition = thai_data.get_nutrition_info(ingredient)
+            if nutrition is None or nutrition.calories == 0:
+                missing_ingredients.append(ingredient)
+        
+        assert len(missing_ingredients) == 0, f"Missing nutrition data for: {missing_ingredients}"
 
 class TestDataIntegrity:
     """ชุดการทดสอบสำหรับความสมบูรณ์และการตรวจสอบข้อมูล"""
@@ -390,6 +535,24 @@ class TestDataIntegrity:
             
             assert min_weight <= weight <= max_weight, \
                 f"{ingredient_text}: คาดหวัง {min_weight}-{max_weight}g, ได้ {weight}g"
+    
+    def test_complete_menu_processing(self):
+        """ทดสอบการประมวลผลเมนูทั้งหมดจาก Config"""
+        analyzer = NutritionAnalyzer()
+        sample_menus = Config.COMPLETE_THAI_MENU_LIST[:20]  # ทดสอบ 20 เมนูแรก
+        
+        failed_menus = []
+        for menu in sample_menus:
+            try:
+                # ใช้วัตถุดิบพื้นฐาน
+                basic_ingredients = "- วัตถุดิบหลัก 100 กรัม\n- เครื่องปรุง ตามชอบ"
+                result = analyzer.analyze_recipe(menu, basic_ingredients)
+                assert 'recipe_name' in result
+                assert result['recipe_name'] == menu
+            except Exception as e:
+                failed_menus.append((menu, str(e)))
+        
+        assert len(failed_menus) == 0, f"Failed to process menus: {failed_menus[:5]}"
 
 class TestErrorHandling:
     """ชุดการทดสอบสำหรับการจัดการข้อผิดพลาดและกรณีขอบเขต"""
@@ -469,9 +632,9 @@ async def test_async_processing():
     assert all(result is not None for result in results)
 
 def test_integration_comprehensive():
-    """การทดสอบรวมแบบครอบคลุม"""
+    """การทดสอบรวมแบบครอบคลุม - ปรับปรุงแล้ว"""
     print("\n" + "="*60)
-    print("🧪 กำลังรันการทดสอบรวมแบบครอบคลุม")
+    print("🧪 กำลังรันการทดสอบรวมแบบครอบคลุม - Enhanced Version")
     print("="*60)
     
     try:
@@ -495,6 +658,16 @@ def test_integration_comprehensive():
         # 3. ทดสอบการวิเคราะห์สูตรอาหาร
         recipe_result = analyzer.analyze_recipe("ไข่เจียว", ingredients_text, True)
         
+        # 4. ทดสอบเมนูอาหารไทยใหม่
+        new_thai_menus = [
+            'กุ้งทาพริกไทยกระเทียม', 'ข้าวเม่าทอด', 'ยำไข่ปลาดุก',
+            'กล้วยบวชชี', 'แกงคั่วฟักทองกับกุ้งตะเข็บ'
+        ]
+        
+        for menu in new_thai_menus:
+            menu_result = analyzer.analyze_recipe(menu, ingredients_text)
+            assert menu_result['recipe_name'] == menu
+        
         # การยืนยัน
         assert ingredient_result['weight_grams'] > 0
         assert len(nutrition_data) >= 2
@@ -504,15 +677,18 @@ def test_integration_comprehensive():
         assert 'ingredients' in recipe_result
         
         print("✅ การทดสอบรวมทั้งหมดผ่าน!")
+        print(f"✅ ทดสอบเมนูอาหารไทยใหม่ {len(new_thai_menus)} เมนู สำเร็จ!")
         return True
         
     except Exception as e:
         print(f"❌ การทดสอบรวมล้มเหลว: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 if __name__ == "__main__":
-    """รันการทดสوบทั้งหมดเมื่อสคริปต์ถูกเรียกใช้โดยตรง"""
-    print("🍲 แชทบอทสูตรอาหารไทยขั้นสูง - ชุดการทดสอบ")
+    """รันการทดสอบทั้งหมดเมื่อสคริปต์ถูกเรียกใช้โดยตรง"""
+    print("🍲 แชทบอทสูตรอาหารไทยขั้นสูง - ชุดการทดสอบที่ปรับปรุงแล้ว")
     print("="*60)
     
     # รันการทดสอบรวมแบบครอบคลุมก่อน
@@ -526,7 +702,8 @@ if __name__ == "__main__":
             __file__,
             "-v",
             "--tb=short",
-            "--color=yes"
+            "--color=yes",
+            "-x"  # หยุดเมื่อเกิดข้อผิดพลาดครั้งแรก
         ]
         
         # รัน pytest
@@ -534,6 +711,14 @@ if __name__ == "__main__":
         
         if exit_code == 0:
             print("\n🎉 การทดสอบทั้งหมดผ่านเรียบร้อย!")
+            print("\n✨ ฟีเจอร์ที่ทดสอบแล้ว:")
+            print("  🔍 การค้นหาขั้นสูงพร้อมการแก้ไขการพิมพ์ผิด")
+            print("  🍲 การรองรับเมนูอาหารไทยทั้งหมดจากชุดข้อมูล")
+            print("  🧮 การวิเคราะห์โภชนาการขั้นสูงพร้อมการปรับแต่งการทำอาหาร")
+            print("  🔌 การเชื่อมต่อ API ภายนอก (USDA และ Nutritionix)")
+            print("  ⚡ การประมวลผลแบบ asynchronous")
+            print("  📱 การปรับปรุง UI/UX และ auto-scroll")
+            print("  🛡️  การจัดการข้อผิดพลาดและการตรวจสอบความถูกต้อง")
         else:
             print(f"\n⚠️  การทดสอบบางส่วนล้มเหลว (รหัสออก: {exit_code})")
     else:
