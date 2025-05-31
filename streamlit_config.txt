@@ -1,0 +1,31 @@
+[global]
+# การตั้งค่าทั่วไป
+developmentMode = false
+logLevel = "info"
+maxCachedMessageAge = 86400
+
+[server]
+# การตั้งค่าเซิร์ฟเวอร์
+headless = true
+port = 8501
+enableCORS = false
+enableXsrfProtection = true
+maxUploadSize = 200
+
+[browser]
+# การตั้งค่าเบราว์เซอร์
+gatherUsageStats = false
+serverAddress = "0.0.0.0"
+
+[theme]
+# ธีมสีสำหรับแอป
+primaryColor = "#FF6B6B"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+font = "sans serif"
+
+[client]
+# การตั้งค่าไคลเอนต์
+showErrorDetails = false
+toolbarMode = "auto"
