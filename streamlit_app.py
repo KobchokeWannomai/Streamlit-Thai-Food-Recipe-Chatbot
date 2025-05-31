@@ -553,25 +553,27 @@ def display_recipe_with_nutrition(recipe, nutrition_data, similarity_score=None)
         else:
             st.info("ไม่มีข้อมูลรายละเอียด")
 
+def create_error_message(search_query, available_recipes):
+    """สร้างข้อความแสดงข้อผิดพลาดแบบปลอดภัย"""
+    message_parts = []
+    message_parts.append("❌ ไม่พบสูตรอาหารที่ตรงกับ")
+    message_parts.append(f"'{search_query}'")
+    message_parts.append("\n\n💡 **คำแนะนำสำหรับการค้นหา:**")
+    message_parts.append("- ลองใช้คำค้นหาที่ง่ายกว่า เช่น 'ไข่เจียว' แทน 'วิธีทำไข่เจียว'")
+    message_parts.append("- ตรวจสอบการสะกดคำภาษาไทย")
+    message_parts.append("- ลองค้นหาด้วยเมนูที่มีชื่อสั้นๆ")
+    message_parts.append("- ปรับค่าความเคร่งครัดในการค้นหาในแถบด้านซ้าย (ลดค่าลง)")
+    message_parts.append("\n🍽️ **เมนูที่มีในระบบ:**")
+    message_parts.append(", ".join(available_recipes))
+    
+    return " ".join(message_parts)
+
 def main():
     """ฟังก์ชันหลักของแอปพลิเคชัน"""
     
     # แสดงหัวข้อแอป
     st.markdown('<h1 class="main-title">🍲 Thai Food Recipe Chatbot</h1>', unsafe_allow_html=True)
-    st.markdown("### 🥘 ระบบค้นหาสูตรอาหารไทยที่ปรับปรุงใหม่")
-    
-    # แสดงข้อมูลการปรับปรุง
-    st.markdown("""
-    <div class="search-improvement-note">
-        <h4>✨ ปรับปรุงใหม่ในเวอร์ชันนี้:</h4>
-        <ul>
-            <li><strong>🎯 การค้นหาแม่นยำขึ้น:</strong> ใช้อัลกอริทึมหลายชั้นรองรับการพิมพ์ผิดและคำไม่ครบ</li>
-            <li><strong>📊 ค่าความคล้ายคลึงที่ถูกต้อง:</strong> แสดงเปอร์เซนต์ความตรงกันแบบสีสันและแม่นยำ</li>
-            <li><strong>🔍 ระบบกรองผลลัพธ์:</strong> ลดการแสดงผลซ้ำซ้อน เน้นคุณภาพมากกว่าปริมาณ</li>
-            <li><strong>⚡ แก้ไข ImportError:</strong> รวมทุกอย่างในไฟล์เดียว ไม่ต้องพึ่งไฟล์ภายนอก</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("### 🥘 ระบบค้นหาสูตรอาหารไทย")
     
     # โหลดข้อมูล
     with st.spinner("กำลังเริ่มต้นระบบ..."):
@@ -688,17 +690,10 @@ def main():
                         "similarity_score": similarity
                     })
                 else:
-                    response = f"""
-                    ❌ ไม่พบสูตรอาหารที่ตรงกับ '{search_query}'
+                    # สร้างข้อความแสดงข้อผิดพลาดแบบปลอดภัย
+                    available_recipes = data['name'].head(10).tolist()
+                    response = create_error_message(search_query, available_recipes)
                     
-                    💡 **คำแนะนำสำหรับการค้นหา:**
-                    - ลองใช้คำค้นหาที่ง่ายกว่า เช่น "ไข่เจียว" แทน "วิธีทำไข่เจียว"
-                    - ตรวจสอบการสะกดคำภาษาไทย
-                    - ลองค้นหาด้วยเมนูที่มีชื่อสั้นๆ
-                    - ปรับค่าความเคร่งครัดในการค้นหาในแถบด้านซ้าย (ลดค่าลง)
-                    
-                    🍽️ **เมนูที่มีในระบบ:** {', '.join(data['name'].head(10).tolist())}
-                    """
                     st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
 
