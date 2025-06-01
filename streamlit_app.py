@@ -723,39 +723,68 @@ def format_cooking_method(method_text):
     
     result = []
     lines = method_text.split('\n')
+    
+    def is_header_line(line):
+        """ตรวจสอบว่าเป็นหัวข้อหรือไม่"""
+        return (line.startswith('#') or 
+                re.match(r'^(วิธีทำ|วิธีแต่ง|ส่วนผสม|เครื่องปรุง|การเตรียม)', line, re.IGNORECASE) or
+                (line.endswith(':') and len(line) < 50))
+    
+    def is_note_line(line):
+        """ตรวจสอบว่าเป็นหมายเหตุหรือไม่"""
+        return re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม|Note|Tip)', line, re.IGNORECASE)
+    
+    def is_numbered_step(line):
+        """ตรวจสอบว่าเป็นเลขข้อหรือไม่"""
+        return re.match(r'^\d+\.', line)
+    
     previous_was_header = False
     
-    for line in lines:
+    for i, line in enumerate(lines):
         line = line.strip()
         if not line:
             continue
             
         # ตรวจสอบหมายเหตุ
-        if re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม|Note|Tip)', line, re.IGNORECASE):
-            result.append("")
+        if is_note_line(line):
+            # เพิ่มบรรทัดเปล่าก่อนหมายเหตุ
+            if result:
+                result.append("")
             result.append(f"**{line}**")
+            # เพิ่มบรรทัดเปล่าหลังหมายเหตุ
             result.append("")
             previous_was_header = True
         
         # ตรวจสอบหัวข้อย่อย
-        elif (line.startswith('#') or 
-              re.match(r'^(วิธีทำ|วิธีแต่ง|ส่วนผสม|เครื่องปรุง|การเตรียม)', line, re.IGNORECASE) or
-              (line.endswith(':') and len(line) < 50)):
-            
+        elif is_header_line(line):
             header_text = line.lstrip('#').strip().rstrip(':')
             
-            # เพิ่มเส้นแบ่งก่อนหัวข้อย่อย (ยกเว้นหัวข้อแรก)
-            if result and not previous_was_header:
+            # ตรวจสอบว่าบรรทัดถัดไปเป็นรายละเอียดของหัวข้อหรือเป็นหัวข้อใหม่
+            next_line_is_detail = False
+            if i + 1 < len(lines):
+                next_line = lines[i + 1].strip()
+                if (next_line and 
+                    not is_header_line(next_line) and 
+                    not is_note_line(next_line) and 
+                    not is_numbered_step(next_line)):
+                    next_line_is_detail = True
+            
+            # ถ้าไม่ใช่หัวข้อแรกและบรรทัดถัดไปไม่ใช่รายละเอียด ให้ใส่เส้นแบ่ง
+            if result and not previous_was_header and not next_line_is_detail:
                 result.append("")
                 result.append("---")
             
             result.append("")
             result.append(f"**{header_text}**")
-            result.append("")
+            
+            # ถ้าบรรทัดถัดไปเป็นรายละเอียด ไม่ต้องเพิ่มบรรทัดว่าง
+            if not next_line_is_detail:
+                result.append("")
+            
             previous_was_header = True
         
         # ตรวจสอบเลขข้อ
-        elif re.match(r'^\d+\.', line):
+        elif is_numbered_step(line):
             step_number = line.split('.')[0]
             step_content = '.'.join(line.split('.')[1:]).strip()
             result.append("")
@@ -763,8 +792,9 @@ def format_cooking_method(method_text):
             result.append(f"{step_content}")
             previous_was_header = False
         
-        # ข้อความธรรมดา
+        # ข้อความธรรมดา (รวมถึงรายละเอียดของหัวข้อ)
         else:
+            # ถ้าเป็นรายละเอียดของหัวข้อ ไม่ใช้ตัวหนา
             result.append(line)
             previous_was_header = False
     
