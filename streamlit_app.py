@@ -714,105 +714,54 @@ def format_ingredients(ingredients_text):
     return formatted
 
 def format_cooking_method(method_text):
-    """จัดรูปแบบวิธีทำให้เรียบร้อยและอ่านง่าย รองรับหัวข้อหลักและหัวข้อย่อย"""
+    """จัดรูปแบบวิธีทำให้เรียบร้อยและอ่านง่าย"""
     if not method_text:
         return "<p>ไม่มีข้อมูลวิธีทำ</p>"
     
+    # ตรวจสอบว่ามีเลขขั้นตอนอยู่แล้วหรือไม่
+    has_numbers = bool(re.search(r'^\s*\d+\.', method_text, re.MULTILINE))
+    
+    # แยกประโยคด้วยจุด และกรองเอาที่ไม่ว่างเปล่า
+    sentences = re.split(r'[.](?:\s|$)', method_text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    
     formatted = "<div style='margin: 0; line-height: 1.8; font-size: 1rem;'>"
     
-    # แยกบรรทัดและประมวลผลทีละบรรทัด
-    lines = method_text.split('\n')
-    current_section = []
-    
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-            
-        # ตรวจสอบหัวข้อหลัก (เช่น "วิธีทำ", "การเตรียม", etc.)
-        if re.match(r'^(วิธีทำ|การเตรียม|ขั้นตอน|วิธีการ|การปรุง)(?:\s|:|$)', line, re.IGNORECASE):
-            # แสดงหัวข้อหลัก
-            formatted += f"""
-            <div style='margin: 1.5rem 0 1rem 0; padding: 0.8rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 6px;'>
-                <div style='font-size: 1.1rem; font-weight: 500;'>{line}</div>
-            </div>
-            """
-            current_section = []
-            
-        # ตรวจสอบหัวข้อย่อย (ขึ้นต้นด้วย #)
-        elif line.startswith('#'):
-            # ประมวลผลส่วนก่อนหน้า (ถ้ามี)
-            if current_section:
-                content = ' '.join(current_section)
-                formatted += f"""
-                <div style='margin: 0.8rem 0; padding: 0.6rem; background-color: #f8f9fa; border-left: 3px solid #dee2e6; border-radius: 3px;'>
-                    <div style='font-size: 1rem; color: #333; text-align: justify;'>{content}</div>
-                </div>
-                """
-                current_section = []
-            
-            # แสดงหัวข้อย่อย
-            sub_title = line.lstrip('#').strip()
-            formatted += f"""
-            <div style='margin: 1.2rem 0 0.6rem 0; padding: 0.6rem; background-color: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px;'>
-                <div style='font-size: 1rem; color: #1565c0;'>{sub_title}</div>
-            </div>
-            """
-            
-        # ตรวจสอบหมายเหตุพิเศษ
-        elif re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|คำแนะนำ)', line, re.IGNORECASE):
-            # ประมวลผลส่วนก่อนหน้า (ถ้ามี)
-            if current_section:
-                content = ' '.join(current_section)
-                formatted += f"""
-                <div style='margin: 0.8rem 0; padding: 0.6rem; background-color: #f8f9fa; border-left: 3px solid #dee2e6; border-radius: 3px;'>
-                    <div style='font-size: 1rem; color: #333; text-align: justify;'>{content}</div>
-                </div>
-                """
-                current_section = []
-            
-            # แยกหัวข้อและเนื้อหา
-            if ':' in line:
-                note_title = line.split(':')[0].strip()
-                note_content = ':'.join(line.split(':')[1:]).strip()
-            else:
-                parts = line.split(' ', 1)
-                note_title = parts[0]
-                note_content = parts[1] if len(parts) > 1 else ""
-            
-            formatted += f"""
-            <div style='margin: 1rem 0; padding: 0.8rem; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;'>
-                <div style='color: #856404; font-size: 1rem; margin-bottom: 0.3rem; border-bottom: 1px solid #f0c14b; padding-bottom: 0.3rem;'>{note_title}</div>
-                {f"<div style='color: #856404; font-size: 1rem; padding-left: 0.5rem;'>{note_content}</div>" if note_content else ""}
-            </div>
-            """
-            
-        # ข้อความทั่วไป - รวมเข้าใน current_section
-        else:
-            current_section.append(line)
-    
-    # ประมวลผลส่วนสุดท้าย (ถ้ามี)
-    if current_section:
-        content = ' '.join(current_section)
+    # ถ้าไม่มีเลขขั้นตอนและประโยคน้อย ให้แสดงเป็นย่อหน้าเดียว
+    if not has_numbers and len(sentences) <= 3:
+        formatted += f"<p style='margin: 0.8rem 0; padding: 0.5rem; text-align: justify; border-left: 3px solid #e3f2fd; background-color: #fafafa;'>{method_text}</p>"
+    else:
+        # แสดงเป็นขั้นตอน
+        step_num = 1
         
-        # ถ้าเป็นข้อความสั้น ให้แสดงเป็นย่อหน้าเดียว
-        if len(content) <= 200:
-            formatted += f"""
-            <div style='margin: 0.8rem 0; padding: 0.6rem; background-color: #f8f9fa; border-left: 3px solid #dee2e6; border-radius: 3px;'>
-                <div style='font-size: 1rem; color: #333; text-align: justify;'>{content}</div>
-            </div>
-            """
-        else:
-            # ข้อความยาว แยกเป็นประโยค
-            sentences = re.split(r'[.!?](?:\s|$)', content)
-            sentences = [s.strip() for s in sentences if s.strip()]
-            
-            for sentence in sentences:
+        for sentence in sentences:
+            # ตรวจสอบว่าเป็นหัวข้อพิเศษหรือไม่
+            if re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม)', sentence):
                 formatted += f"""
-                <div style='margin: 0.8rem 0; padding: 0.6rem; background-color: #f8f9fa; border-left: 3px solid #dee2e6; border-radius: 3px;'>
-                    <div style='font-size: 1rem; color: #333; text-align: justify;'>{sentence}</div>
+                <div style='margin: 1.2rem 0; padding: 1rem; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;'>
+                    <div style='color: #856404; font-size: 1rem; margin-bottom: 0.3rem; border-bottom: 1px solid #f0c14b; padding-bottom: 0.3rem;'>{sentence.split(':')[0] if ':' in sentence else sentence.split()[0]}</div>
+                    <div style='color: #856404; font-size: 1rem; padding-left: 0.5rem;'>{':'.join(sentence.split(':')[1:]).strip() if ':' in sentence else ' '.join(sentence.split()[1:])}</div>
                 </div>
                 """
+            # ถ้ามีเลขขั้นตอนอยู่แล้ว
+            elif re.match(r'^\d+\.', sentence):
+                step_number = sentence.split('.')[0]
+                step_content = '.'.join(sentence.split('.')[1:]).strip()
+                formatted += f"""
+                <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa;'>
+                    <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>ขั้นตอนที่ {step_number}</div>
+                    <div style='font-size: 1rem; padding-left: 0.5rem; color: #333;'>{step_content}</div>
+                </div>
+                """
+            # ถ้าไม่มีเลขขั้นตอน ให้เพิ่มเอง
+            else:
+                formatted += f"""
+                <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa;'>
+                    <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>ขั้นตอนที่ {step_num}</div>
+                    <div style='font-size: 1rem; padding-left: 0.5rem; color: #333;'>{sentence}</div>
+                </div>
+                """
+                step_num += 1
     
     formatted += "</div>"
     return formatted
