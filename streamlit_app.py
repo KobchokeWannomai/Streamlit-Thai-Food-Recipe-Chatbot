@@ -714,54 +714,55 @@ def format_ingredients(ingredients_text):
     return formatted
 
 def format_cooking_method(method_text):
-    """จัดรูปแบบวิธีทำใหม่ - รองรับหัวข้อย่อยและย่อหน้า"""
+    """จัดรูปแบบวิธีทำใหม่ - ปรับปรุงให้อ่านง่ายและสวยงามขึ้น"""
     if not method_text:
         return "<p>ไม่มีข้อมูลวิธีทำ</p>"
     
     # ตรวจสอบว่ามีเลขขั้นตอนอยู่แล้วหรือไม่
     has_numbers = bool(re.search(r'^\s*\d+\.', method_text, re.MULTILINE))
     
-    # แบ่งตามบรรทัดใหม่
-    lines = method_text.split('\n')
-    formatted = "<div style='margin: 0; line-height: 1.6;'>"
+    # แยกประโยคด้วยจุด และกรองเอาที่ไม่ว่างเปล่า
+    sentences = re.split(r'[.](?:\s|$)', method_text)
+    sentences = [s.strip() for s in sentences if s.strip()]
     
-    current_paragraph = []
+    formatted = "<div style='margin: 0; line-height: 1.8;'>"
     
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-            
-        # ตรวจสอบหัวข้อย่อย (ขึ้นต้นด้วย # หรือมีลักษณะเป็นหมายเหตุ)
-        if line.startswith('#') or re.match(r'^[หมายเหตุ|สำคัญ|ข้อสังเกต|วิธีทำ|เตรียม]', line):
-            # เพิ่มย่อหน้าปัจจุบันก่อน
-            if current_paragraph:
-                paragraph_text = ' '.join(current_paragraph)
-                if has_numbers:
-                    formatted += f"<p style='margin: 0.5rem 0;'>{paragraph_text}</p>"
-                else:
-                    formatted += f"<p style='margin: 0.5rem 0;'>{paragraph_text}</p>"
-                current_paragraph = []
-            
-            # เพิ่มหัวข้อย่อย
-            clean_header = line.lstrip('#').strip()
-            formatted += f"<h4 style='margin: 1rem 0 0.5rem 0; font-size: 1rem; color: #333;'>{clean_header}</h4>"
-        else:
-            # ถ้ามีเลขขั้นตอนอยู่แล้ว ให้แสดงตามเดิม
-            if has_numbers and re.match(r'^\d+\.', line):
-                if current_paragraph:
-                    paragraph_text = ' '.join(current_paragraph)
-                    formatted += f"<p style='margin: 0.5rem 0;'>{paragraph_text}</p>"
-                    current_paragraph = []
-                formatted += f"<p style='margin: 0.3rem 0; padding-left: 1rem;'>{line}</p>"
+    # ถ้าไม่มีเลขขั้นตอนและประโยคน้อย ให้แสดงเป็นย่อหน้าเดียว
+    if not has_numbers and len(sentences) <= 3:
+        formatted += f"<p style='margin: 0.5rem 0; text-align: justify;'>{method_text}</p>"
+    else:
+        # แสดงเป็นขั้นตอน
+        step_num = 1
+        
+        for sentence in sentences:
+            # ตรวจสอบว่าเป็นหัวข้อพิเศษหรือไม่
+            if re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม)', sentence):
+                formatted += f"""
+                <div style='margin: 1rem 0; padding: 0.8rem; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;'>
+                    <strong style='color: #856404;'>{sentence}</strong>
+                </div>
+                """
+            # ถ้ามีเลขขั้นตอนอยู่แล้ว
+            elif re.match(r'^\d+\.', sentence):
+                formatted += f"""
+                <div style='margin: 0.8rem 0; display: flex; align-items: flex-start;'>
+                    <div style='background: #667eea; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 0.8rem; flex-shrink: 0; font-weight: bold;'>
+                        {sentence.split('.')[0]}
+                    </div>
+                    <p style='margin: 0; flex: 1;'>{'.'.join(sentence.split('.')[1:]).strip()}</p>
+                </div>
+                """
+            # ถ้าไม่มีเลขขั้นตอน ให้เพิ่มเอง
             else:
-                # รวมเป็นย่อหน้าเดียว
-                current_paragraph.append(line)
-    
-    # เพิ่มย่อหน้าสุดท้าย
-    if current_paragraph:
-        paragraph_text = ' '.join(current_paragraph)
-        formatted += f"<p style='margin: 0.5rem 0;'>{paragraph_text}</p>"
+                formatted += f"""
+                <div style='margin: 0.8rem 0; display: flex; align-items: flex-start;'>
+                    <div style='background: #667eea; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 0.8rem; flex-shrink: 0; font-weight: bold;'>
+                        {step_num}
+                    </div>
+                    <p style='margin: 0; flex: 1;'>{sentence}</p>
+                </div>
+                """
+                step_num += 1
     
     formatted += "</div>"
     return formatted
