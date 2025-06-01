@@ -718,6 +718,9 @@ def format_cooking_method(method_text):
     if not method_text:
         return "<p>ไม่มีข้อมูลวิธีทำ</p>"
     
+    # แปลง **text** เป็น <strong>text</strong>
+    method_text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', method_text)
+    
     formatted = "<div style='margin: 0; line-height: 1.8; font-size: 1rem;'>"
     
     # แยกบรรทัดเพื่อจัดการทีละบรรทัด
@@ -727,37 +730,35 @@ def format_cooking_method(method_text):
         line = line.strip()
         if not line:
             continue
-        
-        # ตรวจสอบหมายเหตุ (รวมทั้งที่อยู่ในเครื่องหมาย **)
-        if (re.search(r'\*\*หมายเหตุ\*\*|^หมายเหตุ|^สำคัญ|^ข้อสังเกต|^เคล็ดลับ|^วิธีเตรียม|^Note|^Tip', line, re.IGNORECASE) or
-            'หมายเหตุ' in line or 'เคล็ดลับ' in line or 'ข้อสังเกต' in line):
             
-            # ลบเครื่องหมาย ** ออก
-            clean_line = re.sub(r'\*\*', '', line)
-            
+        # ตรวจสอบหมายเหตุ
+        if re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม|Note|Tip)', line, re.IGNORECASE):
             # แยกหัวข้อและเนื้อหา
-            if ':' in clean_line:
-                header = clean_line.split(':')[0].strip()
-                content = ':'.join(clean_line.split(':')[1:]).strip()
+            if ':' in line:
+                header = line.split(':')[0].strip()
+                content = ':'.join(line.split(':')[1:]).strip()
             else:
-                header = "หมายเหตุ"
-                content = clean_line.replace('หมายเหตุ', '').strip()
+                # หาส่วนที่เป็นหัวข้อ (คำแรก)
+                words = line.split()
+                header = words[0] if words else line
+                content = ' '.join(words[1:]) if len(words) > 1 else ""
             
             formatted += f"""
             <div style='margin: 1.2rem 0; padding: 1rem; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;'>
-                <div style='color: #856404; font-size: 1rem; margin-bottom: 0.3rem; border-bottom: 1px solid #f0c14b; padding-bottom: 0.3rem;'><strong>{header}</strong></div>
+                <div style='color: #856404; font-size: 1rem; margin-bottom: 0.3rem; border-bottom: 1px solid #f0c14b; padding-bottom: 0.3rem;'>{header}</div>
                 {f"<div style='color: #856404; font-size: 1rem; padding-left: 0.5rem;'>{content}</div>" if content else ""}
             </div>
             """
         
-        # ตรวจสอบหัวข้อย่อย (ขึ้นต้นด้วย # หรือมีลักษณะเป็นหัวข้อ)
+        # ตรวจสอบหัวข้อย่อย (ขึ้นต้นด้วย # หรือเป็นหัวข้อที่มี pattern เฉพาะ)
         elif (line.startswith('#') or 
-              re.match(r'^(วิธีทำ|วิธีแต่ง|เครื่องปรุง|ส่วนผสม)', line, re.IGNORECASE)):
+              re.match(r'^(วิธีทำ|วิธีแต่ง|ส่วนผสม|เครื่องปรุง|การเตรียม)', line, re.IGNORECASE) or
+              (line.endswith(':') and len(line) < 50)):
             
-            header_text = line.lstrip('#').strip()
+            header_text = line.lstrip('#').strip().rstrip(':')
             formatted += f"""
             <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #28a745; background-color: #f8f9fa;'>
-                <div style='color: #28a745; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'><strong>{header_text}</strong></div>
+                <div style='color: #28a745; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>{header_text}</div>
             </div>
             """
         
@@ -768,7 +769,7 @@ def format_cooking_method(method_text):
             
             formatted += f"""
             <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa;'>
-                <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'><strong>{step_number}</strong></div>
+                <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>{step_number}</div>
                 <div style='font-size: 1rem; padding-left: 0.5rem; color: #333;'>{step_content}</div>
             </div>
             """
@@ -776,7 +777,7 @@ def format_cooking_method(method_text):
         # ข้อความธรรมดา
         else:
             # ตรวจสอบว่าเป็นประโยคยาวหรือไม่
-            if len(line) > 50:
+            if len(line) > 80:
                 # ประโยคยาว แสดงเป็นย่อหน้า
                 formatted += f"""
                 <div style='margin: 0.8rem 0; padding: 0.6rem; border-left: 3px solid #e3f2fd; background-color: #fafafa;'>
