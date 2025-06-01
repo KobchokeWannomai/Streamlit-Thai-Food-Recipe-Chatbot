@@ -714,111 +714,54 @@ def format_ingredients(ingredients_text):
     return formatted
 
 def format_cooking_method(method_text):
-    """จัดรูปแบบวิธีทำให้เรียบร้อยและอ่านง่าย รองรับหัวข้อหลักและหัวข้อย่อย"""
+    """จัดรูปแบบวิธีทำให้เรียบร้อยและอ่านง่าย"""
     if not method_text:
         return "<p>ไม่มีข้อมูลวิธีทำ</p>"
     
-    # แยกบรรทัดเพื่อจัดการหัวข้อและเนื้อหาแยกกัน
-    lines = method_text.split('\n')
+    # ตรวจสอบว่ามีเลขขั้นตอนอยู่แล้วหรือไม่
+    has_numbers = bool(re.search(r'^\s*\d+\.', method_text, re.MULTILINE))
+    
+    # แยกประโยคด้วยจุด และกรองเอาที่ไม่ว่างเปล่า
+    sentences = re.split(r'[.](?:\s|$)', method_text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    
     formatted = "<div style='margin: 0; line-height: 1.8; font-size: 1rem;'>"
     
-    step_num = 1
-    in_section = False
-    
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
+    # ถ้าไม่มีเลขขั้นตอนและประโยคน้อย ให้แสดงเป็นย่อหน้าเดียว
+    if not has_numbers and len(sentences) <= 3:
+        formatted += f"<p style='margin: 0.8rem 0; padding: 0.5rem; text-align: justify; border-left: 3px solid #e3f2fd; background-color: #fafafa;'>{method_text}</p>"
+    else:
+        # แสดงเป็นขั้นตอน
+        step_num = 1
         
-        # ตรวจสอบหัวข้อย่อยที่มี # ขึ้นต้น
-        if re.match(r'^#{1,3}\s+(.+)', line):
-            hash_count = len(re.match(r'^(#{1,3})', line).group(1))
-            header_text = re.sub(r'^#{1,3}\s+', '', line)
-            
-            # กำหนดสีและขนาดตามระดับหัวข้อ
-            if hash_count == 1:  # หัวข้อหลัก
-                color = '#2c3e50'
-                bg_color = '#ecf0f1'
-                border_color = '#3498db'
-                font_size = '1.1rem'
-                margin = '1.5rem 0 1rem 0'
-            elif hash_count == 2:  # หัวข้อย่อยระดับ 1
-                color = '#34495e'
-                bg_color = '#f8f9fa'
-                border_color = '#667eea'
-                font_size = '1rem'
-                margin = '1.2rem 0 0.8rem 0'
-            else:  # หัวข้อย่อยระดับ 2
-                color = '#5a6c7d'
-                bg_color = '#fdfdfd'
-                border_color = '#95a5a6'
-                font_size = '1rem'
-                margin = '1rem 0 0.6rem 0'
-            
-            formatted += f"""
-            <div style='margin: {margin}; padding: 0.8rem 1rem; background-color: {bg_color}; border-left: 4px solid {border_color}; border-radius: 4px;'>
-                <div style='color: {color}; font-size: {font_size}; margin: 0; border-bottom: 1px solid {border_color}; padding-bottom: 0.3rem;'>{header_text}</div>
-            </div>
-            """
-            in_section = True
-            continue
-        
-        # ตรวจสอบหัวข้อพิเศษ (หมายเหตุ, เคล็ดลับ, ฯลฯ)
-        if re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม|แนะนำ)', line):
-            header_part = line.split(':')[0] if ':' in line else line.split()[0]
-            content_part = ':'.join(line.split(':')[1:]).strip() if ':' in line else ' '.join(line.split()[1:]).strip()
-            
-            formatted += f"""
-            <div style='margin: 1.2rem 0; padding: 1rem; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;'>
-                <div style='color: #856404; font-size: 1rem; margin-bottom: 0.3rem; border-bottom: 1px solid #f0c14b; padding-bottom: 0.3rem;'>{header_part}</div>
-                {f"<div style='color: #856404; font-size: 1rem; padding-left: 0.5rem;'>{content_part}</div>" if content_part else ""}
-            </div>
-            """
-            continue
-        
-        # ตรวจสอบว่ามีเลขขั้นตอนอยู่แล้วหรือไม่
-        if re.match(r'^\d+\.', line):
-            step_number = line.split('.')[0]
-            step_content = '.'.join(line.split('.')[1:]).strip()
-            
-            formatted += f"""
-            <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa; border-radius: 3px;'>
-                <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>ขั้นตอนที่ {step_number}</div>
-                <div style='font-size: 1rem; padding-left: 0.5rem; color: #333; text-align: justify;'>{step_content}</div>
-            </div>
-            """
-        
-        # ถ้าไม่ใช่หัวข้อหรือขั้นตอนที่มีเลข ให้จัดเป็นขั้นตอนปกติ
-        elif not re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม|แนะนำ)', line):
-            # ตรวจสอบว่าเป็นประโยคที่มีความหมายหรือไม่
-            if len(line) > 5 and not line.isdigit():
+        for sentence in sentences:
+            # ตรวจสอบว่าเป็นหัวข้อพิเศษหรือไม่
+            if re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม)', sentence):
                 formatted += f"""
-                <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa; border-radius: 3px;'>
+                <div style='margin: 1.2rem 0; padding: 1rem; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;'>
+                    <div style='color: #856404; font-size: 1rem; margin-bottom: 0.3rem; border-bottom: 1px solid #f0c14b; padding-bottom: 0.3rem;'>{sentence.split(':')[0] if ':' in sentence else sentence.split()[0]}</div>
+                    <div style='color: #856404; font-size: 1rem; padding-left: 0.5rem;'>{':'.join(sentence.split(':')[1:]).strip() if ':' in sentence else ' '.join(sentence.split()[1:])}</div>
+                </div>
+                """
+            # ถ้ามีเลขขั้นตอนอยู่แล้ว
+            elif re.match(r'^\d+\.', sentence):
+                step_number = sentence.split('.')[0]
+                step_content = '.'.join(sentence.split('.')[1:]).strip()
+                formatted += f"""
+                <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa;'>
+                    <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>ขั้นตอนที่ {step_number}</div>
+                    <div style='font-size: 1rem; padding-left: 0.5rem; color: #333;'>{step_content}</div>
+                </div>
+                """
+            # ถ้าไม่มีเลขขั้นตอน ให้เพิ่มเอง
+            else:
+                formatted += f"""
+                <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa;'>
                     <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>ขั้นตอนที่ {step_num}</div>
-                    <div style='font-size: 1rem; padding-left: 0.5rem; color: #333; text-align: justify;'>{line}</div>
+                    <div style='font-size: 1rem; padding-left: 0.5rem; color: #333;'>{sentence}</div>
                 </div>
                 """
                 step_num += 1
-    
-    # ถ้าไม่มีเนื้อหาที่จัดรูปแบบได้ ให้แสดงข้อความต้นฉบับ
-    if formatted == "<div style='margin: 0; line-height: 1.8; font-size: 1rem;'>":
-        # แยกประโยคด้วยจุดและจัดรูปแบบ
-        sentences = re.split(r'[.](?:\s|$)', method_text)
-        sentences = [s.strip() for s in sentences if s.strip()]
-        
-        if len(sentences) <= 3:
-            formatted += f"<p style='margin: 0.8rem 0; padding: 0.8rem; text-align: justify; border-left: 3px solid #e3f2fd; background-color: #fafafa; border-radius: 3px;'>{method_text}</p>"
-        else:
-            step_num = 1
-            for sentence in sentences:
-                if len(sentence) > 5:
-                    formatted += f"""
-                    <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa; border-radius: 3px;'>
-                        <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>ขั้นตอนที่ {step_num}</div>
-                        <div style='font-size: 1rem; padding-left: 0.5rem; color: #333; text-align: justify;'>{sentence}</div>
-                    </div>
-                    """
-                    step_num += 1
     
     formatted += "</div>"
     return formatted
