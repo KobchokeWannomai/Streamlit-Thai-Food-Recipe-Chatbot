@@ -723,6 +723,7 @@ def format_cooking_method(method_text):
     
     result = []
     lines = method_text.split('\n')
+    previous_was_header = False
     
     for line in lines:
         line = line.strip()
@@ -732,8 +733,9 @@ def format_cooking_method(method_text):
         # ตรวจสอบหมายเหตุ
         if re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม|Note|Tip)', line, re.IGNORECASE):
             result.append("")
-            result.append(f"🟡 **{line}**")
+            result.append(f"**{line}**")
             result.append("")
+            previous_was_header = True
         
         # ตรวจสอบหัวข้อย่อย
         elif (line.startswith('#') or 
@@ -741,21 +743,30 @@ def format_cooking_method(method_text):
               (line.endswith(':') and len(line) < 50)):
             
             header_text = line.lstrip('#').strip().rstrip(':')
+            
+            # เพิ่มเส้นแบ่งก่อนหัวข้อย่อย (ยกเว้นหัวข้อแรก)
+            if result and not previous_was_header:
+                result.append("")
+                result.append("---")
+            
             result.append("")
-            result.append(f"🟢 **{header_text}**")
+            result.append(f"**{header_text}**")
             result.append("")
+            previous_was_header = True
         
         # ตรวจสอบเลขข้อ
         elif re.match(r'^\d+\.', line):
             step_number = line.split('.')[0]
             step_content = '.'.join(line.split('.')[1:]).strip()
             result.append("")
-            result.append(f"🔵 **{step_number}**")
-            result.append(f"   {step_content}")
+            result.append(f"**{step_number}**")
+            result.append(f"{step_content}")
+            previous_was_header = False
         
         # ข้อความธรรมดา
         else:
-            result.append(f"• {line}")
+            result.append(line)
+            previous_was_header = False
     
     return '\n'.join(result)
 
