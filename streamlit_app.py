@@ -716,14 +716,12 @@ def format_ingredients(ingredients_text):
 def format_cooking_method(method_text):
     """จัดรูปแบบวิธีทำให้เรียบร้อยตามโครงสร้างข้อมูลจริง"""
     if not method_text:
-        return "<p>ไม่มีข้อมูลวิธีทำ</p>"
+        return "ไม่มีข้อมูลวิธีทำ"
     
-    # แปลง **text** เป็น <strong>text</strong>
-    method_text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', method_text)
+    # แปลง **text** เป็น markdown bold
+    method_text = re.sub(r'\*\*(.*?)\*\*', r'**\1**', method_text)
     
-    formatted = "<div style='margin: 0; line-height: 1.8; font-size: 1rem;'>"
-    
-    # แยกบรรทัดเพื่อจัดการทีละบรรทัด
+    result = []
     lines = method_text.split('\n')
     
     for line in lines:
@@ -733,67 +731,33 @@ def format_cooking_method(method_text):
             
         # ตรวจสอบหมายเหตุ
         if re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม|Note|Tip)', line, re.IGNORECASE):
-            # แยกหัวข้อและเนื้อหา
-            if ':' in line:
-                header = line.split(':')[0].strip()
-                content = ':'.join(line.split(':')[1:]).strip()
-            else:
-                # หาส่วนที่เป็นหัวข้อ (คำแรก)
-                words = line.split()
-                header = words[0] if words else line
-                content = ' '.join(words[1:]) if len(words) > 1 else ""
-            
-            formatted += f"""
-            <div style='margin: 1.2rem 0; padding: 1rem; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;'>
-                <div style='color: #856404; font-size: 1rem; margin-bottom: 0.3rem; border-bottom: 1px solid #f0c14b; padding-bottom: 0.3rem;'>{header}</div>
-                {f"<div style='color: #856404; font-size: 1rem; padding-left: 0.5rem;'>{content}</div>" if content else ""}
-            </div>
-            """
+            result.append("")
+            result.append(f"🟡 **{line}**")
+            result.append("")
         
-        # ตรวจสอบหัวข้อย่อย (ขึ้นต้นด้วย # หรือเป็นหัวข้อที่มี pattern เฉพาะ)
+        # ตรวจสอบหัวข้อย่อย
         elif (line.startswith('#') or 
               re.match(r'^(วิธีทำ|วิธีแต่ง|ส่วนผสม|เครื่องปรุง|การเตรียม)', line, re.IGNORECASE) or
               (line.endswith(':') and len(line) < 50)):
             
             header_text = line.lstrip('#').strip().rstrip(':')
-            formatted += f"""
-            <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #28a745; background-color: #f8f9fa;'>
-                <div style='color: #28a745; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>{header_text}</div>
-            </div>
-            """
+            result.append("")
+            result.append(f"🟢 **{header_text}**")
+            result.append("")
         
-        # ตรวจสอบเลขข้อ (เริ่มต้นด้วยตัวเลข + จุด)
+        # ตรวจสอบเลขข้อ
         elif re.match(r'^\d+\.', line):
             step_number = line.split('.')[0]
             step_content = '.'.join(line.split('.')[1:]).strip()
-            
-            formatted += f"""
-            <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa;'>
-                <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>{step_number}</div>
-                <div style='font-size: 1rem; padding-left: 0.5rem; color: #333;'>{step_content}</div>
-            </div>
-            """
+            result.append("")
+            result.append(f"🔵 **{step_number}**")
+            result.append(f"   {step_content}")
         
         # ข้อความธรรมดา
         else:
-            # ตรวจสอบว่าเป็นประโยคยาวหรือไม่
-            if len(line) > 80:
-                # ประโยคยาว แสดงเป็นย่อหน้า
-                formatted += f"""
-                <div style='margin: 0.8rem 0; padding: 0.6rem; border-left: 3px solid #e3f2fd; background-color: #fafafa;'>
-                    <div style='font-size: 1rem; color: #333; text-align: justify;'>{line}</div>
-                </div>
-                """
-            else:
-                # ประโยคสั้น แสดงแบบรายการ
-                formatted += f"""
-                <div style='margin: 0.5rem 0; padding: 0.4rem 0.6rem; background-color: #f8f9fa; border-radius: 3px;'>
-                    <div style='font-size: 1rem; color: #333;'>{line}</div>
-                </div>
-                """
+            result.append(f"• {line}")
     
-    formatted += "</div>"
-    return formatted
+    return '\n'.join(result)
 
 def display_nutrition_info(nutrition_data, recipe_name):
     """แสดงข้อมูลโภชนาการแบบบัตร"""
@@ -1014,7 +978,7 @@ def display_recipe_with_nutrition(recipe, nutrition_data, settings, similarity_s
         
         with col2:
             st.markdown("#### 👨‍🍳 วิธีทำ")
-            st.markdown(format_cooking_method(recipe["method"]), unsafe_allow_html=True)
+            st.markdown(format_cooking_method(recipe["method"]))
     
     with tab2:
         if nutrition_data:
