@@ -714,87 +714,111 @@ def format_ingredients(ingredients_text):
     return formatted
 
 def format_cooking_method(method_text):
-    """จัดรูปแบบวิธีทำให้เรียบร้อยและอ่านง่าย รองรับหัวข้อหลักและหัวข้อย่อยที่มี # ขึ้นต้น"""
+    """จัดรูปแบบวิธีทำให้เรียบร้อยและอ่านง่าย รองรับหัวข้อหลักและหัวข้อย่อย"""
     if not method_text:
         return "<p>ไม่มีข้อมูลวิธีทำ</p>"
     
-    # แยกบรรทัดและประมวลผลแต่ละบรรทัด
-    lines = method_text.strip().split('\n')
+    # แยกบรรทัดเพื่อจัดการหัวข้อและเนื้อหาแยกกัน
+    lines = method_text.split('\n')
     formatted = "<div style='margin: 0; line-height: 1.8; font-size: 1rem;'>"
     
-    # ตรวจสอบว่ามีเลขขั้นตอนหรือหัวข้อพิเศษหรือไม่
-    has_structure = any(
-        re.match(r'^\s*\d+\.', line) or 
-        re.match(r'^\s*#+', line) or 
-        re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม)', line)
-        for line in lines
-    )
+    step_num = 1
+    in_section = False
     
-    # ถ้าไม่มีโครงสร้างพิเศษและข้อความสั้น ให้แสดงแบบธรรมดา
-    if not has_structure and len(method_text) < 200:
-        formatted += f"<p style='margin: 0.8rem 0; padding: 0.8rem; text-align: justify; border-left: 3px solid #e3f2fd; background-color: #fafafa; border-radius: 4px;'>{method_text}</p>"
-    else:
-        step_num = 1
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
         
-        for line in lines:
-            line = line.strip()
-            if not line:  # บรรทัดว่าง
-                formatted += "<div style='margin: 0.5rem 0; border-bottom: 1px solid #e9ecef;'></div>"
-                continue
+        # ตรวจสอบหัวข้อย่อยที่มี # ขึ้นต้น
+        if re.match(r'^#{1,3}\s+(.+)', line):
+            hash_count = len(re.match(r'^(#{1,3})', line).group(1))
+            header_text = re.sub(r'^#{1,3}\s+', '', line)
             
-            # หัวข้อย่อยที่มี # ขึ้นต้น
-            if re.match(r'^\s*#+\s*(.+)', line):
-                header_content = re.sub(r'^\s*#+\s*', '', line).strip()
+            # กำหนดสีและขนาดตามระดับหัวข้อ
+            if hash_count == 1:  # หัวข้อหลัก
+                color = '#2c3e50'
+                bg_color = '#ecf0f1'
+                border_color = '#3498db'
+                font_size = '1.1rem'
+                margin = '1.5rem 0 1rem 0'
+            elif hash_count == 2:  # หัวข้อย่อยระดับ 1
+                color = '#34495e'
+                bg_color = '#f8f9fa'
+                border_color = '#667eea'
+                font_size = '1rem'
+                margin = '1.2rem 0 0.8rem 0'
+            else:  # หัวข้อย่อยระดับ 2
+                color = '#5a6c7d'
+                bg_color = '#fdfdfd'
+                border_color = '#95a5a6'
+                font_size = '1rem'
+                margin = '1rem 0 0.6rem 0'
+            
+            formatted += f"""
+            <div style='margin: {margin}; padding: 0.8rem 1rem; background-color: {bg_color}; border-left: 4px solid {border_color}; border-radius: 4px;'>
+                <div style='color: {color}; font-size: {font_size}; margin: 0; border-bottom: 1px solid {border_color}; padding-bottom: 0.3rem;'>{header_text}</div>
+            </div>
+            """
+            in_section = True
+            continue
+        
+        # ตรวจสอบหัวข้อพิเศษ (หมายเหตุ, เคล็ดลับ, ฯลฯ)
+        if re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม|แนะนำ)', line):
+            header_part = line.split(':')[0] if ':' in line else line.split()[0]
+            content_part = ':'.join(line.split(':')[1:]).strip() if ':' in line else ' '.join(line.split()[1:]).strip()
+            
+            formatted += f"""
+            <div style='margin: 1.2rem 0; padding: 1rem; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;'>
+                <div style='color: #856404; font-size: 1rem; margin-bottom: 0.3rem; border-bottom: 1px solid #f0c14b; padding-bottom: 0.3rem;'>{header_part}</div>
+                {f"<div style='color: #856404; font-size: 1rem; padding-left: 0.5rem;'>{content_part}</div>" if content_part else ""}
+            </div>
+            """
+            continue
+        
+        # ตรวจสอบว่ามีเลขขั้นตอนอยู่แล้วหรือไม่
+        if re.match(r'^\d+\.', line):
+            step_number = line.split('.')[0]
+            step_content = '.'.join(line.split('.')[1:]).strip()
+            
+            formatted += f"""
+            <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa; border-radius: 3px;'>
+                <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>ขั้นตอนที่ {step_number}</div>
+                <div style='font-size: 1rem; padding-left: 0.5rem; color: #333; text-align: justify;'>{step_content}</div>
+            </div>
+            """
+        
+        # ถ้าไม่ใช่หัวข้อหรือขั้นตอนที่มีเลข ให้จัดเป็นขั้นตอนปกติ
+        elif not re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม|แนะนำ)', line):
+            # ตรวจสอบว่าเป็นประโยคที่มีความหมายหรือไม่
+            if len(line) > 5 and not line.isdigit():
                 formatted += f"""
-                <div style='margin: 1.2rem 0 0.8rem 0; padding: 0.8rem; background: linear-gradient(135deg, #e8f4fd 0%, #d1ecf1 100%); border-left: 4px solid #17a2b8; border-radius: 4px;'>
-                    <div style='color: #0c5460; font-size: 1rem; margin-bottom: 0.4rem; border-bottom: 1px solid #bee5eb; padding-bottom: 0.3rem;'>📋 {header_content}</div>
+                <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa; border-radius: 3px;'>
+                    <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>ขั้นตอนที่ {step_num}</div>
+                    <div style='font-size: 1rem; padding-left: 0.5rem; color: #333; text-align: justify;'>{line}</div>
                 </div>
                 """
-            
-            # หัวข้อพิเศษ (หมายเหตุ, เคล็ดลับ, ฯลฯ)
-            elif re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม|ข้อควรระวัง)', line):
-                if ':' in line:
-                    header_part = line.split(':')[0].strip()
-                    content_part = ':'.join(line.split(':')[1:]).strip()
-                else:
-                    header_part = line.split()[0] if line.split() else line
-                    content_part = ' '.join(line.split()[1:]) if len(line.split()) > 1 else ''
-                
-                formatted += f"""
-                <div style='margin: 1.2rem 0; padding: 1rem; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;'>
-                    <div style='color: #856404; font-size: 1rem; margin-bottom: 0.4rem; border-bottom: 1px solid #f0c14b; padding-bottom: 0.3rem;'>💡 {header_part}</div>
-                    {f"<div style='color: #856404; font-size: 1rem; padding-left: 0.5rem;'>{content_part}</div>" if content_part else ""}
-                </div>
-                """
-            
-            # ขั้นตอนที่มีเลขอยู่แล้ว
-            elif re.match(r'^\s*\d+\.', line):
-                step_number = re.match(r'^\s*(\d+)\.', line).group(1)
-                step_content = re.sub(r'^\s*\d+\.\s*', '', line).strip()
-                formatted += f"""
-                <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa; border-radius: 4px;'>
-                    <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>ขั้นตอนที่ {step_number}</div>
-                    <div style='font-size: 1rem; padding-left: 0.5rem; color: #333; line-height: 1.6;'>{step_content}</div>
-                </div>
-                """
-            
-            # ขั้นตอนทั่วไป (ไม่มีเลข)
-            else:
-                # ตรวจสอบว่าเป็นประโยคสั้นหรือยาว
-                if len(line) > 15:  # ถ้าเป็นประโยคยาว ให้ทำเป็นขั้นตอน
+                step_num += 1
+    
+    # ถ้าไม่มีเนื้อหาที่จัดรูปแบบได้ ให้แสดงข้อความต้นฉบับ
+    if formatted == "<div style='margin: 0; line-height: 1.8; font-size: 1rem;'>":
+        # แยกประโยคด้วยจุดและจัดรูปแบบ
+        sentences = re.split(r'[.](?:\s|$)', method_text)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        
+        if len(sentences) <= 3:
+            formatted += f"<p style='margin: 0.8rem 0; padding: 0.8rem; text-align: justify; border-left: 3px solid #e3f2fd; background-color: #fafafa; border-radius: 3px;'>{method_text}</p>"
+        else:
+            step_num = 1
+            for sentence in sentences:
+                if len(sentence) > 5:
                     formatted += f"""
-                    <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa; border-radius: 4px;'>
+                    <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa; border-radius: 3px;'>
                         <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>ขั้นตอนที่ {step_num}</div>
-                        <div style='font-size: 1rem; padding-left: 0.5rem; color: #333; line-height: 1.6;'>{line}</div>
+                        <div style='font-size: 1rem; padding-left: 0.5rem; color: #333; text-align: justify;'>{sentence}</div>
                     </div>
                     """
                     step_num += 1
-                else:  # ถ้าเป็นข้อความสั้น ให้แสดงแบบธรรมดา
-                    formatted += f"""
-                    <div style='margin: 0.8rem 0; padding: 0.6rem; background-color: #f1f3f4; border-radius: 4px; border-left: 2px solid #6c757d;'>
-                        <div style='font-size: 1rem; color: #495057; line-height: 1.5;'>{line}</div>
-                    </div>
-                    """
     
     formatted += "</div>"
     return formatted
