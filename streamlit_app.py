@@ -16,7 +16,7 @@ from plotly.subplots import make_subplots
 
 # การตั้งค่าหน้าเว็บ
 st.set_page_config(
-    page_title="Thai Food Recipe Chatbot - Advanced",
+    page_title="Thai Food Recipe Chatbot - ปรับปรุงใหม่",
     page_icon="🍲",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -30,133 +30,47 @@ st.markdown("""
         font-family: 'Sarabun', sans-serif !important;
     }
     
-    .main-title {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-weight: bold;
-        font-size: 2.5rem;
-        margin-bottom: 0.5rem;
-        text-align: center;
-    }
-    
     .nutrition-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 1rem;
-        border-radius: 15px;
+        border-radius: 10px;
         color: white;
         margin: 0.5rem 0;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     
     .vitamin-card {
         background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         padding: 1rem;
-        border-radius: 15px;
+        border-radius: 10px;
         color: white;
         margin: 0.5rem 0;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     
     .mineral-card {
         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         padding: 1rem;
-        border-radius: 15px;
+        border-radius: 10px;
         color: white;
         margin: 0.5rem 0;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     
-    .ingredient-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 1rem 0;
-        background: white;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    
-    .ingredient-table th {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 12px 8px;
-        text-align: center;
-        font-weight: 600;
-        font-size: 0.9rem;
-        border: none;
-    }
-    
-    .ingredient-table td {
-        padding: 10px 8px;
-        text-align: center;
-        border-bottom: 1px solid #f0f0f0;
-        font-size: 0.85rem;
-    }
-    
-    .ingredient-table tr:nth-child(even) {
-        background-color: #f8f9fa;
-    }
-    
-    .ingredient-table tr:hover {
-        background-color: #e3f2fd;
-        transition: background-color 0.3s;
-    }
-    
-    .method-section {
-        background: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 15px;
-        margin: 1rem 0;
-        border-left: 4px solid #667eea;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-    
-    .method-title {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #e0e0e0;
-    }
-    
-    .method-steps ol {
-        line-height: 1.8;
-        padding-left: 1.5rem;
-    }
-    
-    .method-steps li {
-        margin: 0.8rem 0;
+    .api-status-connected {
+        background-color: #d4edda;
+        color: #155724;
         padding: 0.5rem;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border-radius: 5px;
+        border: 1px solid #c3e6cb;
     }
     
-    .method-paragraph {
-        line-height: 1.8;
-        text-align: justify;
-        padding: 1rem;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    
-    .note-section {
-        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-        padding: 1rem;
-        border-radius: 10px;
-        border-left: 4px solid #ff9800;
-        margin: 1rem 0;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    .note-title {
-        font-weight: 600;
-        color: #e65100;
-        margin-bottom: 0.5rem;
+    .api-status-disconnected {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 0.5rem;
+        border-radius: 5px;
+        border: 1px solid #f5c6cb;
     }
     
     .similarity-badge-high {
@@ -192,70 +106,33 @@ st.markdown("""
         margin-left: 0.5rem;
     }
     
-    .ingredients-list {
-        background: #f8f9fa;
+    .search-improvement-note {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border-left: 4px solid #2196f3;
         padding: 1rem;
-        border-radius: 15px;
         margin: 1rem 0;
-        border-left: 4px solid #28a745;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border-radius: 5px;
     }
     
-    .ingredients-list ul {
-        list-style-type: none;
-        padding-left: 0;
-    }
-    
-    .ingredients-list li {
-        margin: 0.5rem 0;
-        padding: 0.5rem;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        position: relative;
-        padding-left: 2rem;
-    }
-    
-    .ingredients-list li:before {
-        content: "🥬";
-        position: absolute;
-        left: 0.5rem;
-        top: 0.5rem;
-    }
-    
-    .auto-scroll-button {
-        position: fixed !important;
-        bottom: 25px !important;
-        right: 25px !important;
-        z-index: 999999 !important;
-        background: linear-gradient(135deg, #4CAF50, #45a049) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 50% !important;
-        width: 60px !important;
-        height: 60px !important;
-        cursor: pointer !important;
-        box-shadow: 0 4px 20px rgba(76, 175, 80, 0.4) !important;
-        font-size: 24px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    }
-    
-    .auto-scroll-button:hover {
-        background: linear-gradient(135deg, #45a049, #3d8b40) !important;
-        transform: scale(1.1) translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(76, 175, 80, 0.6) !important;
+    .main-title {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: bold;
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
-class AdvancedNutritionAPI:
-    """คลาสสำหรับจัดการข้อมูลโภชนาการขั้นสูง"""
+# คลาส NutritionAPI
+class NutritionAPI:
+    """คลาสสำหรับจัดการข้อมูลโภชนาการ"""
     
     def __init__(self):
-        self.nutrition_db = self.load_nutrition_database()
+        self.current_api_source = "local"
+        self.local_nutrition_db = self.get_default_nutrition_database()
         
         # หน่วยแปลงที่พบบ่อยในอาหารไทย
         self.unit_conversion = {
@@ -269,8 +146,7 @@ class AdvancedNutritionAPI:
             "กรัม": 1, "g": 1, "gram": 1,
             "ตัว": 100, "ฟอง": 50, "หัว": 50, "กลีบ": 3,
             "ต้น": 30, "ใบ": 2, "เม็ด": 0.5, "แว่น": 2,
-            "ผล": 150, "ราก": 5, "ท่อน": 20, "ก้อน": 30,
-            "หยิบ": 5, "ข้อมือ": 100
+            "ผล": 150, "ราก": 5, "ท่อน": 20
         }
         
         # สัดส่วนที่บริโภคจริง
@@ -280,124 +156,51 @@ class AdvancedNutritionAPI:
             "น้ำปลา": 1.0, "น้ำตาล": 1.0, "เกลือ": 1.0
         }
 
-    def load_nutrition_database(self) -> Dict:
-        """โหลดฐานข้อมูลโภชนาการ"""
-        # ลองโหลดจากไฟล์ CSV ก่อน
-        if os.path.exists("thai_ingredients_nutrition.csv"):
-            try:
-                df = pd.read_csv("thai_ingredients_nutrition.csv")
-                nutrition_db = {}
-                for _, row in df.iterrows():
-                    nutrition_db[row['ingredient']] = {
-                        "calories": row.get('calories', 0),
-                        "protein": row.get('protein', 0),
-                        "carbs": row.get('carbs', 0),
-                        "fat": row.get('fat', 0),
-                        "fiber": row.get('fiber', 0),
-                        "vitamin_a": row.get('vitamin_a', 0),
-                        "vitamin_c": row.get('vitamin_c', 0),
-                        "vitamin_b1": row.get('vitamin_b1', 0),
-                        "vitamin_b2": row.get('vitamin_b2', 0),
-                        "calcium": row.get('calcium', 0),
-                        "iron": row.get('iron', 0),
-                        "potassium": row.get('potassium', 0),
-                        "sodium": row.get('sodium', 0)
-                    }
-                return nutrition_db
-            except:
-                pass
-        
-        # ใช้ข้อมูลเริ่มต้น
-        return self.get_default_nutrition_database()
-
     def get_default_nutrition_database(self) -> Dict:
         """ฐานข้อมูลโภชนาการเริ่มต้น (ต่อ 100 กรัม)"""
         return {
-            "ข้าวสาร": {
-                "calories": 130, "protein": 2.7, "carbs": 28, "fat": 0.3, "fiber": 0.4,
-                "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0.07, "vitamin_b2": 0.02,
-                "calcium": 10, "iron": 0.8, "potassium": 115, "sodium": 5
-            },
-            "ไข่ไก่": {
-                "calories": 155, "protein": 13, "carbs": 1.1, "fat": 11, "fiber": 0,
-                "vitamin_a": 540, "vitamin_c": 0, "vitamin_b1": 0.04, "vitamin_b2": 0.42,
-                "calcium": 56, "iron": 1.75, "potassium": 138, "sodium": 124
-            },
-            "ไข่เป็ด": {
-                "calories": 185, "protein": 13, "carbs": 1.4, "fat": 14, "fiber": 0,
-                "vitamin_a": 674, "vitamin_c": 0, "vitamin_b1": 0.11, "vitamin_b2": 0.44,
-                "calcium": 64, "iron": 2.7, "potassium": 222, "sodium": 146
-            },
-            "กุ้งนาง": {
-                "calories": 99, "protein": 18, "carbs": 0.2, "fat": 1.4, "fiber": 0,
-                "vitamin_a": 54, "vitamin_c": 2.1, "vitamin_b1": 0.02, "vitamin_b2": 0.04,
-                "calcium": 70, "iron": 0.5, "potassium": 259, "sodium": 111
-            },
-            "เนื้อหมู": {
-                "calories": 242, "protein": 27, "carbs": 0, "fat": 14, "fiber": 0,
-                "vitamin_a": 2, "vitamin_c": 0.7, "vitamin_b1": 0.66, "vitamin_b2": 0.23,
-                "calcium": 19, "iron": 0.87, "potassium": 423, "sodium": 62
-            },
-            "เนื้อไก่": {
-                "calories": 165, "protein": 31, "carbs": 0, "fat": 3.6, "fiber": 0,
-                "vitamin_a": 21, "vitamin_c": 1.6, "vitamin_b1": 0.07, "vitamin_b2": 0.12,
-                "calcium": 15, "iron": 1.3, "potassium": 256, "sodium": 82
-            },
-            "ปลาช่อน": {
-                "calories": 112, "protein": 18.7, "carbs": 0, "fat": 3.6, "fiber": 0,
-                "vitamin_a": 45, "vitamin_c": 0.9, "vitamin_b1": 0.02, "vitamin_b2": 0.11,
-                "calcium": 89, "iron": 0.9, "potassium": 358, "sodium": 54
-            },
-            "น้ำมันพืช": {
-                "calories": 884, "protein": 0, "carbs": 0, "fat": 100, "fiber": 0,
-                "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
-                "calcium": 0, "iron": 0, "potassium": 0, "sodium": 0
-            },
-            "กระเทียม": {
-                "calories": 149, "protein": 6.4, "carbs": 33, "fat": 0.5, "fiber": 2.1,
-                "vitamin_a": 9, "vitamin_c": 31, "vitamin_b1": 0.2, "vitamin_b2": 0.11,
-                "calcium": 181, "iron": 1.7, "potassium": 401, "sodium": 17
-            },
-            "หอมแดง": {
-                "calories": 40, "protein": 1.1, "carbs": 9.3, "fat": 0.1, "fiber": 1.7,
-                "vitamin_a": 2, "vitamin_c": 7.4, "vitamin_b1": 0.05, "vitamin_b2": 0.03,
-                "calcium": 23, "iron": 0.21, "potassium": 146, "sodium": 4
-            },
-            "ผักชี": {
-                "calories": 23, "protein": 2.1, "carbs": 3.7, "fat": 0.5, "fiber": 2.8,
-                "vitamin_a": 3377, "vitamin_c": 27, "vitamin_b1": 0.07, "vitamin_b2": 0.16,
-                "calcium": 67, "iron": 1.77, "potassium": 521, "sodium": 46
-            },
-            "พริกไทย": {
-                "calories": 251, "protein": 10.4, "carbs": 64, "fat": 3.3, "fiber": 25,
-                "vitamin_a": 547, "vitamin_c": 0, "vitamin_b1": 0.11, "vitamin_b2": 0.18,
-                "calcium": 443, "iron": 9.7, "potassium": 1329, "sodium": 20
-            },
-            "น้ำปลา": {
-                "calories": 42, "protein": 5.8, "carbs": 1.5, "fat": 0.8, "fiber": 0,
-                "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0.03, "vitamin_b2": 0.22,
-                "calcium": 85, "iron": 2.03, "potassium": 84, "sodium": 6976
-            },
-            "น้ำตาลทราย": {
-                "calories": 387, "protein": 0, "carbs": 100, "fat": 0, "fiber": 0,
-                "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
-                "calcium": 1, "iron": 0.01, "potassium": 2, "sodium": 1
-            },
-            "มะนาว": {
-                "calories": 29, "protein": 0.7, "carbs": 9.3, "fat": 0.2, "fiber": 2.8,
-                "vitamin_a": 22, "vitamin_c": 53, "vitamin_b1": 0.03, "vitamin_b2": 0.02,
-                "calcium": 33, "iron": 0.6, "potassium": 138, "sodium": 2
-            },
-            "กะทิ": {
-                "calories": 230, "protein": 2.3, "carbs": 6, "fat": 24, "fiber": 2.2,
-                "vitamin_a": 0, "vitamin_c": 2.8, "vitamin_b1": 0.03, "vitamin_b2": 0,
-                "calcium": 16, "iron": 1.64, "potassium": 263, "sodium": 15
-            },
-            "เกลือ": {
-                "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0,
-                "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
-                "calcium": 24, "iron": 0.33, "potassium": 8, "sodium": 38758
-            }
+            "ข้าว": {"calories": 130, "protein": 2.7, "carbs": 28, "fat": 0.3, "fiber": 0.4,
+                    "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0.07, "vitamin_b2": 0.02,
+                    "calcium": 10, "iron": 0.8, "potassium": 115, "sodium": 5},
+            "ไข่ไก่": {"calories": 155, "protein": 13, "carbs": 1.1, "fat": 11, "fiber": 0,
+                     "vitamin_a": 540, "vitamin_c": 0, "vitamin_b1": 0.04, "vitamin_b2": 0.42,
+                     "calcium": 56, "iron": 1.75, "potassium": 138, "sodium": 124},
+            "กุ้ง": {"calories": 99, "protein": 18, "carbs": 0.2, "fat": 1.4, "fiber": 0,
+                    "vitamin_a": 54, "vitamin_c": 2.1, "vitamin_b1": 0.02, "vitamin_b2": 0.04,
+                    "calcium": 70, "iron": 0.5, "potassium": 259, "sodium": 111},
+            "หมู": {"calories": 242, "protein": 27, "carbs": 0, "fat": 14, "fiber": 0,
+                   "vitamin_a": 2, "vitamin_c": 0.7, "vitamin_b1": 0.66, "vitamin_b2": 0.23,
+                   "calcium": 19, "iron": 0.87, "potassium": 423, "sodium": 62},
+            "ไก่": {"calories": 165, "protein": 31, "carbs": 0, "fat": 3.6, "fiber": 0,
+                   "vitamin_a": 21, "vitamin_c": 1.6, "vitamin_b1": 0.07, "vitamin_b2": 0.12,
+                   "calcium": 15, "iron": 1.3, "potassium": 256, "sodium": 82},
+            "ปลา": {"calories": 112, "protein": 18.7, "carbs": 0, "fat": 3.6, "fiber": 0,
+                    "vitamin_a": 45, "vitamin_c": 0.9, "vitamin_b1": 0.02, "vitamin_b2": 0.11,
+                    "calcium": 89, "iron": 0.9, "potassium": 358, "sodium": 54},
+            "น้ำมันพืช": {"calories": 884, "protein": 0, "carbs": 0, "fat": 100, "fiber": 0,
+                         "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
+                         "calcium": 0, "iron": 0, "potassium": 0, "sodium": 0},
+            "กระเทียม": {"calories": 149, "protein": 6.4, "carbs": 33, "fat": 0.5, "fiber": 2.1,
+                         "vitamin_a": 9, "vitamin_c": 31, "vitamin_b1": 0.2, "vitamin_b2": 0.11,
+                         "calcium": 181, "iron": 1.7, "potassium": 401, "sodium": 17},
+            "หอมใหญ่": {"calories": 40, "protein": 1.1, "carbs": 9.3, "fat": 0.1, "fiber": 1.7,
+                        "vitamin_a": 2, "vitamin_c": 7.4, "vitamin_b1": 0.05, "vitamin_b2": 0.03,
+                        "calcium": 23, "iron": 0.21, "potassium": 146, "sodium": 4},
+            "ผักชี": {"calories": 23, "protein": 2.1, "carbs": 3.7, "fat": 0.5, "fiber": 2.8,
+                     "vitamin_a": 3377, "vitamin_c": 27, "vitamin_b1": 0.07, "vitamin_b2": 0.16,
+                     "calcium": 67, "iron": 1.77, "potassium": 521, "sodium": 46},
+            "น้ำปลา": {"calories": 42, "protein": 5.8, "carbs": 1.5, "fat": 0.8, "fiber": 0,
+                       "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0.03, "vitamin_b2": 0.22,
+                       "calcium": 85, "iron": 2.03, "potassium": 84, "sodium": 6976},
+            "น้ำตาล": {"calories": 387, "protein": 0, "carbs": 100, "fat": 0, "fiber": 0,
+                       "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
+                       "calcium": 1, "iron": 0.01, "potassium": 2, "sodium": 1},
+            "มะนาว": {"calories": 29, "protein": 0.7, "carbs": 9.3, "fat": 0.2, "fiber": 2.8,
+                      "vitamin_a": 22, "vitamin_c": 53, "vitamin_b1": 0.03, "vitamin_b2": 0.02,
+                      "calcium": 33, "iron": 0.6, "potassium": 138, "sodium": 2},
+            "กะทิ": {"calories": 230, "protein": 2.3, "carbs": 6, "fat": 24, "fiber": 2.2,
+                     "vitamin_a": 0, "vitamin_c": 2.8, "vitamin_b1": 0.03, "vitamin_b2": 0,
+                     "calcium": 16, "iron": 1.64, "potassium": 263, "sodium": 15}
         }
 
     def normalize_ingredient_name(self, ingredient: str) -> str:
@@ -406,12 +209,11 @@ class AdvancedNutritionAPI:
         ingredient = re.sub(r'[^\u0E00-\u0E7Fa-zA-Z\s]', '', ingredient)
         ingredient = ingredient.strip()
         
-        # แปลงคำพ้องความหมาย
         synonyms = {
-            "กุ้งนาง": "กุ้งนาง", "กุ้งตะเข็บ": "กุ้งนาง",
-            "เนื้อหมู": "เนื้อหมู", "หมูสับ": "เนื้อหมู",
-            "เนื้อไก่": "เนื้อไก่", "ไก่สับ": "เนื้อไก่",
-            "หอมหัวใหญ่": "หอมแดง", "น้ำตาลทราย": "น้ำตาลทราย"
+            "กุ้งนาง": "กุ้ง", "กุ้งตะเข็บ": "กุ้ง",
+            "เนื้อหมู": "หมู", "หมูสับ": "หมู",
+            "เนื้อไก่": "ไก่", "ไก่สับ": "ไก่",
+            "หอมหัวใหญ่": "หอมใหญ่", "น้ำตาลทราย": "น้ำตาล"
         }
         
         for synonym, standard in synonyms.items():
@@ -526,13 +328,11 @@ class AdvancedNutritionAPI:
         """ดึงข้อมูลโภชนาการสำหรับวัตถุดิบ"""
         normalized_ingredient = self.normalize_ingredient_name(ingredient)
         
-        # ค้นหาในฐานข้อมูล
-        for db_ingredient, nutrition in self.nutrition_db.items():
-            if (db_ingredient.lower() in normalized_ingredient.lower() or 
-                normalized_ingredient.lower() in db_ingredient.lower()):
+        for local_ingredient, nutrition in self.local_nutrition_db.items():
+            if (local_ingredient.lower() in normalized_ingredient.lower() or 
+                normalized_ingredient.lower() in local_ingredient.lower()):
                 return nutrition.copy()
         
-        # ประมาณค่าตามประเภท
         return self.estimate_nutrition_by_type(normalized_ingredient)
 
     def estimate_nutrition_by_type(self, ingredient: str) -> Dict:
@@ -540,25 +340,21 @@ class AdvancedNutritionAPI:
         ingredient_lower = ingredient.lower()
         
         if any(keyword in ingredient_lower for keyword in ["เนื้อ", "หมู", "ไก่", "ปลา", "กุ้ง"]):
-            return {
-                "calories": 150, "protein": 20, "carbs": 0, "fat": 6, "fiber": 0,
-                "vitamin_a": 20, "vitamin_c": 1, "vitamin_b1": 0.1, "vitamin_b2": 0.15,
-                "calcium": 20, "iron": 1.5, "potassium": 250, "sodium": 50
-            }
+            return {"calories": 150, "protein": 20, "carbs": 0, "fat": 6, "fiber": 0,
+                   "vitamin_a": 20, "vitamin_c": 1, "vitamin_b1": 0.1, "vitamin_b2": 0.15,
+                   "calcium": 20, "iron": 1.5, "potassium": 250, "sodium": 50}
         elif any(keyword in ingredient_lower for keyword in ["ผัก", "ใบ", "ต้น"]):
-            return {
-                "calories": 25, "protein": 2, "carbs": 5, "fat": 0.2, "fiber": 2,
-                "vitamin_a": 1000, "vitamin_c": 30, "vitamin_b1": 0.05, "vitamin_b2": 0.08,
-                "calcium": 50, "iron": 1, "potassium": 200, "sodium": 10
-            }
+            return {"calories": 25, "protein": 2, "carbs": 5, "fat": 0.2, "fiber": 2,
+                   "vitamin_a": 1000, "vitamin_c": 30, "vitamin_b1": 0.05, "vitamin_b2": 0.08,
+                   "calcium": 50, "iron": 1, "potassium": 200, "sodium": 10}
         else:
-            return {
-                "calories": 50, "protein": 2, "carbs": 10, "fat": 1, "fiber": 1,
-                "vitamin_a": 10, "vitamin_c": 5, "vitamin_b1": 0.05, "vitamin_b2": 0.05,
-                "calcium": 20, "iron": 0.5, "potassium": 100, "sodium": 10
-            }
+            return {"calories": 50, "protein": 2, "carbs": 10, "fat": 1, "fiber": 1,
+                   "vitamin_a": 10, "vitamin_c": 5, "vitamin_b1": 0.05, "vitamin_b2": 0.05,
+                   "calcium": 20, "iron": 0.5, "potassium": 100, "sodium": 10}
 
-    def calculate_recipe_nutrition(self, ingredients_text: str, adjust_consumption: bool = True) -> Dict:
+    def calculate_recipe_nutrition(self, ingredients_text: str, use_api: bool = True, 
+                                 adjust_consumption: bool = True, 
+                                 enhance_missing: bool = False) -> Dict:
         """คำนวณค่าโภชนาการของสูตรอาหาร"""
         
         total_nutrition = {
@@ -597,138 +393,197 @@ class AdvancedNutritionAPI:
                 
                 ingredient_details.append({
                     "name": ingredient_name,
-                    "original_text": ingredient_text,
                     "quantity": quantity,
                     "unit": unit,
                     "grams": grams,
                     "effective_grams": effective_grams,
-                    "consumption_factor": consumption_factor if adjust_consumption else 1.0,
                     "nutrition": ingredient_nutrition
                 })
         
         return {
             "total_nutrition": total_nutrition,
-            "ingredient_details": ingredient_details
+            "ingredient_details": ingredient_details,
+            "settings": {
+                "use_api": use_api,
+                "adjust_consumption": adjust_consumption,
+                "enhance_missing": enhance_missing
+            }
         }
 
-class AdvancedFuzzyMatcher:
-    """คลาสสำหรับการจับคู่ข้อความขั้นสูง"""
+# คลาส RecipeSearchEngine
+class RecipeSearchEngine:
+    """เครื่องมือค้นหาสูตรอาหารขั้นสูง"""
     
-    def __init__(self):
-        # เมนูอาหารไทยยอดนิยม
-        self.thai_menu_variations = {
-            'ไข่เจียว': ['ไข่เยียว', 'ไข่เจียวฟู', 'ไข่เจียวกรอบ', 'ไขเจียว'],
-            'ไข่ดาว': ['ไข่ดาวกรอบ', 'ไข่ทอด', 'ไขดาว'],
-            'ผัดกะเพรา': ['กะเพราผัด', 'ผัดใบกะเพรา', 'กะเพราหมูสับ', 'ผัดกระเพรา'],
-            'ต้มยำกุ้ง': ['ต้มยำ', 'ต้มยํา', 'ต้มยำใส', 'ต้มยำน้ำใส'],
-            'ส้มตำ': ['ส้มตํา', 'ส้มตำไทย', 'ส้มตำอีสาน'],
-            'แกงเขียวหวาน': ['แกงเขียวหวานไก่', 'แกงเขียวหวานหมู', 'เขียวหวาน'],
-            'ผัดไทย': ['ผัดไท', 'ผัดไทยกุ้ง', 'ผัดไทยหมู'],
-            'ยำวุ้นเส้น': ['ยำวุนเส้น', 'วุ้นเส้นยำ', 'ยำวุ้น'],
-            'ลาบหมู': ['ลาบ', 'ลาบอีสาน', 'ลาบหมูสับ'],
-            'มะม่วงข้าวเหนียว': ['ข้าวเหนียวมะม่วง', 'มะม่วงข้าวเหนียวมูน']
-        }
-        
-        # การแก้ไขการพิมพ์ผิดทั่วไป
-        self.common_typos = {
-            'ไขเจียว': 'ไข่เจียว', 'ไขดาว': 'ไข่ดาว',
-            'กะเพรา': 'กะเพรา', 'กระเพรา': 'กะเพรา',
-            'ต้มยำ': 'ต้มยำ', 'ต้มยํา': 'ต้มยำ',
-            'ส้มตำ': 'ส้มตำ', 'ส้มตํา': 'ส้มตำ',
-            'ผัดไทย': 'ผัดไทย', 'ผัดไท': 'ผัดไทย'
-        }
+    def __init__(self, data: pd.DataFrame, nutrition_api: NutritionAPI):
+        self.data = data
+        self.nutrition_api = nutrition_api
+        self.recipe_nutrition_cache = {}
 
-    def calculate_similarity(self, s1: str, s2: str) -> float:
-        """คำนวณความคล้ายคลึงระหว่างสองสตริง"""
-        s1_lower = s1.lower().strip()
-        s2_lower = s2.lower().strip()
-        
-        # ตรวจสอบการตรงกันแบบตรงตัว
-        if s1_lower == s2_lower:
-            return 1.0
-        
-        # ความคล้ายคลึงพื้นฐาน
-        basic_similarity = SequenceMatcher(None, s1_lower, s2_lower).ratio()
-        
-        # ความคล้ายคลึงแบบคำ
-        words1 = set(s1_lower.split())
-        words2 = set(s2_lower.split())
-        if words1 and words2:
-            word_similarity = len(words1.intersection(words2)) / len(words1.union(words2))
-        else:
-            word_similarity = 0
-        
-        # ความคล้ายคลึงแบบ substring
-        substring_similarity = 0
-        if len(s1_lower) >= 3 and len(s2_lower) >= 3:
-            if s1_lower in s2_lower or s2_lower in s1_lower:
-                substring_similarity = 0.8
-        
-        # คำนวณคะแนนรวม
-        final_score = max(basic_similarity * 0.4, word_similarity * 0.4, substring_similarity * 0.2)
-        
-        return final_score
-
-    def fix_typos(self, text: str) -> str:
-        """แก้ไขการพิมพ์ผิด"""
-        fixed_text = text.strip()
-        for typo, correct in self.common_typos.items():
-            if typo in fixed_text.lower():
-                fixed_text = re.sub(re.escape(typo), correct, fixed_text, flags=re.IGNORECASE)
-        return fixed_text
-
-    def find_best_match(self, query: str, candidates: List[str], threshold: float = 0.4) -> List[Dict]:
-        """หาผลลัพธ์ที่ตรงกันมากที่สุด"""
-        corrected_query = self.fix_typos(query.lower())
+    def advanced_fuzzy_search(self, query: str, threshold: float = 0.4) -> List[Tuple[str, float, int]]:
+        """การค้นหาแบบ fuzzy matching ที่ปรับปรุงแล้ว"""
+        query = query.lower().strip()
         matches = []
         
-        # ตรวจสอบรูปแบบต่างๆ ของเมนู
-        for main_menu, variations in self.thai_menu_variations.items():
-            if corrected_query == main_menu.lower():
-                for i, candidate in enumerate(candidates):
-                    if main_menu.lower() in candidate.lower():
-                        matches.append({
-                            'index': i,
-                            'text': candidate,
-                            'similarity': 0.98,
-                            'match_type': 'exact_variation'
-                        })
-            
-            for variation in variations:
-                if corrected_query == variation.lower():
-                    for i, candidate in enumerate(candidates):
-                        if main_menu.lower() in candidate.lower() or variation.lower() in candidate.lower():
-                            matches.append({
-                                'index': i,
-                                'text': candidate,
-                                'similarity': 0.95,
-                                'match_type': 'variation_match'
-                            })
+        # ลบคำที่ไม่จำเป็น
+        stop_words = ["อาหาร", "เมนู", "สูตร", "วิธีทำ", "ทำ", "ปรุง", "อร่อย", "ง่าย"]
+        query_words = [word for word in query.split() if word not in stop_words and len(word) > 1]
+        clean_query = " ".join(query_words) if query_words else query
         
-        # การจับคู่แบบทั่วไป
-        for i, candidate in enumerate(candidates):
-            similarity = self.calculate_similarity(corrected_query, candidate.lower())
+        for idx, recipe_name in enumerate(self.data['name']):
+            recipe_name_lower = recipe_name.lower()
             
-            if similarity >= threshold:
-                # ตรวจสอบว่าไม่ซ้ำกับที่มีแล้ว
-                is_duplicate = any(match['index'] == i for match in matches)
-                if not is_duplicate:
-                    match_type = 'fuzzy'
-                    if similarity >= 0.8:
-                        match_type = 'high_similarity'
-                    elif similarity >= 0.6:
-                        match_type = 'medium_similarity'
+            # 1. ความคล้ายคลึงแบบ sequence matching
+            sequence_similarity = SequenceMatcher(None, clean_query, recipe_name_lower).ratio()
+            
+            # 2. การตรวจสอบคำที่ตรงกันทั้งหมด
+            exact_match_score = 0
+            if clean_query in recipe_name_lower:
+                exact_match_score = min(len(clean_query) / len(recipe_name_lower), 1.0)
+            
+            # 3. การตรวจสอบคำต่างๆ แยกกัน
+            word_scores = []
+            partial_scores = []
+            
+            for q_word in query_words:
+                if len(q_word) <= 1:
+                    continue
                     
-                    matches.append({
-                        'index': i,
-                        'text': candidate,
-                        'similarity': similarity,
-                        'match_type': match_type
-                    })
+                best_match_score = 0
+                best_partial_score = 0
+                
+                recipe_words = recipe_name_lower.split()
+                for r_word in recipe_words:
+                    word_similarity = SequenceMatcher(None, q_word, r_word).ratio()
+                    if word_similarity >= 0.8:
+                        best_match_score = max(best_match_score, word_similarity)
+                    elif len(q_word) >= 3:
+                        if q_word in r_word:
+                            best_partial_score = max(best_partial_score, 0.7)
+                        elif r_word in q_word and len(r_word) >= 3:
+                            best_partial_score = max(best_partial_score, 0.6)
+                
+                if best_match_score > 0:
+                    word_scores.append(best_match_score)
+                elif best_partial_score > 0:
+                    partial_scores.append(best_partial_score)
+            
+            # คำนวณคะแนนจากการจับคู่คำ
+            word_match_score = 0
+            if word_scores:
+                word_match_score = sum(word_scores) / len(query_words)
+            elif partial_scores:
+                word_match_score = sum(partial_scores) / len(query_words) * 0.8
+            
+            # 4. ตรวจสอบในส่วนผสมและวิธีทำ
+            content_match_score = 0
+            if sequence_similarity < threshold and word_match_score < threshold:
+                ingredient_text = str(self.data.iloc[idx].get('ingredient', '')).lower()
+                method_text = str(self.data.iloc[idx].get('method', '')).lower()
+                
+                content_matches = 0
+                for q_word in query_words:
+                    if len(q_word) >= 3:
+                        if q_word in ingredient_text:
+                            content_matches += 0.3
+                        elif q_word in method_text:
+                            content_matches += 0.2
+                
+                if content_matches > 0:
+                    content_match_score = min(content_matches / len(query_words), 0.5)
+            
+            # 5. คำนวณคะแนนรวม
+            final_scores = [
+                sequence_similarity * 0.3,
+                exact_match_score * 0.9,
+                word_match_score * 0.7,
+                content_match_score * 0.4
+            ]
+            
+            final_score = max(final_scores)
+            
+            # ปรับคะแนนตามความยาวของชื่อเมนู
+            if final_score > 0:
+                length_factor = 1.0
+                if len(recipe_name_lower) <= 10 and exact_match_score > 0:
+                    length_factor = 1.2
+                elif len(recipe_name_lower) > 20:
+                    length_factor = 0.9
+                
+                final_score = min(final_score * length_factor, 1.0)
+            
+            if final_score >= threshold:
+                matches.append((recipe_name, final_score, idx))
         
-        # เรียงลำดับตามความคล้ายคลึง
-        matches.sort(key=lambda x: x['similarity'], reverse=True)
-        return matches[:10]
+        # เรียงลำดับและกรองผลลัพธ์
+        matches.sort(key=lambda x: x[1], reverse=True)
+        
+        filtered_matches = []
+        seen_scores = set()
+        
+        for match in matches:
+            score_rounded = round(match[1], 2)
+            if score_rounded not in seen_scores or len(filtered_matches) < 3:
+                filtered_matches.append(match)
+                seen_scores.add(score_rounded)
+                
+                if len(filtered_matches) >= 10:
+                    break
+        
+        return filtered_matches
+
+    def get_recipe_nutrition(self, recipe_index: int, use_api: bool = True, 
+                           adjust_consumption: bool = True, 
+                           enhance_missing: bool = False) -> Dict:
+        """ดึงข้อมูลโภชนาการของสูตรอาหารพร้อมแคช"""
+        cache_key = f"{recipe_index}_{use_api}_{adjust_consumption}_{enhance_missing}"
+        
+        if cache_key in self.recipe_nutrition_cache:
+            return self.recipe_nutrition_cache[cache_key]
+        
+        try:
+            recipe = self.data.iloc[recipe_index]
+            nutrition_data = self.nutrition_api.calculate_recipe_nutrition(
+                recipe['ingredient'], use_api, adjust_consumption, enhance_missing
+            )
+            
+            self.recipe_nutrition_cache[cache_key] = nutrition_data
+            return nutrition_data
+        except Exception:
+            # ส่งคืนข้อมูลโภชนาการเริ่มต้นหากเกิดข้อผิดพลาด
+            default_nutrition = {
+                "total_nutrition": {
+                    "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0,
+                    "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
+                    "calcium": 0, "iron": 0, "potassium": 0, "sodium": 0
+                },
+                "ingredient_details": [],
+                "settings": {"use_api": use_api, "adjust_consumption": adjust_consumption, "enhance_missing": enhance_missing}
+            }
+            return default_nutrition
+
+    def smart_search(self, query: str, use_api: bool = True, adjust_consumption: bool = True,
+                    enhance_missing: bool = False, fuzzy_threshold: float = 0.4,
+                    limit: int = 5) -> List[Dict]:
+        """ระบบค้นหาอัจฉริยะ"""
+        
+        fuzzy_results = self.advanced_fuzzy_search(query, threshold=fuzzy_threshold)
+        results = []
+        
+        for recipe_name, similarity, recipe_idx in fuzzy_results[:limit]:
+            nutrition_data = self.get_recipe_nutrition(
+                recipe_idx, use_api, adjust_consumption, enhance_missing
+            )
+            
+            results.append({
+                "name": recipe_name,
+                "similarity": similarity,
+                "index": recipe_idx,
+                "nutrition": nutrition_data,
+                "match_reason": f"ความคล้ายคลึงชื่อ: {similarity:.0%}",
+                "match_type": "fuzzy"
+            })
+        
+        return results
 
 # ตัวแปรไฟล์และโฟลเดอร์
 DATA_PATH = "thai_food_processed.csv"
@@ -766,34 +621,34 @@ def load_data():
         return create_sample_data()
 
 def create_sample_data():
-    """สร้างข้อมูลตัวอย่าง"""
+    """สร้างข้อมูลตัวอย่างเมื่อไม่มีไฟล์"""
     sample_data = {
         'name': [
-            'ไข่เจียว', 'ผัดกะเพรา', 'ต้มยำกุ้ง', 'แกงเขียวหวาน', 'ผัดไทย',
-            'ส้มตำ', 'ยำวุ้นเส้น', 'ลาบหมู', 'ข้าวผัด', 'มะม่วงข้าวเหนียว'
+            'ผัดกะเพรา', 'ต้มยำกุ้ง', 'ส้มตำ', 'แกงเขียวหวาน', 'ผัดไทย',
+            'ไข่เจียว', 'ข้าวผัด', 'ยำวุ้นเส้น', 'ลาบหมู', 'มะม่วงข้าวเหนียว'
         ],
         'ingredient': [
-            '- ไข่ไก่ 3 ฟอง\n- น้ำปลา 1 ช้อนชา\n- น้ำมันพืช 2 ช้อนโต๊ะ',
             '- เนื้อหมูสับ 200 กรัม\n- ใบกะเพรา 1 ถ้วย\n- พริกขี้หนู 5 เม็ด\n- กระเทียม 4 กลีบ\n- น้ำปลา 2 ช้อนโต๊ะ',
             '- กุ้งนาง 300 กรัม\n- เห็ดฟาง 100 กรัม\n- มะนาว 3 ผล\n- ใบมะกรูด 5 ใบ\n- น้ำปลา 3 ช้อนโต๊ะ',
+            '- มะละกอดิบ 2 ถ้วย\n- มะเขือเทศ 3 ผล\n- ถั่วฝักยาว 10 เส้น\n- กุ้งแห้ง 2 ช้อนโต๊ะ\n- น้ำปลา 2 ช้อนโต๊ะ',
             '- เนื้อไก่ 400 กรัม\n- กะทิ 2 ถ้วย\n- มะเขือเปราะ 8 ผล\n- ใบโหระพา 1 ถ้วย\n- น้ำปลา 2 ช้อนโต๊ะ',
             '- เส้นจันท์ 200 กรัม\n- กุ้งสด 100 กรัม\n- เต้าหู้ 100 กรัม\n- ไข่ไก่ 2 ฟอง\n- น้ำปลา 2 ช้อนโต๊ะ',
-            '- มะละกอดิบ 2 ถ้วย\n- มะเขือเทศ 3 ผล\n- ถั่วฝักยาว 10 เส้น\n- น้ำปลา 2 ช้อนโต๊ะ',
-            '- วุ้นเส้น 150 กรัม\n- กุ้งสด 200 กรัม\n- หมูสับ 100 กรัม\n- มะนาว 3 ผล\n- น้ำปลา 3 ช้อนโต๊ะ',
-            '- เนื้อหมูสับ 300 กรัม\n- ข้าวคั่ว 3 ช้อนโต๊ะ\n- หอมแดง 5 หัว\n- น้ำปลา 4 ช้อนโต๊ะ',
+            '- ไข่ไก่ 3 ฟอง\n- น้ำปลา 1 ช้อนชา\n- ต้นหอม 2 ต้น\n- น้ำมันหมู 2 ช้อนโต๊ะ',
             '- ข้าวสวย 3 ถ้วย\n- กุ้งสด 150 กรัม\n- ไข่ไก่ 2 ฟอง\n- หอมใหญ่ 1 หัว\n- น้ำปลา 2 ช้อนโต๊ะ',
-            '- ข้าวเหนียว 2 ถ้วย\n- มะม่วงสุก 2 ผล\n- กะทิ 1 ถ้วย\n- น้ำตาลทราย 3 ช้อนโต๊ะ'
+            '- วุ้นเส้น 150 กรัม\n- กุ้งสด 200 กรัม\n- หมูสับ 100 กรัม\n- มะนาว 3 ผล\n- น้ำปลา 3 ช้อนโต๊ะ',
+            '- เนื้อหมูสับ 300 กรัม\n- ข้าวคั่ว 3 ช้อนโต๊ะ\n- พริกแห้ง 8 เม็ด\n- หอมแดง 5 หัว\n- น้ำปลา 4 ช้อนโต๊ะ',
+            '- ข้าวเหนียว 2 ถ้วย\n- มะม่วงสุก 2 ผล\n- กะทิ 1 ถ้วย\n- น้ำตาลปึก 3 ช้อนโต๊ะ\n- เกลือ 1/2 ช้อนชา'
         ],
         'method': [
-            'ตอกไข่ใส่ชาม ใส่น้ำปลา ตีให้เข้ากัน ตั้งกะทะใส่น้ำมัน ทอดไข่จนเหลือง',
             'โขลกกระเทียมและพริกให้ละเอียด ผัดหมูสับจนสุก ใส่กะเพราและปรุงรส',
             'ต้มน้ำให้เดือด ใส่เครื่องต้มยำ เมื่อเดือดใส่กุ้งและเห็ด ปรุงรสและใส่มะนาว',
-            'คั่วน้ำพริกแกงเขียวหวานกับหัวกะทิ ใส่เนื้อไก่และกะทิ ปรุงรสและใส่ผัก',
+            'โขลกพริก กระเทียม ถั่วลิสง กุ้งแห้งให้หยาบ ใส่มะละกอและผักอื่นๆ ปรุงรสด้วยน้ำปลา น้ำตาล น้ำมะนาว',
+            'คั่วน้ำพริกแกงเขียวหวานกับหัวกะทิ ใส่ไก่และกะทิ ปรุงรสและใส่ผัก',
             'แช่เส้นจันท์ให้นุ่ม ผัดกุ้งและเต้าหู้ ใส่ไข่และเส้น ปรุงรสและใส่ผัก',
-            'โขลกพริก กระเทียม ถั่วลิสง ใส่มะละกอและผักอื่นๆ ปรุงรส',
-            'แช่วุ้นเส้นให้นุ่ม ลวกกุ้งและหมู คลุกทุกอย่างกับน้ำยำ',
-            'คั่วข้าวให้เหลืองหอม โขลกให้หยาบ ผสมเนื้อหมูกับเครื่องปรุง',
+            'ตอกไข่ใส่ชาม ใส่น้ำปลา ตีให้เข้ากัน ทอดในน้ำมันร้อนจนเหลือง',
             'ตั้งกะทะใส่น้ำมัน ผัดกระเทียมและหอมใหญ่ ใส่กุ้งและไข่ ใส่ข้าวผัดให้เข้ากัน',
+            'แช่วุ้นเส้นให้นุ่ม ลวกกุ้งและหมู คลุกทุกอย่างกับน้ำยำ',
+            'คั่วข้าวให้เหลืองหอม โขลกให้หยาบ ย่างพริกแห้ง ผสมเนื้อหมูกับเครื่องปรุง',
             'นึ่งข้าวเหนียวให้สุก หั่นมะม่วง ต้มกะทิกับน้ำตาลและเกลือ เสิร์ฟพร้อมกัน'
         ]
     }
@@ -835,12 +690,14 @@ def get_embeddings(_model, data):
 @st.cache_resource
 def initialize_nutrition_api():
     """เริ่มต้นระบบข้อมูลโภชนาการ"""
-    return AdvancedNutritionAPI()
+    return NutritionAPI()
 
 @st.cache_resource
-def initialize_fuzzy_matcher():
-    """เริ่มต้นระบบจับคู่ข้อความ"""
-    return AdvancedFuzzyMatcher()
+def initialize_search_engine(_data, _nutrition_api):
+    """เริ่มต้นระบบค้นหา"""
+    if _data.empty:
+        return None
+    return RecipeSearchEngine(_data, _nutrition_api)
 
 def format_ingredients(ingredients_text):
     """จัดรูปแบบรายการวัตถุดิบ"""
@@ -848,24 +705,12 @@ def format_ingredients(ingredients_text):
         return "<p>ไม่มีข้อมูลวัตถุดิบ</p>"
         
     ingredients = ingredients_text.split('\n')
-    formatted = """
-    <div class="ingredients-list">
-        <ul>
-    """
+    formatted = "<ul style='margin: 0; padding-left: 1.5rem;'>"
     for item in ingredients:
         if item.strip():
             clean_item = item.strip().lstrip('- ')
-            # เน้นปริมาณและหน่วย
-            highlighted_item = re.sub(
-                r'(\d+(?:\.\d+)?)\s*([ก-๙a-zA-Z]+)', 
-                r'<strong>\1 \2</strong>', 
-                clean_item
-            )
-            formatted += f"<li>{highlighted_item}</li>"
-    formatted += """
-        </ul>
-    </div>
-    """
+            formatted += f"<li style='margin: 0.2rem 0;'>{clean_item}</li>"
+    formatted += "</ul>"
     return formatted
 
 def format_cooking_method(method_text):
@@ -878,7 +723,7 @@ def format_cooking_method(method_text):
     
     # แบ่งตามบรรทัดใหม่
     lines = method_text.split('\n')
-    formatted = '<div class="method-section">'
+    formatted = "<div style='margin: 0; line-height: 1.6;'>"
     
     current_paragraph = []
     
@@ -893,22 +738,22 @@ def format_cooking_method(method_text):
             if current_paragraph:
                 paragraph_text = ' '.join(current_paragraph)
                 if has_numbers:
-                    formatted += format_method_steps([paragraph_text])
+                    formatted += f"<p style='margin: 0.5rem 0;'>{paragraph_text}</p>"
                 else:
-                    formatted += format_method_paragraph(paragraph_text)
+                    formatted += f"<p style='margin: 0.5rem 0;'>{paragraph_text}</p>"
                 current_paragraph = []
             
             # เพิ่มหัวข้อย่อย
             clean_header = line.lstrip('#').strip()
-            formatted += f'<div class="method-title">{clean_header}</div>'
+            formatted += f"<h4 style='margin: 1rem 0 0.5rem 0; font-size: 1rem; color: #333;'>{clean_header}</h4>"
         else:
             # ถ้ามีเลขขั้นตอนอยู่แล้ว ให้แสดงตามเดิม
             if has_numbers and re.match(r'^\d+\.', line):
                 if current_paragraph:
                     paragraph_text = ' '.join(current_paragraph)
-                    formatted += format_method_paragraph(paragraph_text)
+                    formatted += f"<p style='margin: 0.5rem 0;'>{paragraph_text}</p>"
                     current_paragraph = []
-                formatted += format_method_steps([line])
+                formatted += f"<p style='margin: 0.3rem 0; padding-left: 1rem;'>{line}</p>"
             else:
                 # รวมเป็นย่อหน้าเดียว
                 current_paragraph.append(line)
@@ -916,33 +761,10 @@ def format_cooking_method(method_text):
     # เพิ่มย่อหน้าสุดท้าย
     if current_paragraph:
         paragraph_text = ' '.join(current_paragraph)
-        if has_numbers:
-            formatted += format_method_steps(current_paragraph)
-        else:
-            formatted += format_method_paragraph(paragraph_text)
+        formatted += f"<p style='margin: 0.5rem 0;'>{paragraph_text}</p>"
     
-    formatted += '</div>'
+    formatted += "</div>"
     return formatted
-
-def format_method_steps(steps):
-    """จัดรูปแบบขั้นตอนการทำอาหาร"""
-    if not steps:
-        return ""
-    
-    formatted = '<div class="method-steps"><ol>'
-    for step in steps:
-        if step.strip():
-            clean_step = re.sub(r'^\d+\.\s*', '', step.strip())
-            formatted += f"<li>{clean_step}</li>"
-    formatted += '</ol></div>'
-    return formatted
-
-def format_method_paragraph(text):
-    """จัดรูปแบบย่อหน้าวิธีทำ"""
-    if not text:
-        return ""
-    
-    return f'<div class="method-paragraph">{text}</div>'
 
 def display_nutrition_info(nutrition_data, recipe_name):
     """แสดงข้อมูลโภชนาการแบบบัตร"""
@@ -984,303 +806,254 @@ def display_nutrition_info(nutrition_data, recipe_name):
         </div>
         """, unsafe_allow_html=True)
 
-def create_ingredient_nutrition_table(ingredient_details):
-    """สร้างตารางรายละเอียดวัตถุดิบแต่ละชนิดพร้อมวิตามินและแร่ธาตุ"""
-    if not ingredient_details:
-        return ""
-    
-    table_html = """
-    <table class="ingredient-table">
-        <thead>
-            <tr>
-                <th>วัตถุดิบ</th>
-                <th>ปริมาณ</th>
-                <th>แคลอรี่<br>(kcal)</th>
-                <th>โปรตีน<br>(g)</th>
-                <th>คาร์โบ<br>(g)</th>
-                <th>ไขมัน<br>(g)</th>
-                <th>ใยอาหาร<br>(g)</th>
-                <th>วิต.A<br>(IU)</th>
-                <th>วิต.C<br>(mg)</th>
-                <th>แคลเซียม<br>(mg)</th>
-                <th>เหล็ก<br>(mg)</th>
-                <th>โซเดียม<br>(mg)</th>
-            </tr>
-        </thead>
-        <tbody>
-    """
-    
-    for ingredient in ingredient_details:
-        nutrition = ingredient['nutrition']
-        consumption_note = ""
-        if ingredient.get('consumption_factor', 1.0) < 1.0:
-            consumption_note = f" *{ingredient['consumption_factor']*100:.0f}%"
-        
-        # สีพื้นหลังตามระดับโซเดียม
-        sodium_color = ""
-        if nutrition['sodium'] > 500:
-            sodium_color = 'style="background-color: #ffebee; color: #c62828;"'
-        elif nutrition['sodium'] > 200:
-            sodium_color = 'style="background-color: #fff3e0; color: #ef6c00;"'
-        
-        # สีพื้นหลังตามระดับวิตามิน
-        vit_a_color = ""
-        if nutrition['vitamin_a'] > 500:
-            vit_a_color = 'style="background-color: #e8f5e8; color: #2e7d32;"'
-        
-        vit_c_color = ""
-        if nutrition['vitamin_c'] > 20:
-            vit_c_color = 'style="background-color: #e8f5e8; color: #2e7d32;"'
-        
-        table_html += f"""
-        <tr>
-            <td><strong>{ingredient['name']}</strong>{consumption_note}</td>
-            <td>{ingredient['quantity']:.1f} {ingredient['unit']}</td>
-            <td>{nutrition['calories']:.0f}</td>
-            <td>{nutrition['protein']:.1f}</td>
-            <td>{nutrition['carbs']:.1f}</td>
-            <td>{nutrition['fat']:.1f}</td>
-            <td>{nutrition['fiber']:.1f}</td>
-            <td {vit_a_color}>{nutrition['vitamin_a']:.0f}</td>
-            <td {vit_c_color}>{nutrition['vitamin_c']:.1f}</td>
-            <td>{nutrition['calcium']:.0f}</td>
-            <td>{nutrition['iron']:.1f}</td>
-            <td {sodium_color}>{nutrition['sodium']:.0f}</td>
-        </tr>
-        """
-    
-    table_html += """
-        </tbody>
-    </table>
-    """
-    
-    return table_html
-
 def get_similarity_badge_class(similarity):
     """ได้รับ CSS class สำหรับ badge ตามคะแนนความคล้ายคลึง"""
-    if similarity >= 0.8:
+    if similarity >= 0.7:
         return "similarity-badge-high"
-    elif similarity >= 0.6:
+    elif similarity >= 0.5:
         return "similarity-badge-medium"
     else:
         return "similarity-badge-low"
 
-def search_recipes_advanced(query, model, data, embeddings, nutrition_api, fuzzy_matcher, top_k=5):
-    """การค้นหาสูตรอาหารขั้นสูง"""
+def display_settings_panel(data, model, settings_state):
+    """แสดงแถบการตั้งค่าพร้อมสถิติ"""
+    st.sidebar.title("🔧 การตั้งค่าขั้นสูง")
     
-    # ใช้ Advanced Fuzzy Matcher
-    recipe_names = data['name'].tolist()
-    fuzzy_matches = fuzzy_matcher.find_best_match(query, recipe_names, threshold=0.4)
+    # การตั้งค่า API
+    st.sidebar.markdown("### 🌐 API ข้อมูลโภชนาการ")
+    use_api = st.sidebar.checkbox("เปิดใช้งาน API ภายนอก", value=False, key="use_api")
     
-    # ค้นหาแบบ semantic search
-    if model is not None and len(embeddings) > 0:
-        query_embedding = model.encode([query])
-        similarities = cosine_similarity(query_embedding, embeddings)[0]
-    else:
-        similarities = np.zeros(len(data))
+    api_status_detail = "🔴 ไม่ได้เชื่อมต่อ"
+    if use_api:
+        api_key = st.sidebar.text_input("USDA API Key", type="password", key="usda_api_key")
+        if api_key:
+            api_status_detail = "🟡 ตั้งค่าแล้ว"
     
-    # รวมผลลัพธ์
+    status_class = "api-status-connected" if "🟢" in api_status_detail else "api-status-disconnected"
+    st.sidebar.markdown(f'<div class="{status_class}">สถานะ: {api_status_detail}</div>', unsafe_allow_html=True)
+    
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🧮 การคำนวณโภชนาการ")
+    
+    adjust_consumption = st.sidebar.checkbox(
+        "ปรับการบริโภคตามความเป็นจริง", value=True, key="adjust_consumption"
+    )
+    
+    enhance_missing = st.sidebar.checkbox(
+        "เพิ่มวัตถุดิบที่ขาดหาย", value=False, key="enhance_missing"
+    )
+    
+    st.sidebar.markdown("### 🔍 การค้นหาที่ปรับปรุงแล้ว")
+    
+    fuzzy_threshold = st.sidebar.slider(
+        "ความเคร่งครัดในการค้นหา",
+        min_value=0.2, max_value=0.8, value=0.4, step=0.1,
+        help="ค่าต่ำ = หาได้ง่าย, ค่าสูง = หาได้ยากแต่ตรงมาก",
+        key="fuzzy_threshold"
+    )
+    
+    max_results = st.sidebar.number_input(
+        "จำนวนผลลัพธ์สูงสุด", min_value=1, max_value=10, value=3, key="max_results"
+    )
+    
+    st.sidebar.markdown("---")
+
+    # แสดงสถิติโดยรวม
+    st.sidebar.markdown("### 📊 สถิติโดยรวม")
+    st.sidebar.metric("📖 จำนวนสูตร", len(data))
+    st.sidebar.metric("🤖 AI Model", "✅ พร้อม" if model else "❌ ไม่พร้อม")
+    
+    api_status = "🟢 เชื่อมต่อ" if settings_state.get('use_api', False) else "🔴 ปิดใช้งาน"
+    st.sidebar.metric("🌐 API", api_status)
+    st.sidebar.metric("🔍 การค้นหา", "✨ ปรับปรุงแล้ว")
+    
+    return {
+        'use_api': use_api, 'adjust_consumption': adjust_consumption,
+        'enhance_missing': enhance_missing, 'fuzzy_threshold': fuzzy_threshold,
+        'max_results': max_results
+    }
+
+def search_recipes_improved(query, model, data, embeddings, search_engine, settings):
+    """การค้นหาสูตรอาหารที่ปรับปรุงแล้ว"""
+    
+    if search_engine:
+        try:
+            smart_results = search_engine.smart_search(
+                query, settings['use_api'], settings['adjust_consumption'],
+                settings['enhance_missing'], settings['fuzzy_threshold'],
+                limit=settings['max_results']
+            )
+            
+            if smart_results:
+                results = []
+                for result in smart_results:
+                    adjusted_similarity = min(result['similarity'], 1.0)
+                    results.append((
+                        result['name'], adjusted_similarity,
+                        result['index'], result.get('nutrition')
+                    ))
+                return results
+        except Exception as e:
+            st.warning(f"เกิดข้อผิดพลาดในระบบค้นหา: {str(e)}")
+    
+    # ระบบสำรองแบบ fuzzy matching
+    matches = []
+    query_lower = query.lower().strip()
+    
+    stop_words = ["อาหาร", "เมนู", "สูตร", "วิธีทำ", "ทำ", "ปรุง"]
+    query_words = [word for word in query_lower.split() if word not in stop_words and len(word) > 1]
+    clean_query = " ".join(query_words) if query_words else query_lower
+    
+    for idx, recipe_name in enumerate(data['name']):
+        recipe_name_lower = recipe_name.lower()
+        
+        similarities = []
+        
+        # 1. ความคล้ายคลึงแบบ sequence
+        seq_sim = SequenceMatcher(None, clean_query, recipe_name_lower).ratio()
+        similarities.append(seq_sim * 0.4)
+        
+        # 2. การตรวจสอบคำที่ตรงกัน
+        if clean_query in recipe_name_lower:
+            exact_sim = len(clean_query) / len(recipe_name_lower)
+            similarities.append(exact_sim * 0.8)
+        
+        # 3. การตรวจสอบคำแยกกัน
+        word_matches = 0
+        for q_word in query_words:
+            if len(q_word) > 2:
+                for r_word in recipe_name_lower.split():
+                    if SequenceMatcher(None, q_word, r_word).ratio() > 0.8:
+                        word_matches += 1
+                        break
+                    elif q_word in r_word or r_word in q_word:
+                        word_matches += 0.5
+                        break
+        
+        if query_words:
+            word_sim = word_matches / len(query_words)
+            similarities.append(word_sim * 0.6)
+        
+        final_similarity = max(similarities) if similarities else 0
+        
+        if final_similarity > 0 and len(recipe_name_lower) <= 10:
+            final_similarity = min(final_similarity * 1.1, 1.0)
+        
+        if final_similarity >= settings['fuzzy_threshold']:
+            matches.append((recipe_name, final_similarity, idx))
+    
+    matches.sort(key=lambda x: x[1], reverse=True)
+    
+    # คำนวณโภชนาการ
     results = []
-    used_indices = set()
+    nutrition_api = initialize_nutrition_api()
     
-    # เพิ่ม fuzzy matches ก่อน
-    for match in fuzzy_matches[:3]:
-        idx = match['index']
-        if idx not in used_indices:
-            recipe = data.iloc[idx]
-            nutrition_data = nutrition_api.calculate_recipe_nutrition(recipe['ingredient'])
-            
-            results.append({
-                'name': recipe['name'],
-                'similarity': match['similarity'],
-                'match_type': match['match_type'],
-                'ingredients': recipe['ingredient'],
-                'method': recipe['method'],
-                'nutrition': nutrition_data
-            })
-            used_indices.add(idx)
-    
-    # เพิ่มผลลัพธ์จาก semantic search
-    threshold = 0.3
-    top_indices = np.argsort(-similarities)
-    
-    for idx in top_indices:
-        if len(results) >= top_k:
-            break
-            
-        if idx not in used_indices and similarities[idx] > threshold:
-            recipe = data.iloc[idx]
-            nutrition_data = nutrition_api.calculate_recipe_nutrition(recipe['ingredient'])
-            
-            results.append({
-                'name': recipe['name'],
-                'similarity': similarities[idx],
-                'match_type': 'semantic',
-                'ingredients': recipe['ingredient'],
-                'method': recipe['method'],
-                'nutrition': nutrition_data
-            })
-            used_indices.add(idx)
+    for recipe_name, similarity, recipe_idx in matches[:settings['max_results']]:
+        nutrition_data = None
+        try:
+            recipe = data.iloc[recipe_idx]
+            nutrition_data = nutrition_api.calculate_recipe_nutrition(
+                recipe['ingredient'], settings['use_api'],
+                settings['adjust_consumption'], settings['enhance_missing']
+            )
+        except:
+            pass
+        
+        results.append((recipe_name, similarity, recipe_idx, nutrition_data))
     
     return results
 
-def create_auto_scroll_system():
-    """สร้างระบบเลื่อนหน้าอัตโนมัติ"""
-    auto_scroll_script = """
-    <script>
-    let autoScrollActive = false;
-    let lastMessageCount = 0;
+def display_recipe_with_nutrition(recipe, nutrition_data, settings, similarity_score=None):
+    """แสดงสูตรอาหารพร้อมข้อมูลโภชนาการ"""
     
-    function createAutoScrollButton() {
-        const existingBtn = document.getElementById('auto-scroll-btn');
-        if (existingBtn) return;
-        
-        const scrollBtn = document.createElement('button');
-        scrollBtn.id = 'auto-scroll-btn';
-        scrollBtn.className = 'auto-scroll-button';
-        scrollBtn.innerHTML = '↓';
-        scrollBtn.title = 'เลื่อนไปข้อความล่าสุด';
-        
-        scrollBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            scrollToLatestMessage();
-        });
-        
-        document.body.appendChild(scrollBtn);
-    }
+    title_html = f"### 🍽️ {recipe['name']}"
+    if similarity_score is not None:
+        similarity_percent = similarity_score * 100
+        badge_class = get_similarity_badge_class(similarity_score)
+        title_html += f'<span class="{badge_class}">{similarity_percent:.0f}% ตรง</span>'
     
-    function scrollToLatestMessage() {
-        setTimeout(() => {
-            const chatMessages = document.querySelectorAll('[data-testid="stChatMessage"], [data-testid="stExpander"]');
+    st.markdown(title_html, unsafe_allow_html=True)
+    
+    tab1, tab2, tab3 = st.tabs(["📝 สูตรอาหาร", "📊 โภชนาการ", "🔍 รายละเอียด"])
+    
+    with tab1:
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            st.markdown("#### 🥬 วัตถุดิบ")
+            st.markdown(format_ingredients(recipe["ingredient"]), unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("#### 👨‍🍳 วิธีทำ")
+            st.markdown(format_cooking_method(recipe["method"]), unsafe_allow_html=True)
+    
+    with tab2:
+        if nutrition_data:
+            display_nutrition_info(nutrition_data, recipe['name'])
+        else:
+            st.info("ไม่มีข้อมูลโภชนาการ หรือเกิดข้อผิดพลาดในการคำนวณ")
+    
+    with tab3:
+        if nutrition_data:
+            st.markdown("#### 🔬 รายละเอียดวัตถุดิบแต่ละชนิด")
             
-            if (chatMessages.length > 0) {
-                const lastMessage = chatMessages[chatMessages.length - 1];
-                lastMessage.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'end',
-                    inline: 'nearest'
-                });
-            } else {
-                window.scrollTo({
-                    top: document.body.scrollHeight,
-                    behavior: 'smooth'
-                });
-            }
-        }, 300);
-    }
-    
-    function checkForNewMessages() {
-        const currentMessages = document.querySelectorAll('[data-testid="stChatMessage"]');
-        const currentCount = currentMessages.length;
-        
-        if (currentCount > lastMessageCount && currentCount > 0) {
-            lastMessageCount = currentCount;
+            ingredient_df = []
+            for ingredient in nutrition_data['ingredient_details']:
+                ingredient_df.append({
+                    'วัตถุดิบ': ingredient['name'],
+                    'ปริมาณ': f"{ingredient['quantity']} {ingredient['unit']}",
+                    'น้ำหนัก (กรัม)': f"{ingredient['grams']:.1f}",
+                    'แคลอรี่': f"{ingredient['nutrition']['calories']:.1f}",
+                    'โปรตีน (g)': f"{ingredient['nutrition']['protein']:.1f}",
+                    'ไขมัน (g)': f"{ingredient['nutrition']['fat']:.1f}"
+                })
             
-            if (!autoScrollActive) {
-                autoScrollActive = true;
-                setTimeout(() => {
-                    scrollToLatestMessage();
-                    setTimeout(() => {
-                        autoScrollActive = false;
-                    }, 1500);
-                }, 600);
-            }
-        }
-    }
-    
-    function initializeAutoScrollSystem() {
-        createAutoScrollButton();
-        
-        // ตรวจสอบข้อความใหม่ทุก 1 วินาที
-        setInterval(checkForNewMessages, 1000);
-        
-        // ตรวจสอบและสร้างปุ่มซ้ำทุก 5 วินาที
-        setInterval(() => {
-            if (!document.getElementById('auto-scroll-btn')) {
-                createAutoScrollButton();
-            }
-        }, 5000);
-    }
-    
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(initializeAutoScrollSystem, 1500);
-        });
-    } else {
-        setTimeout(initializeAutoScrollSystem, 1500);
-    }
-    </script>
-    """
-    
-    st.components.v1.html(auto_scroll_script, height=0)
+            if ingredient_df:
+                df = pd.DataFrame(ingredient_df)
+                st.dataframe(df, use_container_width=True)
+        else:
+            st.info("ไม่มีข้อมูลรายละเอียดวัตถุดิบ")
 
 def main():
     """ฟังก์ชันหลักของแอปพลิเคชัน"""
     
-    st.markdown('<h1 class="main-title">🍲 Thai Food Recipe Chatbot - Advanced</h1>', unsafe_allow_html=True)
-    st.markdown("### 🥘 ระบบค้นหาสูตรอาหารไทยขั้นสูงพร้อมข้อมูลโภชนาการครบถ้วน")
+    st.markdown('<h1 class="main-title">Thai Food Recipe Chatbot</h1>', unsafe_allow_html=True)
+    st.markdown("### 🥘 ระบบค้นหาสูตรอาหารไทย")
     
     # เริ่มต้นระบบ
-    with st.spinner("กำลังเริ่มต้นระบบขั้นสูง..."):
+    with st.spinner("กำลังเริ่มต้นระบบที่ปรับปรุงแล้ว..."):
         model = load_model()
         data = load_data()
+        
+        if model is None:
+            st.error("ไม่สามารถโหลดโมเดล AI ได้")
+            return
+        
+        if data.empty:
+            st.error("ไม่มีข้อมูลสูตรอาหาร")
+            return
+        
         embeddings = get_embeddings(model, data)
+        
+        # สร้าง session state สำหรับการจัดการ settings
+        if 'settings_state' not in st.session_state:
+            st.session_state.settings_state = {}
+        
+        # แถบการตั้งค่าพร้อมสถิติ
+        settings = display_settings_panel(data, model, st.session_state.settings_state)
+        st.session_state.settings_state = settings
+        
         nutrition_api = initialize_nutrition_api()
-        fuzzy_matcher = initialize_fuzzy_matcher()
-    
-    # สร้างระบบเลื่อนหน้าอัตโนมัติ
-    create_auto_scroll_system()
-    
-    # แถบด้านข้าง
-    with st.sidebar:
-        st.title("⚙️ การตั้งค่าขั้นสูง")
-        
-        st.subheader("📊 สถิติระบบ")
-        st.metric("สูตรอาหาร", len(data))
-        st.metric("ฐานข้อมูลโภชนาการ", len(nutrition_api.nutrition_db))
-        
-        adjust_consumption = st.checkbox(
-            "ปรับสัดส่วนการบริโภคจริง", 
-            value=True,
-            help="คำนวณปริมาณที่บริโภคจริง เช่น น้ำมันที่ใช้ทอด"
-        )
-        
-        show_detailed_nutrition = st.checkbox(
-            "แสดงตารางโภชนาการรายละเอียด", 
-            value=True,
-            help="แสดงตารางข้อมูลโภชนาการแต่ละวัตถุดิบ"
-        )
-        
-        if "search_count" not in st.session_state:
-            st.session_state.search_count = 0
-        
-        st.metric("การค้นหาในเซสชันนี้", st.session_state.search_count)
-        
-        # คำแนะนำการใช้งาน
-        with st.expander("💡 คำแนะนำการใช้งาน"):
-            st.markdown("""
-            **ฟีเจอร์ขั้นสูง:**
-            - 🔍 รองรับการพิมพ์ผิดเมนูอาหารไทย
-            - 📊 ตารางโภชนาการรายละเอียดทุกวัตถุดิบ
-            - 🎯 การคำนวณปริมาณการบริโภคจริง
-            - 🌈 การแสดงผลสีสันตามระดับโภชนาการ
-            - ⬇️ ระบบเลื่อนหน้าอัตโนมัติ
-            
-            **ตัวอย่างการค้นหา:**
-            - ไขเจียว (แก้ไขการพิมพ์ผิดอัตโนมัติ)
-            - กะเพรา
-            - ต้มยํา
-            """)
+        search_engine = initialize_search_engine(data, nutrition_api)
     
     # ตัวอย่างคำค้นหา
     st.markdown("#### 💡 ลองค้นหาเมนูเหล่านี้:")
     
-    sample_recipes = data['name'].head(8).tolist()
-    cols = st.columns(4)
+    sample_recipes = data['name'].head(5).tolist()
+    cols = st.columns(len(sample_recipes))
     for i, recipe_name in enumerate(sample_recipes):
-        with cols[i % 4]:
-            if st.button(recipe_name, key=f"example_{i}"):
-                st.session_state['search_query'] = recipe_name
+        if cols[i].button(recipe_name, key=f"example_{i}"):
+            st.session_state['search_query'] = recipe_name
     
     # เริ่มต้น session state
     if "messages" not in st.session_state:
@@ -1293,120 +1066,44 @@ def main():
         with st.chat_message(message["role"]):
             if message["role"] == "assistant" and "recipe" in message:
                 recipe = message["recipe"]
-                similarity_score = recipe.get('similarity', 0)
-                match_type = recipe.get('match_type', 'semantic')
-                
-                # แสดงชื่อเมนูพร้อมความคล้ายคลึง
-                title_html = f"### 🍽️ {recipe['name']}"
-                if similarity_score > 0:
-                    badge_class = get_similarity_badge_class(similarity_score)
-                    if match_type in ['exact_variation', 'variation_match']:
-                        title_html += f'<span class="{badge_class}">แก้ไขการพิมพ์ผิด: {similarity_score:.2f}</span>'
-                    elif match_type == 'high_similarity':
-                        title_html += f'<span class="{badge_class}">ความคล้ายคลึงสูง: {similarity_score:.2f}</span>'
-                    else:
-                        title_html += f'<span class="{badge_class}">ความเกี่ยวข้อง: {similarity_score:.2f}</span>'
-                
-                st.markdown(title_html, unsafe_allow_html=True)
-                
-                # แสดงข้อมูลโภชนาการ
-                display_nutrition_info(recipe['nutrition'], recipe['name'])
-                
-                # แสดงตารางรายละเอียดวัตถุดิบ (ถ้าเปิดใช้งาน)
-                if show_detailed_nutrition and recipe['nutrition'].get('ingredient_details'):
-                    st.markdown("#### 📋 ตารางรายละเอียดโภชนาการแต่ละวัตถุดิบ")
-                    table_html = create_ingredient_nutrition_table(recipe['nutrition']['ingredient_details'])
-                    st.markdown(table_html, unsafe_allow_html=True)
-                    
-                    # คำอธิบายสัญลักษณ์
-                    st.markdown("""
-                    <div style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
-                    💡 <strong>คำอธิบาย:</strong> 
-                    *% = ปริมาณที่บริโภคจริง | 
-                    <span style="background-color: #ffebee; padding: 2px;">สีแดง</span> = โซเดียมสูง | 
-                    <span style="background-color: #e8f5e8; padding: 2px;">สีเขียว</span> = วิตามินสูง
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                # แสดงวัตถุดิบ
-                st.markdown("#### 🥬 วัตถุดิบ")
-                st.markdown(format_ingredients(recipe["ingredients"]), unsafe_allow_html=True)
-                
-                # แสดงวิธีทำ
-                st.markdown("#### 👨‍🍳 วิธีทำ")
-                st.markdown(format_cooking_method(recipe["method"]), unsafe_allow_html=True)
-                
+                nutrition_data = message.get("nutrition_data")
+                similarity_score = message.get("similarity_score")
+                display_recipe_with_nutrition(recipe, nutrition_data, settings, similarity_score)
             else:
                 st.markdown(message["content"])
     
     # ช่องค้นหา
     search_query = st.session_state.get('search_query', '')
-    if prompt := st.chat_input("ค้นหาสูตรอาหาร เช่น 'ไข่เจียว' หรือ 'ผัดกะเพรา'... ✨", key="main_chat"):
+    if prompt := st.chat_input("ค้นหาสูตรอาหาร เช่น 'ผัดกะเพรา' หรือ 'ไข่เจียว'... (ระบบค้นหาปรับปรุงใหม่)", key="main_chat"):
         search_query = prompt
         st.session_state.search_query = ""
     
     if search_query:
-        st.session_state.search_count += 1
         st.session_state.messages.append({"role": "user", "content": search_query})
         
         with st.chat_message("user"):
             st.markdown(search_query)
         
         with st.chat_message("assistant"):
-            with st.spinner("🔍 กำลังค้นหาด้วยระบบขั้นสูง..."):
-                results = search_recipes_advanced(
-                    search_query, model, data, embeddings, nutrition_api, fuzzy_matcher
+            with st.spinner("กำลังค้นหาด้วยระบบที่ปรับปรุงใหม่..."):
+                results = search_recipes_improved(
+                    search_query, model, data, embeddings, search_engine, settings
                 )
                 
                 if results:
                     best_match = results[0]
+                    recipe_name, similarity, recipe_idx, nutrition_data = best_match
                     
-                    response = f"🎯 พบสูตรอาหารที่ตรงกับการค้นหา: **{best_match['name']}**"
+                    recipe = {
+                        'name': recipe_name,
+                        'ingredient': data.iloc[recipe_idx]['ingredient'],
+                        'method': data.iloc[recipe_idx]['method']
+                    }
                     
-                    # ปรับข้อความตามประเภทการจับคู่
-                    match_type = best_match.get('match_type', 'semantic')
-                    if match_type in ['exact_variation', 'variation_match']:
-                        response = f"🔧 แก้ไขการพิมพ์ผิดและพบสูตร: **{best_match['name']}**"
-                    elif match_type == 'high_similarity':
-                        response = f"✨ พบสูตรอาหารที่คล้ายคลึงมาก: **{best_match['name']}**"
-                    
+                    response = f"🎯 พบสูตรอาหารที่ตรงกับการค้นหา: **{recipe_name}**"
                     st.markdown(response)
                     
-                    # คำนวณโภชนาการใหม่ด้วยการตั้งค่า
-                    nutrition_data = nutrition_api.calculate_recipe_nutrition(
-                        best_match['ingredients'], 
-                        adjust_consumption=adjust_consumption
-                    )
-                    
-                    # อัปเดตข้อมูลโภชนาการ
-                    best_match['nutrition'] = nutrition_data
-                    
-                    # แสดงข้อมูลโภชนาการ
-                    display_nutrition_info(nutrition_data, best_match['name'])
-                    
-                    # แสดงตารางรายละเอียดวัตถุดิบ (ถ้าเปิดใช้งาน)
-                    if show_detailed_nutrition and nutrition_data.get('ingredient_details'):
-                        st.markdown("#### 📋 ตารางรายละเอียดโภชนาการแต่ละวัตถุดิบ")
-                        table_html = create_ingredient_nutrition_table(nutrition_data['ingredient_details'])
-                        st.markdown(table_html, unsafe_allow_html=True)
-                        
-                        # คำอธิบายสัญลักษณ์
-                        st.markdown("""
-                        <div style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
-                        💡 <strong>คำอธิบาย:</strong> 
-                        *% = ปริมาณที่บริโภคจริง | 
-                        <span style="background-color: #ffebee; padding: 2px;">สีแดง</span> = โซเดียมสูง | 
-                        <span style="background-color: #e8f5e8; padding: 2px;">สีเขียว</span> = วิตามินสูง
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # แสดงวัตถุดิบ
-                    st.markdown("#### 🥬 วัตถุดิบ")
-                    st.markdown(format_ingredients(best_match["ingredients"]), unsafe_allow_html=True)
-                    
-                    # แสดงวิธีทำ
-                    st.markdown("#### 👨‍🍳 วิธีทำ")
-                    st.markdown(format_cooking_method(best_match["method"]), unsafe_allow_html=True)
+                    display_recipe_with_nutrition(recipe, nutrition_data, settings, similarity)
                     
                     # แนะนำเมนูอื่น
                     if len(results) > 1:
@@ -1414,29 +1111,28 @@ def main():
                         other_results = results[1:min(4, len(results))]
                         
                         cols = st.columns(len(other_results))
-                        for i, (other_recipe) in enumerate(other_results):
+                        for i, (other_name, other_sim, other_idx, _) in enumerate(other_results):
                             with cols[i]:
-                                similarity_percent = other_recipe['similarity'] * 100
-                                if st.button(f"🍽️ {other_recipe['name']}\n({similarity_percent:.0f}% ตรง)", key=f"other_{i}"):
-                                    st.session_state.search_query = other_recipe['name']
+                                similarity_percent = other_sim * 100
+                                if st.button(f"🍽️ {other_name}\n({similarity_percent:.0f}% ตรง)", key=f"other_{i}"):
+                                    st.session_state.search_query = other_name
                                     st.rerun()
                     
                     st.session_state.messages.append({
-                        "role": "assistant", 
-                        "content": response, 
-                        "recipe": best_match
+                        "role": "assistant", "content": response, "recipe": recipe,
+                        "nutrition_data": nutrition_data, "similarity_score": similarity
                     })
-                    
                 else:
                     response = f"""
                     ❌ ไม่พบสูตรอาหารที่ตรงกับ '{search_query}'
                     
-                    💡 **คำแนะนำ:**
+                    💡 **คำแนะนำสำหรับการค้นหา:**
                     - ลองใช้คำค้นหาที่ง่ายกว่า เช่น "ไข่เจียว" แทน "วิธีทำไข่เจียว"
                     - ตรวจสอบการสะกดคำภาษาไทย
                     - ลองค้นหาด้วยเมนูที่มีชื่อสั้นๆ
+                    - ปรับค่าความเคร่งครัดในการค้นหาในแถบด้านซ้าย (ลดค่าลง)
                     
-                    🍽️ **เมนูยอดนิยม:** {', '.join(data['name'].head(5).tolist())}
+                    🍽️ **เมนูที่มีในระบบ:** {', '.join(data['name'].head(10).tolist())}
                     """
                     st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
