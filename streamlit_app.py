@@ -714,54 +714,76 @@ def format_ingredients(ingredients_text):
     return formatted
 
 def format_cooking_method(method_text):
-    """จัดรูปแบบวิธีทำให้เรียบร้อยและอ่านง่าย"""
+    """จัดรูปแบบวิธีทำให้เรียบร้อยตามโครงสร้างข้อมูลจริง"""
     if not method_text:
         return "<p>ไม่มีข้อมูลวิธีทำ</p>"
     
-    # ตรวจสอบว่ามีเลขขั้นตอนอยู่แล้วหรือไม่
-    has_numbers = bool(re.search(r'^\s*\d+\.', method_text, re.MULTILINE))
-    
-    # แยกประโยคด้วยจุด และกรองเอาที่ไม่ว่างเปล่า
-    sentences = re.split(r'[.](?:\s|$)', method_text)
-    sentences = [s.strip() for s in sentences if s.strip()]
-    
     formatted = "<div style='margin: 0; line-height: 1.8; font-size: 1rem;'>"
     
-    # ถ้าไม่มีเลขขั้นตอนและประโยคน้อย ให้แสดงเป็นย่อหน้าเดียว
-    if not has_numbers and len(sentences) <= 3:
-        formatted += f"<p style='margin: 0.8rem 0; padding: 0.5rem; text-align: justify; border-left: 3px solid #e3f2fd; background-color: #fafafa;'>{method_text}</p>"
-    else:
-        # แสดงเป็นขั้นตอน
-        step_num = 1
-        
-        for sentence in sentences:
-            # ตรวจสอบว่าเป็นหัวข้อพิเศษหรือไม่
-            if re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม)', sentence):
-                formatted += f"""
-                <div style='margin: 1.2rem 0; padding: 1rem; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;'>
-                    <div style='color: #856404; font-size: 1rem; margin-bottom: 0.3rem; border-bottom: 1px solid #f0c14b; padding-bottom: 0.3rem;'>{sentence.split(':')[0] if ':' in sentence else sentence.split()[0]}</div>
-                    <div style='color: #856404; font-size: 1rem; padding-left: 0.5rem;'>{':'.join(sentence.split(':')[1:]).strip() if ':' in sentence else ' '.join(sentence.split()[1:])}</div>
-                </div>
-                """
-            # ถ้ามีเลขขั้นตอนอยู่แล้ว
-            elif re.match(r'^\d+\.', sentence):
-                step_number = sentence.split('.')[0]
-                step_content = '.'.join(sentence.split('.')[1:]).strip()
-                formatted += f"""
-                <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa;'>
-                    <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>ขั้นตอนที่ {step_number}</div>
-                    <div style='font-size: 1rem; padding-left: 0.5rem; color: #333;'>{step_content}</div>
-                </div>
-                """
-            # ถ้าไม่มีเลขขั้นตอน ให้เพิ่มเอง
+    # แยกบรรทัดเพื่อจัดการทีละบรรทัด
+    lines = method_text.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # ตรวจสอบหมายเหตุ
+        if re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม|Note|Tip)', line, re.IGNORECASE):
+            # แยกหัวข้อและเนื้อหา
+            if ':' in line:
+                header = line.split(':')[0].strip()
+                content = ':'.join(line.split(':')[1:]).strip()
             else:
+                header = line.split()[0] if line.split() else line
+                content = ' '.join(line.split()[1:]) if len(line.split()) > 1 else ""
+            
+            formatted += f"""
+            <div style='margin: 1.2rem 0; padding: 1rem; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;'>
+                <div style='color: #856404; font-size: 1rem; margin-bottom: 0.3rem; border-bottom: 1px solid #f0c14b; padding-bottom: 0.3rem;'>{header}</div>
+                {f"<div style='color: #856404; font-size: 1rem; padding-left: 0.5rem;'>{content}</div>" if content else ""}
+            </div>
+            """
+        
+        # ตรวจสอบหัวข้อย่อย (ขึ้นต้นด้วย #)
+        elif line.startswith('#'):
+            header_text = line.lstrip('#').strip()
+            formatted += f"""
+            <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #28a745; background-color: #f8f9fa;'>
+                <div style='color: #28a745; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>{header_text}</div>
+            </div>
+            """
+        
+        # ตรวจสอบเลขข้อ (เริ่มต้นด้วยตัวเลข + จุด)
+        elif re.match(r'^\d+\.', line):
+            step_number = line.split('.')[0]
+            step_content = '.'.join(line.split('.')[1:]).strip()
+            
+            # ขึ้นบรรทัดใหม่เมื่อพบเลขข้อ
+            formatted += f"""
+            <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa;'>
+                <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>{step_number}</div>
+                <div style='font-size: 1rem; padding-left: 0.5rem; color: #333;'>{step_content}</div>
+            </div>
+            """
+        
+        # ข้อความธรรมดา
+        else:
+            # ตรวจสอบว่าเป็นประโยคยาวหรือไม่
+            if len(line) > 50:
+                # ประโยคยาว แสดงเป็นย่อหน้า
                 formatted += f"""
-                <div style='margin: 1rem 0; padding: 0.8rem; border-left: 3px solid #667eea; background-color: #f8f9fa;'>
-                    <div style='color: #667eea; font-size: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem;'>ขั้นตอนที่ {step_num}</div>
-                    <div style='font-size: 1rem; padding-left: 0.5rem; color: #333;'>{sentence}</div>
+                <div style='margin: 0.8rem 0; padding: 0.6rem; border-left: 3px solid #e3f2fd; background-color: #fafafa;'>
+                    <div style='font-size: 1rem; color: #333; text-align: justify;'>{line}</div>
                 </div>
                 """
-                step_num += 1
+            else:
+                # ประโยคสั้น แสดงแบบรายการ
+                formatted += f"""
+                <div style='margin: 0.5rem 0; padding: 0.4rem 0.6rem; background-color: #f8f9fa; border-radius: 3px;'>
+                    <div style='font-size: 1rem; color: #333;'>{line}</div>
+                </div>
+                """
     
     formatted += "</div>"
     return formatted
