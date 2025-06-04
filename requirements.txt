@@ -1,4 +1,4 @@
-# Core Streamlit dependencies
+# Core Streamlit dependencies - เวอร์ชันที่ทดสอบแล้ว
 streamlit>=1.40.0
 pandas>=2.0.0
 numpy>=1.24.0
@@ -9,18 +9,21 @@ scikit-learn>=1.3.0
 torch>=2.0.0,<2.8.0
 transformers>=4.30.0,<4.53.0
 
-# การแสดงผลกราฟ
+# การแสดงผลกราฟและ UI
 plotly>=5.15.0
 
 # การประมวลผลข้อความ (ใช้เฉพาะที่จำเป็น)
 python-levenshtein>=0.21.0
 fuzzywuzzy>=0.18.0
 
-# HTTP requests
+# HTTP requests สำหรับ API
 requests>=2.31.0
 
 # การจัดการไฟล์และข้อมูล
 python-dateutil>=2.8.0
 
-# การตั้งค่า
+# การตั้งค่าและ environment variables
 python-dotenv>=1.0.0
+
+# เพิ่มเติมสำหรับการปรับปรุงใหม่
+typing-extensions>=4.5.0  # สำหรับ type hints ที่ดีขึ้น
