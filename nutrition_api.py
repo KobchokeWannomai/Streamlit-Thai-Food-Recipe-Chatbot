@@ -28,7 +28,7 @@ class NutritionAPI:
         # โหลดฐานข้อมูลโภชนาการท้องถิ่น
         self.local_nutrition_db = self.load_local_nutrition_database()
         
-        # หน่วยแปลงที่พบบ่อยในอาหารไทย
+        # หน่วยแปลงที่พบบ่อยในอาหารไทย - ปรับปรุงให้ครอบคลุมมากขึ้น
         self.unit_conversion = {
             # หน่วยปริมาตร
             "ช้อนโต๊ะ": 15, "ชต": 15, "tbsp": 15,
@@ -48,7 +48,7 @@ class NutritionAPI:
             "ออนซ์": 28.35, "oz": 28.35,
             "ปอนด์": 453.6, "lb": 453.6,
             
-            # หน่วยนับ (ประมาณการสำหรับอาหารไทย)
+            # หน่วยนับ (ประมาณการสำหรับอาหารไทย) - ปรับปรุงให้แม่นยำขึ้น
             "ตัว": 100,  # กุ้งตัวกลาง, ปลาตัวกลาง
             "ฟอง": 50,   # ไข่ฟองกลาง
             "หัว": 50,    # หอมใหญ่หัวกลาง
@@ -62,28 +62,85 @@ class NutritionAPI:
             "ท่อน": 20,   # ตะไคร้ 1 ท่อน
             "ก้อน": 30,   # ก้อนเล็ก
             "หยิบ": 5,    # หยิบมือ
-            "ข้อมือ": 100  # ผักข้อมือหนึง
+            "ข้อมือ": 100, # ผักข้อมือหนึ่ง
+            "จี้": 5,     # หอมจี้หนึ่ง
+            "ลูก": 80,    # ลูกกลาง เช่น มะเขือเทศ
+            "แผ่น": 10,   # แผ่นเล็ก เช่น ข่าแผ่นหนึ่ง
+            "ชิ้น": 50,   # ชิ้นกลาง
+            "เส้น": 1     # เส้นผัก เช่น ถั่วฝักยาว
         }
         
-        # สัดส่วนที่บริโภคจริง (วัตถุดิบบางอย่างใช้ในการปรุงแต่ไม่ได้กินหมด)
+        # สัดส่วนที่บริโภคจริง - ปรับปรุงให้ครอบคลุมและแม่นยำขึ้น
         self.consumption_ratio = {
+            # น้ำมันสำหรับทอด/ผัด - ไม่กินหมด
             "น้ำมันหมู": 0.25,        # ใช้ทอดแต่ไม่กินหมด
             "น้ำมันพืช": 0.25,         # ใช้ทอดแต่ไม่กินหมด
             "น้ำมันมะพร้าว": 0.25,     # ใช้ทอดแต่ไม่กินหมด
             "น้ำมันรำข้าว": 0.25,      # ใช้ทอดแต่ไม่กินหมด
+            "น้ำมันงา": 0.3,           # ใช้ปรุงรสส่วนใหญ่กิน
+            
+            # ของเหลวในการปรุง
             "กะทิ": 0.85,              # ใช้ในแกงส่วนใหญ่จะกิน
             "น้ำปลา": 1.0,             # ใช้ปรุงรสกินหมด
+            "ซีอิ้วขาว": 1.0,          # ใช้ปรุงรสกินหมด
+            "ซีอิ้วหวาน": 1.0,         # ใช้ปรุงรสกินหมด
+            "ซีอิ้วดำ": 1.0,           # ใช้ปรุงรสกินหมด
+            "น้ำส้มสายชู": 1.0,        # ใช้ปรุงรสกินหมด
+            
+            # เครื่องปรุงรส
             "น้ำตาล": 1.0,             # ใช้ปรุงรสกินหมด
+            "น้ำตาลทราย": 1.0,         # ใช้ปรุงรสกินหมด
+            "น้ำตาลปึก": 1.0,          # ใช้ปรุงรสกินหมด
+            "น้ำตาลโตนด": 1.0,         # ใช้ปรุงรสกินหมด
             "เกลือ": 1.0,              # ใช้ปรุงรสกินหมด
             "พริกไทย": 1.0,            # ใช้ปรุงรสกินหมด
-            "ซีอิ้ว": 1.0,             # ใช้ปรุงรสกินหมด
-            "น้ำส้มสายชู": 1.0,        # ใช้ปรุงรสกินหมด
+            "พริกไทยป่น": 1.0,         # ใช้ปรุงรสกินหมด
+            
+            # เครื่องเทศและสมุนไพร
+            "กระเทียม": 0.9,           # ส่วนใหญ่กิน
+            "หอมแดง": 0.9,            # ส่วนใหญ่กิน
+            "หอมใหญ่": 0.9,           # ส่วนใหญ่กิน
+            "หอมหัวใหญ่": 0.9,        # ส่วนใหญ่กิน
+            "ผักชี": 0.95,             # เกือบทั้งหมด
+            "ใบผักชี": 0.95,          # เกือบทั้งหมด
+            "รากผักชี": 0.8,          # บางส่วนอาจไม่กิน
+            "ต้นหอม": 0.95,           # เกือบทั้งหมด
+            
+            # เครื่องแกงและเครื่องปรุงพิเศษ
+            "พริกแห้ง": 1.0,          # กินหมด
+            "พริกสด": 1.0,            # กินหมด
+            "พริกชี้ฟ้า": 1.0,         # กินหมด
+            "พริกขี้หนู": 1.0,         # กินหมด
+            "ข่า": 0.7,               # บางส่วนกิน บางส่วนใช้หอม
+            "ตะไคร้": 0.6,            # ส่วนใหญ่ใช้หอม
+            "ใบมะกรูด": 0.8,          # ส่วนใหญ่กิน
+            "กะปิ": 1.0,              # กินหมด
+            "ขมิ้น": 1.0,             # กินหมด
+            
+            # ผักและสมุนไพร
+            "ดอกกะเพรา": 0.95,       # เกือบทั้งหมด
+            "ใบกะเพรา": 0.95,        # เกือบทั้งหมด
+            "ใบโหระพา": 0.95,        # เกือบทั้งหมด
+            "ผักบุ้ง": 0.9,           # ส่วนใหญ่กิน
+            "คะน้า": 0.9,             # ส่วนใหญ่กิน
+            "ผักกาดขาว": 0.9,         # ส่วนใหญ่กิน
+            "ผักกาดหอม": 0.9,         # ส่วนใหญ่กิน
+            
+            # ผลไม้และของหวาน
+            "มะนาว": 0.8,             # ใช้น้ำส่วนใหญ่
+            "มะขามเปียก": 0.9,        # ส่วนใหญ่กิน
+            "มะพร้าว": 0.85,          # บางส่วนเป็นกาก
+            "มะพร้าวขูด": 0.95,       # เกือบทั้งหมด
+            
+            # อื่นๆ
             "เนย": 0.8,                # บางส่วนอาจไม่กิน
             "หอมเจียว": 0.9,           # ส่วนใหญ่กิน
             "กระเทียมเจียว": 0.9,      # ส่วนใหญ่กิน
+            "น้ำเชื่อม": 1.0,          # กินหมด
+            "นมสด": 1.0,              # ดื่มหมด
         }
         
-        # วัตถุดิบที่มักขาดหายไปตามประเภทอาหาร
+        # วัตถุดิบที่มักขาดหายไปตามประเภทอาหาร - ปรับปรุงให้ครอบคลุมขึ้น
         self.missing_ingredients_by_cooking_method = {
             "ทอด": {
                 "required": ["น้ำมันพืช 3 ช้อนโต๊ะ"],
@@ -124,19 +181,38 @@ class NutritionAPI:
             "ยำ": {
                 "required": [],
                 "optional": ["น้ำปลา 2 ช้อนโต๊ะ", "มะนาว 2 ผล", "น้ำตาลปึก 2 ช้อนชา", "พริกขี้หนู 3 เม็ด"]
+            },
+            "คั่ว": {
+                "required": ["น้ำมันพืช 1 ช้อนโต๊ะ"],
+                "optional": []
+            },
+            "อบ": {
+                "required": [],
+                "optional": ["น้ำมันพืช 1 ช้อนชา"]
             }
         }
 
-        # รายการวัตถุดิบที่ขาดหายไปตามชื่อเมนู
+        # รายการวัตถุดิบที่ขาดหายไปตามชื่อเมนู - เพิ่มเติม
         self.recipe_specific_ingredients = {
             'ไข่เจียว': ['น้ำมันหมู 2 ช้อนโต๊ะ'],
             'ไข่ดาว': ['น้ำมันหมู 2 ช้อนโต๊ะ'],
             'ไข่ทอด': ['น้ำมันพืช 3 ช้อนโต๊ะ'],
             'ปลาทอด': ['น้ำมันพืช 1 ถ้วย', 'แป้งสาลี 3 ช้อนโต๊ะ'],
+            'เนื้อทอด': ['น้ำมันพืช 1 ถ้วย', 'แป้งสาลี 2 ช้อนโต๊ะ'],
+            'ไก่ทอด': ['น้ำมันพืช 1 ถ้วย', 'แป้งสาลี 3 ช้อนโต๊ะ'],
             'ข้าวผัด': ['น้ำมันพืช 2 ช้อนโต๊ะ', 'ไข่ไก่ 2 ฟอง'],
+            'ข้าวผัดกุ้ง': ['น้ำมันพืช 2 ช้อนโต๊ะ', 'ไข่ไก่ 2 ฟอง'],
+            'ข้าวผัดหมู': ['น้ำมันพืช 2 ช้อนโต๊ะ', 'ไข่ไก่ 2 ฟอง'],
             'ผัดไทย': ['น้ำมันพืช 3 ช้อนโต๊ะ', 'ไข่ไก่ 2 ฟอง'],
+            'ผัดซีอิ้ว': ['น้ำมันพืช 2 ช้อนโต๊ะ'],
+            'ผัดขี้เมา': ['น้ำมันพืช 2 ช้อนโต๊ะ'],
             'ก๋วยเตี๋ยว': ['น้ำซุป 2 ถ้วย'],
-            'ราดหน้า': ['น้ำมันพืช 2 ช้อนโต๊ะ', 'แป้งข้าวโพด 2 ช้อนโต๊ะ']
+            'ก๋วยเตี๋ยวเรือ': ['น้ำซุป 2 ถ้วย'],
+            'ราดหน้า': ['น้ำมันพืช 2 ช้อนโต๊ะ', 'แป้งข้าวโพด 2 ช้อนโต๊ะ'],
+            'ผัดกะเพรา': ['น้ำมันพืช 2 ช้อนโต๊ะ'],
+            'ผัดกะเพราหมู': ['น้ำมันพืช 2 ช้อนโต๊ะ'],
+            'ผัดกะเพราไก่': ['น้ำมันพืช 2 ช้อนโต๊ะ'],
+            'ผัดกะเพรากุ้ง': ['น้ำมันพืช 2 ช้อนโต๊ะ']
         }
 
     def load_local_nutrition_database(self) -> Dict:
@@ -167,6 +243,7 @@ class NutritionAPI:
                     }
                     nutrition_db[ingredient_name] = nutrition_data
                     
+                print(f"โหลดข้อมูลโภชนาการจากไฟล์ CSV สำเร็จ: {len(nutrition_db)} รายการ")
                 return nutrition_db
                 
             except Exception as e:
@@ -174,6 +251,7 @@ class NutritionAPI:
                 pass
         
         # หากไม่มีไฟล์ CSV ใช้ข้อมูลเริ่มต้น
+        print("ใช้ข้อมูลโภชนาการเริ่มต้น")
         return self.get_default_nutrition_database()
 
     def get_default_nutrition_database(self) -> Dict:
@@ -264,10 +342,25 @@ class NutritionAPI:
                 "vitamin_a": 0, "vitamin_c": 8.1, "vitamin_b1": 0.05, "vitamin_b2": 0.03,
                 "calcium": 25, "iron": 0.25, "potassium": 157, "sodium": 4
             },
+            "หอมหัวใหญ่": {
+                "calories": 42, "protein": 1.2, "carbs": 9.9, "fat": 0.1, "fiber": 1.9,
+                "vitamin_a": 0, "vitamin_c": 8.1, "vitamin_b1": 0.05, "vitamin_b2": 0.03,
+                "calcium": 25, "iron": 0.25, "potassium": 157, "sodium": 4
+            },
             "ผักชี": {
                 "calories": 23, "protein": 2.1, "carbs": 3.7, "fat": 0.5, "fiber": 2.8,
                 "vitamin_a": 3377, "vitamin_c": 27, "vitamin_b1": 0.07, "vitamin_b2": 0.16,
                 "calcium": 67, "iron": 1.77, "potassium": 521, "sodium": 46
+            },
+            "ใบผักชี": {
+                "calories": 23, "protein": 2.1, "carbs": 3.7, "fat": 0.5, "fiber": 2.8,
+                "vitamin_a": 3377, "vitamin_c": 27, "vitamin_b1": 0.07, "vitamin_b2": 0.16,
+                "calcium": 67, "iron": 1.77, "potassium": 521, "sodium": 46
+            },
+            "รากผักชี": {
+                "calories": 25, "protein": 2.3, "carbs": 4.1, "fat": 0.6, "fiber": 3.2,
+                "vitamin_a": 3500, "vitamin_c": 30, "vitamin_b1": 0.08, "vitamin_b2": 0.18,
+                "calcium": 75, "iron": 2.0, "potassium": 580, "sodium": 52
             },
             "ต้นหอม": {
                 "calories": 32, "protein": 1.8, "carbs": 7.3, "fat": 0.2, "fiber": 2.6,
@@ -289,6 +382,16 @@ class NutritionAPI:
                 "vitamin_a": 952, "vitamin_c": 144, "vitamin_b1": 0.07, "vitamin_b2": 0.09,
                 "calcium": 14, "iron": 1.03, "potassium": 322, "sodium": 9
             },
+            "พริกชี้ฟ้า": {
+                "calories": 40, "protein": 1.9, "carbs": 9.5, "fat": 0.4, "fiber": 1.5,
+                "vitamin_a": 952, "vitamin_c": 144, "vitamin_b1": 0.07, "vitamin_b2": 0.09,
+                "calcium": 14, "iron": 1.03, "potassium": 322, "sodium": 9
+            },
+            "พริกขี้หนู": {
+                "calories": 318, "protein": 12, "carbs": 56, "fat": 17, "fiber": 28.7,
+                "vitamin_a": 21600, "vitamin_c": 76.4, "vitamin_b1": 0.33, "vitamin_b2": 0.92,
+                "calcium": 148, "iron": 7.8, "potassium": 1870, "sodium": 91
+            },
             "น้ำปลา": {
                 "calories": 42, "protein": 5.8, "carbs": 1.5, "fat": 0.8, "fiber": 0,
                 "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0.03, "vitamin_b2": 0.22,
@@ -304,15 +407,35 @@ class NutritionAPI:
                 "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0.01, "vitamin_b2": 0.01,
                 "calcium": 85, "iron": 1.9, "potassium": 133, "sodium": 39
             },
+            "น้ำตาลโตนด": {
+                "calories": 383, "protein": 0.4, "carbs": 98.1, "fat": 0.1, "fiber": 0,
+                "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0.02, "vitamin_b2": 0.02,
+                "calcium": 67, "iron": 2.26, "potassium": 162, "sodium": 35
+            },
             "มะนาว": {
                 "calories": 29, "protein": 0.7, "carbs": 9.3, "fat": 0.2, "fiber": 2.8,
                 "vitamin_a": 22, "vitamin_c": 53, "vitamin_b1": 0.03, "vitamin_b2": 0.02,
                 "calcium": 33, "iron": 0.6, "potassium": 138, "sodium": 2
             },
+            "มะขามเปียก": {
+                "calories": 239, "protein": 2.8, "carbs": 62.5, "fat": 0.6, "fiber": 5.1,
+                "vitamin_a": 30, "vitamin_c": 3.5, "vitamin_b1": 0.43, "vitamin_b2": 0.15,
+                "calcium": 74, "iron": 2.8, "potassium": 628, "sodium": 28
+            },
             "กะทิ": {
                 "calories": 230, "protein": 2.3, "carbs": 6, "fat": 24, "fiber": 2.2,
                 "vitamin_a": 0, "vitamin_c": 2.8, "vitamin_b1": 0.03, "vitamin_b2": 0,
                 "calcium": 16, "iron": 1.64, "potassium": 263, "sodium": 15
+            },
+            "มะพร้าว": {
+                "calories": 354, "protein": 3.3, "carbs": 15, "fat": 33, "fiber": 9,
+                "vitamin_a": 0, "vitamin_c": 3.3, "vitamin_b1": 0.07, "vitamin_b2": 0.02,
+                "calcium": 14, "iron": 2.43, "potassium": 356, "sodium": 20
+            },
+            "มะพร้าวขูด": {
+                "calories": 354, "protein": 3.3, "carbs": 15, "fat": 33, "fiber": 9,
+                "vitamin_a": 0, "vitamin_c": 3.3, "vitamin_b1": 0.07, "vitamin_b2": 0.02,
+                "calcium": 14, "iron": 2.43, "potassium": 356, "sodium": 20
             },
             "เกลือ": {
                 "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0,
@@ -341,23 +464,27 @@ class NutritionAPI:
         self.current_api_source = "edamam"
 
     def normalize_ingredient_name(self, ingredient: str) -> str:
-        """ปรับแต่งชื่อวัตถุดิบให้เป็นมาตรฐาน"""
+        """ปรับแต่งชื่อวัตถุดิบให้เป็นมาตรฐาน - ปรับปรุงให้ครอบคลุมมากขึ้น"""
         # ลบข้อความที่ไม่จำเป็น
         ingredient = re.sub(r'\d+.*', '', ingredient)  # ลบตัวเลขและข้อความที่ตามมา
         ingredient = re.sub(r'[^\u0E00-\u0E7Fa-zA-Z\s]', '', ingredient)  # เก็บเฉพาะตัวอักษรไทย-อังกฤษ
         ingredient = ingredient.strip()
         
-        # แปลงคำพ้องความหมาย
+        # แปลงคำพ้องความหมาย - เพิ่มเติม
         synonyms = {
-            "กุ้ง": ["กุ้งนาง", "กุ้งตะเข็บ", "กุ้งฝอย"],
-            "หมู": ["เนื้อหมู", "หมูสับ", "สันในหมู"],
+            "กุ้ง": ["กุ้งนาง", "กุ้งตะเข็บ", "กุ้งฝอย", "กุ้งสด"],
+            "หมู": ["เนื้อหมู", "หมูสับ", "สันในหมู", "สันคอหมู", "หมูกรอบ"],
             "เนื้อ": ["เนื้อโค", "เนื้อวัว"],
-            "ไก่": ["เนื้อไก่", "ไก่สับ", "อกไก่"],
+            "ไก่": ["เนื้อไก่", "ไก่สับ", "อกไก่", "น่องไก่", "ปีกไก่"],
             "หอมใหญ่": ["หอมหัวใหญ่"],
-            "หอมแดง": ["หอมหัวเล็ก", "หัวหอม"],
-            "น้ำมันพืช": ["น้ำมันรำ", "น้ำมันถั่วเหลือง"],
+            "หอมแดง": ["หอมหัวเล็ก", "หัวหอม", "หอมสับ"],
+            "น้ำมันพืช": ["น้ำมันรำ", "น้ำมันถั่วเหลือง", "น้ำมันดอกทานตะวัน"],
             "น้ำตาล": ["น้ำตาลทราย", "น้ำตาลขาว", "น้ำตาลแดง"],
-            "ผักชี": ["ใบผักชี", "รากผักชี"]
+            "ผักชี": ["ใบผักชี", "รากผักชี"],
+            "ซีอิ้ว": ["ซีอิ้วขาว", "ซีอิ้วหวาน", "ซีอิ้วดำ"],
+            "พริก": ["พริกสด", "พริกแห้ง", "พริกชี้ฟ้า", "พริกขี้หนู"],
+            "ไข่": ["ไข่ไก่", "ไข่เป็ด"],
+            "ปลา": ["ปลาช่อน", "ปลาทู", "ปลาหมึก", "ปลากะพง", "ปลาดุก"]
         }
         
         # หาและแทนที่คำพ้องความหมาย
@@ -373,7 +500,7 @@ class NutritionAPI:
         return ingredient
 
     def extract_quantity_and_unit(self, ingredient_text: str) -> Tuple[float, str, str]:
-        """แยกปริมาณ หน่วย และชื่อวัตถุดิบอย่างแม่นยำ"""
+        """แยกปริมาณ หน่วย และชื่อวัตถุดิบอย่างแม่นยำ - ปรับปรุงให้ดีขึ้น"""
         ingredient_text = ingredient_text.strip()
         
         # รูปแบบการหาปริมาณและหน่วย (รองรับเศษส่วนและทศนิยม)
@@ -439,7 +566,7 @@ class NutritionAPI:
         return float(text)
 
     def estimate_default_quantity(self, ingredient: str) -> float:
-        """ประมาณปริมาณเริ่มต้นสำหรับวัตถุดิบที่ไม่ระบุปริมาณ"""
+        """ประมาณปริมาณเริ่มต้นสำหรับวัตถุดิบที่ไม่ระบุปริมาณ - ปรับปรุงให้แม่นยำขึ้น"""
         ingredient_lower = ingredient.lower()
         
         # ปริมาณเริ่มต้นที่ปรับปรุงแล้ว
@@ -466,6 +593,9 @@ class NutritionAPI:
             "มะนาว": 2,         # 2 ผล
             "ผัก": 100,         # 100 กรัม
             "เห็ด": 100,        # 100 กรัม
+            "พริก": 5,          # 5 เม็ด
+            "มะเขือ": 3,        # 3 ลูก
+            "ถั่ว": 50,         # 50 กรัม
         }
         
         for key, value in defaults.items():
@@ -475,7 +605,7 @@ class NutritionAPI:
         return 100  # ค่าเริ่มต้น 100 กรัม
 
     def estimate_default_unit(self, ingredient: str) -> str:
-        """ประมาณหน่วยเริ่มต้นสำหรับวัตถุดิบ"""
+        """ประมาณหน่วยเริ่มต้นสำหรับวัตถุดิบ - ปรับปรุงให้ครอบคลุมขึ้น"""
         ingredient_lower = ingredient.lower()
         
         unit_map = {
@@ -485,7 +615,8 @@ class NutritionAPI:
             "ผักชี": "ต้น", "ไข่": "ฟอง", "ข่า": "แว่น", "ตะไคร้": "ท่อน",
             "ใบมะกรูด": "ใบ", "กะทิ": "มล", "มะนาว": "ผล",
             "เนื้อ": "กรัม", "หมู": "กรัม", "ไก่": "กรัม", "กุ้ง": "กรัม",
-            "ปลา": "กรัม", "ผัก": "กรัม", "เห็ด": "กรัม"
+            "ปลา": "กรัม", "ผัก": "กรัม", "เห็ด": "กรัม", "พริก": "เม็ด",
+            "มะเขือ": "ลูก", "ถั่ว": "กรัม"
         }
         
         for key, unit in unit_map.items():
@@ -495,7 +626,7 @@ class NutritionAPI:
         return "กรัม"
 
     def convert_to_grams(self, quantity: float, unit: str, ingredient: str) -> float:
-        """แปลงปริมาณเป็นกรัมอย่างแม่นยำ"""
+        """แปลงปริมาณเป็นกรัมอย่างแม่นยำ - ปรับปรุงให้ดีขึ้น"""
         # หากหน่วยเป็นกรัมอยู่แล้ว
         if unit.lower() in ["กรัม", "g", "gram", "grams"]:
             return quantity
@@ -505,12 +636,12 @@ class NutritionAPI:
             base_amount = quantity * self.unit_conversion[unit]
             
             # สำหรับของเหลว (มล. -> กรัม ใช้ density)
-            if unit in ["ช้อนโต๊ะ", "ช้อนชา", "ถ้วย", "ถ้วยชา", "มล", "ลิตร"]:
+            if unit in ["ช้อนโต๊ะ", "ช้อนชา", "ถ้วย", "ถ้วยชา", "มล", "ลิตร", "แก้ว"]:
                 # ความหนาแน่นต่างกันตามชนิดวัตถุดิบ
                 density_map = {
                     "น้ำมัน": 0.92, "กะทิ": 0.95, "น้ำปลา": 1.1,
                     "ซีอิ้ว": 1.15, "น้ำส้มสายชู": 1.05, "น้ำตาล": 1.6,
-                    "เกลือ": 2.16, "นม": 1.03
+                    "เกลือ": 2.16, "นม": 1.03, "น้ำ": 1.0
                 }
                 
                 density = 1.0  # ค่าเริ่มต้น
@@ -528,7 +659,7 @@ class NutritionAPI:
         return quantity
 
     def enhance_missing_ingredients(self, ingredients_text: str, recipe_name: str = "", method_text: str = "") -> str:
-        """เพิ่มวัตถุดิบที่ขาดหายไปตามวิธีการทำและชื่อเมนู"""
+        """เพิ่มวัตถุดิบที่ขาดหายไปตามวิธีการทำและชื่อเมนู - ปรับปรุงให้ทำงานได้ดีขึ้น"""
         enhanced_ingredients = ingredients_text
         missing_ingredients = []
         
@@ -536,14 +667,20 @@ class NutritionAPI:
         ingredients_lower = ingredients_text.lower() if ingredients_text else ""
         recipe_name_lower = recipe_name.lower() if recipe_name else ""
         
+        print(f"DEBUG: กำลังตรวจสอบวัตถุดิบที่ขาดหาย สำหรับ '{recipe_name}'")
+        print(f"DEBUG: วิธีทำ: {method_lower[:100]}...")
+        
         # ตรวจสอบวิธีการทำและเพิ่มวัตถุดิบที่ขาดหาย
         for cooking_method, ingredients_dict in self.missing_ingredients_by_cooking_method.items():
             if cooking_method in method_lower:
+                print(f"DEBUG: พบวิธีการทำ '{cooking_method}' ในเมนู")
+                
                 # วัตถุดิบจำเป็น
                 for ingredient in ingredients_dict["required"]:
                     ingredient_name = ingredient.split()[0]  # เอาชื่อวัตถุดิบ
                     if ingredient_name not in ingredients_lower:
                         missing_ingredients.append(f"- {ingredient}")
+                        print(f"DEBUG: เพิ่มวัตถุดิบจำเป็น: {ingredient}")
                 
                 # วัตถุดิบเสริม (หากรายการวัตถุดิบน้อย)
                 if len(ingredients_text.split('\n')) <= 5:
@@ -551,20 +688,27 @@ class NutritionAPI:
                         ingredient_name = ingredient.split()[0]
                         if ingredient_name not in ingredients_lower:
                             missing_ingredients.append(f"- {ingredient}")
+                            print(f"DEBUG: เพิ่มวัตถุดิบเสริม: {ingredient}")
         
         # ตรวจสอบชื่อเมนูและเพิ่มวัตถุดิบที่ขาดหาย
         for recipe_pattern, required_ingredients in self.recipe_specific_ingredients.items():
             if recipe_pattern in recipe_name_lower:
+                print(f"DEBUG: พบรูปแบบเมนู '{recipe_pattern}' ตรงกับ '{recipe_name}'")
+                
                 for ingredient in required_ingredients:
                     ingredient_name = ingredient.split()[0]
                     if ingredient_name not in ingredients_lower:
                         missing_ingredients.append(f"- {ingredient}")
+                        print(f"DEBUG: เพิ่มวัตถุดิบเฉพาะเมนู: {ingredient}")
         
         # เพิ่มวัตถุดิบที่ขาดหาย
         if missing_ingredients:
             if enhanced_ingredients and not enhanced_ingredients.endswith('\n'):
                 enhanced_ingredients += '\n'
             enhanced_ingredients += '\n'.join(missing_ingredients)
+            print(f"DEBUG: เพิ่มวัตถุดิบทั้งหมด {len(missing_ingredients)} รายการ")
+        else:
+            print("DEBUG: ไม่พบวัตถุดิบที่ขาดหาย")
         
         return enhanced_ingredients
 
@@ -622,6 +766,7 @@ class NutritionAPI:
             return None
             
         except Exception as e:
+            print(f"Error with USDA API: {e}")
             return None
 
     def get_usda_nutrition_details(self, food_id: int) -> Optional[Dict]:
@@ -638,6 +783,7 @@ class NutritionAPI:
             return None
             
         except Exception as e:
+            print(f"Error getting USDA details: {e}")
             return None
 
     def parse_usda_nutrition_data(self, data: Dict) -> Dict:
@@ -691,7 +837,7 @@ class NutritionAPI:
         return nutrients
 
     def estimate_nutrition_by_type(self, ingredient: str) -> Dict:
-        """ประมาณค่าโภชนาการตามประเภทวัตถุดิบ"""
+        """ประมาณค่าโภชนาการตามประเภทวัตถุดิบ - ปรับปรุงให้แม่นยำขึ้น"""
         ingredient_lower = ingredient.lower()
         
         # ประเภทเนื้อสัตว์
@@ -718,6 +864,14 @@ class NutritionAPI:
                 "calcium": 30, "iron": 1, "potassium": 50, "sodium": 3000
             }
         
+        # ประเภทน้ำมัน
+        elif any(keyword in ingredient_lower for keyword in ["น้ำมัน", "เนย"]):
+            return {
+                "calories": 884, "protein": 0, "carbs": 0, "fat": 100, "fiber": 0,
+                "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
+                "calcium": 0, "iron": 0, "potassium": 0, "sodium": 0
+            }
+        
         # ค่าเริ่มต้นทั่วไป
         return {
             "calories": 50, "protein": 2, "carbs": 10, "fat": 1, "fiber": 1,
@@ -728,13 +882,22 @@ class NutritionAPI:
     def calculate_recipe_nutrition(self, ingredients_text: str, use_api: bool = True, 
                                  adjust_consumption: bool = True, 
                                  enhance_missing: bool = False,
-                                 recipe_name: str = "", method_text: str = "") -> Dict:
-        """คำนวณค่าโภชนาการของสูตรอาหารอย่างครอบคลุม"""
+                                 recipe_name: str = "",
+                                 method_text: str = "") -> Dict:
+        """คำนวณค่าโภชนาการของสูตรอาหารอย่างครอบคลุม - แก้ไขให้ทำงานถูกต้อง"""
+        
+        print(f"DEBUG: เริ่มคำนวณโภชนาการสำหรับ '{recipe_name}'")
+        print(f"DEBUG: การตั้งค่า - enhance_missing: {enhance_missing}, adjust_consumption: {adjust_consumption}")
         
         # เพิ่มวัตถุดิบที่ขาดหาย (หากเปิดใช้งาน)
         original_ingredients = ingredients_text
         if enhance_missing:
+            print("DEBUG: เริ่มเพิ่มวัตถุดิบที่ขาดหาย")
             ingredients_text = self.enhance_missing_ingredients(ingredients_text, recipe_name, method_text)
+            if ingredients_text != original_ingredients:
+                print("DEBUG: มีการเพิ่มวัตถุดิบแล้ว")
+            else:
+                print("DEBUG: ไม่มีวัตถุดิบเพิ่มเติม")
         
         total_nutrition = {
             "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0,
@@ -746,6 +909,7 @@ class NutritionAPI:
         
         # แยกวัตถุดิบแต่ละรายการ
         ingredients = [ing.strip() for ing in ingredients_text.split('\n') if ing.strip()]
+        print(f"DEBUG: พบวัตถุดิบทั้งหมด {len(ingredients)} รายการ")
         
         for ingredient_line in ingredients:
             # ลบเครื่องหมาย - หรือ * ถ้ามี
@@ -765,8 +929,9 @@ class NutritionAPI:
             if adjust_consumption:
                 # ตรวจสอบชื่อวัตถุดิบใน consumption_ratio
                 for ratio_ingredient, ratio in self.consumption_ratio.items():
-                    if ratio_ingredient in ingredient_name.lower():
+                    if ratio_ingredient.lower() in ingredient_name.lower():
                         consumption_factor = ratio
+                        print(f"DEBUG: ปรับสัดส่วนการบริโภคของ '{ingredient_name}' เป็น {ratio}")
                         break
                 effective_grams = grams * consumption_factor
             else:
@@ -785,6 +950,10 @@ class NutritionAPI:
                     ingredient_nutrition[nutrient] = nutrient_value
                     total_nutrition[nutrient] += nutrient_value
                 
+                # ตรวจสอบว่าเป็นวัตถุดิบที่เพิ่มใหม่หรือไม่
+                was_enhanced = (ingredients_text != original_ingredients and 
+                               ingredient_line not in original_ingredients)
+                
                 ingredient_details.append({
                     "name": ingredient_name,
                     "quantity": quantity,
@@ -792,8 +961,13 @@ class NutritionAPI:
                     "grams": grams,
                     "effective_grams": effective_grams,
                     "consumption_factor": consumption_factor,
-                    "nutrition": ingredient_nutrition
+                    "nutrition": ingredient_nutrition,
+                    "was_enhanced": was_enhanced
                 })
+                
+                print(f"DEBUG: คำนวณ '{ingredient_name}' - {effective_grams:.1f}g ได้ {ingredient_nutrition.get('calories', 0):.1f} kcal")
+        
+        print(f"DEBUG: คำนวณเสร็จ - รวม {total_nutrition['calories']:.1f} kcal")
         
         return {
             "total_nutrition": total_nutrition,
@@ -854,5 +1028,7 @@ class NutritionAPI:
             "api_source": self.current_api_source,
             "available_apis": list(self.api_urls.keys()),
             "consumption_adjustments": len(self.consumption_ratio),
-            "unit_conversions": len(self.unit_conversion)
+            "unit_conversions": len(self.unit_conversion),
+            "cooking_methods": len(self.missing_ingredients_by_cooking_method),
+            "recipe_patterns": len(self.recipe_specific_ingredients)
         }
