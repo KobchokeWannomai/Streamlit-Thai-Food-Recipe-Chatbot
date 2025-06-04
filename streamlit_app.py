@@ -724,36 +724,47 @@ def format_cooking_method(method_text):
     result = []
     lines = method_text.split('\n')
     previous_was_header = False
+    in_subheader_content = False
+    subheader_content_count = 0
     
     for i, line in enumerate(lines):
         line = line.strip()
         if not line:
             continue
-            
+        
+        # ตรวจสอบว่าบรรทัดนี้เป็นหัวข้อประเภทใดบ้าง
+        is_note = re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม|Note|Tip)', line, re.IGNORECASE)
+        is_special_header = re.match(r'^(ที่มา|แหล่งที่มา|อ้างอิง|Reference|Source):', line, re.IGNORECASE)
+        is_subheader = (line.startswith('#') or 
+                       re.match(r'^(วิธีทำ|วิธีแต่ง|ส่วนผสม|เครื่องปรุง|การเตรียม)', line, re.IGNORECASE) or
+                       (line.endswith(':') and len(line) < 50 and len(line.split()) <= 5))
+        is_numbered_step = re.match(r'^\d+\.', line)
+        
         # ตรวจสอบหมายเหตุ
-        if re.match(r'^(หมายเหตุ|สำคัญ|ข้อสังเกต|เคล็ดลับ|วิธีเตรียม|Note|Tip)', line, re.IGNORECASE):
+        if is_note:
             result.append("")  # บรรทัดเปล่าก่อนหมายเหตุ
             result.append("")  # บรรทัดเปล่าเพิ่มอีกหนึ่งบรรทัด
             result.append(f"**{line}**")
             result.append("")
             previous_was_header = True
+            in_subheader_content = False
+            subheader_content_count = 0
         
         # ตรวจสอบหัวข้อพิเศษ (เช่น ที่มา:, แหล่งที่มา:, อ้างอิง:)
-        elif re.match(r'^(ที่มา|แหล่งที่มา|อ้างอิง|Reference|Source):', line, re.IGNORECASE):
+        elif is_special_header:
             result.append("")  # บรรทัดเปล่าก่อนหัวข้อพิเศษ
             result.append("")  # บรรทัดเปล่าเพิ่มอีกหนึ่งบรรทัด
             result.append(f"**{line}**")
             result.append("")
             previous_was_header = True
+            in_subheader_content = False
+            subheader_content_count = 0
         
         # ตรวจสอบหัวข้อย่อย
-        elif (line.startswith('#') or 
-              re.match(r'^(วิธีทำ|วิธีแต่ง|ส่วนผสม|เครื่องปรุง|การเตรียม)', line, re.IGNORECASE) or
-              (line.endswith(':') and len(line) < 50 and len(line.split()) <= 5)):
-            
+        elif is_subheader:
             header_text = line.lstrip('#').strip().rstrip(':')
             
-            # เพิ่มเส้นแบ่งก่อนหัวข้อย่อย (ยกเว้นหัวข้อแรก)
+            # เพิ่มเส้นแบ่งก่อนหัวข้อย่อย (ยกเว้นหัวข้อแรกหรือหลังหมายเหตุ/หัวข้อพิเศษ)
             if result and not previous_was_header:
                 result.append("")
                 result.append("---")
@@ -762,25 +773,39 @@ def format_cooking_method(method_text):
             result.append(f"**{header_text}**")
             result.append("")
             previous_was_header = True
+            in_subheader_content = True
+            subheader_content_count = 0
         
         # ตรวจสอบเลขข้อ
-        elif re.match(r'^\d+\.', line):
+        elif is_numbered_step:
             step_number = line.split('.')[0]
             step_content = '.'.join(line.split('.')[1:]).strip()
             result.append("")
             result.append(f"**{step_number}.**")  # เพิ่มจุดหลังเลขข้อ
             result.append(f"{step_content}")
             previous_was_header = False
+            in_subheader_content = False
+            subheader_content_count = 0
         
-        # ข้อความธรรมดา - ตรวจสอบว่าเป็นรายละเอียดของหัวข้อหรือไม่
+        # ข้อความธรรมดา
         else:
-            # ถ้าบรรทัดก่อนหน้าเป็นหัวข้อ ให้แสดงเป็นรายละเอียดของหัวข้อ (ไม่ใช้ตัวหนา)
-            if previous_was_header:
-                result.append(line)  # ไม่ใช้ตัวหนา เป็นรายละเอียดของหัวข้อ
+            # ถ้าอยู่ในรายละเอียดของหัวข้อย่อย
+            if in_subheader_content:
+                subheader_content_count += 1
+                
+                # ถ้าเป็นประโยคแรกของรายละเอียด ให้แสดงตรงๆ
+                if subheader_content_count == 1:
+                    result.append(line)  # ไม่ใช้ตัวหนา
+                else:
+                    # ถ้าเป็นประโยคที่ 2 ขึ้นไป ให้เพิ่มบรรทัดเปล่าก่อน
+                    result.append("")
+                    result.append(line)  # ไม่ใช้ตัวหนา
             else:
-                # ถ้าไม่ใช่รายละเอียดของหัวข้อ ให้ขึ้นบรรทัดใหม่
-                result.append("")
+                # ถ้าไม่ได้อยู่ในหัวข้อย่อย ให้ขึ้นบรรทัดใหม่
+                if not previous_was_header:
+                    result.append("")
                 result.append(line)
+            
             previous_was_header = False
     
     return '\n'.join(result)
