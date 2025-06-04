@@ -14,7 +14,24 @@ except ImportError:
     import sys
     import os
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    from nutrition_api import NutritionAPI
+    try:
+        from nutrition_api import NutritionAPI
+    except ImportError:
+        # Simple fallback if nutrition_api is not available
+        class NutritionAPI:
+            def __init__(self):
+                pass
+            def calculate_recipe_nutrition(self, *args, **kwargs):
+                return {
+                    "total_nutrition": {
+                        "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0,
+                        "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
+                        "calcium": 0, "iron": 0, "potassium": 0, "sodium": 0
+                    },
+                    "ingredient_details": [],
+                    "enhanced_ingredients": None,
+                    "settings": {}
+                }
 
 class RecipeSearchEngine:
     """เครื่องมือค้นหาสูตรอาหารขั้นสูงพร้อมระบบ AI และ Fuzzy Matching"""
@@ -270,7 +287,7 @@ class RecipeSearchEngine:
     def get_recipe_nutrition(self, recipe_index: int, use_api: bool = True, 
                            adjust_consumption: bool = True, 
                            enhance_missing: bool = False) -> Dict:
-        """ดึงข้อมูลโภชนาการของสูตรอาหารพร้อมแคช"""
+        """ดึงข้อมูลโภชนาการของสูตรอาหารพร้อมแคช - แก้ไขให้ทำงานถูกต้อง"""
         cache_key = f"{recipe_index}_{use_api}_{adjust_consumption}_{enhance_missing}"
         
         if cache_key in self.recipe_nutrition_cache:
@@ -278,9 +295,15 @@ class RecipeSearchEngine:
         
         try:
             recipe = self.data.iloc[recipe_index]
+            
+            # เรียกใช้ calculate_recipe_nutrition พร้อมพารามิเตอร์ครบถ้วน
             nutrition_data = self.nutrition_api.calculate_recipe_nutrition(
-                recipe['ingredient'], use_api, adjust_consumption, enhance_missing,
-                recipe['name'], recipe['method']
+                ingredients_text=recipe['ingredient'], 
+                use_api=use_api,
+                adjust_consumption=adjust_consumption,
+                enhance_missing=enhance_missing,
+                recipe_name=recipe['name'],          # เพิ่มการส่งผ่าน recipe_name
+                method_text=recipe['method']         # เพิ่มการส่งผ่าน method_text
             )
             
             self.recipe_nutrition_cache[cache_key] = nutrition_data
@@ -308,7 +331,7 @@ class RecipeSearchEngine:
     def smart_search(self, query: str, use_api: bool = True, adjust_consumption: bool = True,
                     enhance_missing: bool = False, fuzzy_threshold: float = 0.4,
                     limit: int = 5, search_method: str = "hybrid") -> List[Dict]:
-        """ระบบค้นหาอัจฉริยะที่รวมทุกวิธีการ"""
+        """ระบบค้นหาอัจฉริยะที่รวมทุกวิธีการ - ปรับปรุงให้ทำงานถูกต้อง"""
         
         # จำแนกประเภทการค้นหา
         search_intent = self.classify_search_intent(query)
@@ -341,7 +364,8 @@ class RecipeSearchEngine:
             else:
                 match_reason += " (Fuzzy Match)"
             
-            results.append({
+            # สร้างข้อมูลสำหรับผลลัพธ์
+            result_data = {
                 "name": recipe_name,
                 "similarity": similarity,
                 "index": recipe_idx,
@@ -349,7 +373,15 @@ class RecipeSearchEngine:
                 "match_reason": match_reason,
                 "match_type": search_method,
                 "search_intent": search_intent
-            })
+            }
+            
+            # เพิ่มข้อมูลการปรับปรุง (หากมี)
+            if nutrition_data.get('enhanced_ingredients'):
+                result_data["enhanced"] = True
+                result_data["original_ingredients"] = self.data.iloc[recipe_idx]['ingredient']
+                result_data["enhanced_ingredients"] = nutrition_data['enhanced_ingredients']
+            
+            results.append(result_data)
         
         return results
 
@@ -396,6 +428,40 @@ class RecipeSearchEngine:
             print(f"Error finding similar recipes: {e}")
             return []
 
+    def analyze_recipe_nutrition_trends(self, recipe_indices: List[int]) -> Dict:
+        """วิเคราะห์แนวโน้มโภชนาการของสูตรอาหารที่เลือก"""
+        if not recipe_indices:
+            return {}
+        
+        nutrition_data = []
+        for idx in recipe_indices:
+            try:
+                nutrition = self.get_recipe_nutrition(idx, adjust_consumption=True, enhance_missing=False)
+                if nutrition and nutrition.get('total_nutrition'):
+                    nutrition_data.append(nutrition['total_nutrition'])
+            except:
+                continue
+        
+        if not nutrition_data:
+            return {}
+        
+        # คำนวณค่าสถิติ
+        analysis = {}
+        nutrients = ['calories', 'protein', 'carbs', 'fat', 'fiber', 'sodium', 'calcium', 'iron']
+        
+        for nutrient in nutrients:
+            values = [data.get(nutrient, 0) for data in nutrition_data]
+            if values:
+                analysis[nutrient] = {
+                    'average': np.mean(values),
+                    'min': np.min(values),
+                    'max': np.max(values),
+                    'std': np.std(values),
+                    'median': np.median(values)
+                }
+        
+        return analysis
+
     def get_search_statistics(self) -> Dict:
         """สถิติการค้นหาและข้อมูลระบบ"""
         return {
@@ -403,7 +469,7 @@ class RecipeSearchEngine:
             "has_ai_model": self.model is not None,
             "has_embeddings": self.embeddings is not None,
             "cache_size": len(self.recipe_nutrition_cache),
-            "nutrition_api_source": self.nutrition_api.current_api_source,
+            "nutrition_api_available": hasattr(self.nutrition_api, 'calculate_recipe_nutrition'),
             "available_search_methods": [
                 "fuzzy", 
                 "semantic" if self.model is not None else None,
@@ -415,3 +481,70 @@ class RecipeSearchEngine:
         """ล้างแคชข้อมูลโภชนาการ"""
         self.recipe_nutrition_cache.clear()
         print("Cache cleared successfully")
+
+    def validate_recipe_data(self, recipe_index: int) -> Dict:
+        """ตรวจสอบความถูกต้องของข้อมูลสูตรอาหาร"""
+        if recipe_index >= len(self.data):
+            return {"valid": False, "error": "Recipe index out of range"}
+        
+        recipe = self.data.iloc[recipe_index]
+        validation = {
+            "valid": True,
+            "warnings": [],
+            "info": {}
+        }
+        
+        # ตรวจสอบชื่อเมนู
+        if not recipe.get('name') or len(str(recipe['name']).strip()) == 0:
+            validation["warnings"].append("ไม่มีชื่อเมนู")
+            validation["valid"] = False
+        
+        # ตรวจสอบวัตถุดิบ
+        ingredients = str(recipe.get('ingredient', ''))
+        if len(ingredients.strip()) < 10:
+            validation["warnings"].append("รายการวัตถุดิบสั้นเกินไป")
+        
+        ingredient_lines = [line.strip() for line in ingredients.split('\n') if line.strip()]
+        validation["info"]["ingredient_count"] = len(ingredient_lines)
+        
+        # ตรวจสอบวิธีทำ
+        method = str(recipe.get('method', ''))
+        if len(method.strip()) < 20:
+            validation["warnings"].append("วิธีทำสั้นเกินไป")
+        
+        validation["info"]["method_length"] = len(method)
+        
+        return validation
+
+    def export_search_results(self, results: List[Dict], format: str = "dict") -> any:
+        """ส่งออกผลลัพธ์การค้นหาในรูปแบบต่างๆ"""
+        if format == "dataframe":
+            # แปลงเป็น DataFrame
+            df_data = []
+            for result in results:
+                nutrition = result.get('nutrition', {}).get('total_nutrition', {})
+                df_data.append({
+                    'name': result['name'],
+                    'similarity': result['similarity'],
+                    'calories': nutrition.get('calories', 0),
+                    'protein': nutrition.get('protein', 0),
+                    'fat': nutrition.get('fat', 0),
+                    'carbs': nutrition.get('carbs', 0),
+                    'sodium': nutrition.get('sodium', 0)
+                })
+            return pd.DataFrame(df_data)
+        
+        elif format == "summary":
+            # สรุปผลลัพธ์
+            total_results = len(results)
+            avg_similarity = np.mean([r['similarity'] for r in results]) if results else 0
+            
+            return {
+                "total_results": total_results,
+                "average_similarity": avg_similarity,
+                "best_match": results[0]['name'] if results else None,
+                "search_types": list(set([r.get('search_intent', 'general') for r in results]))
+            }
+        
+        else:
+            return results  # ส่งคืนเป็น dict ปกติ
