@@ -123,6 +123,15 @@ st.markdown("""
         font-size: 2.5rem;
         margin-bottom: 0.5rem;
     }
+    
+    .enhanced-feature {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 0.5rem;
+        border-radius: 5px;
+        margin: 0.5rem 0;
+        font-size: 0.9rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -149,11 +158,62 @@ class NutritionAPI:
             "ผล": 150, "ราก": 5, "ท่อน": 20
         }
         
-        # สัดส่วนที่บริโภคจริง
+        # สัดส่วนที่บริโภคจริง - แก้ไขให้ครอบคลุมมากขึ้น
         self.consumption_ratio = {
             "น้ำมันหมู": 0.25, "น้ำมันพืช": 0.25,
             "น้ำมันมะพร้าว": 0.25, "กะทิ": 0.85,
-            "น้ำปลา": 1.0, "น้ำตาล": 1.0, "เกลือ": 1.0
+            "น้ำปลา": 1.0, "น้ำตาล": 1.0, "เกลือ": 1.0,
+            "ซีอิ้ว": 1.0, "น้ำส้มสายชู": 1.0,
+            "พริกไทย": 1.0, "กระเทียม": 0.9, "หอม": 0.9,
+            "เนย": 0.8, "หอมเจียว": 0.9, "กระเทียมเจียว": 0.9
+        }
+
+        # วัตถุดิบที่มักขาดหายไปตามประเภทอาหาร - ปรับปรุงใหม่
+        self.missing_ingredients_by_cooking_method = {
+            "ทอด": {
+                "required": ["น้ำมันพืช 3 ช้อนโต๊ะ"],
+                "optional": []
+            },
+            "เจียว": {
+                "required": ["น้ำมันหมู 2 ช้อนโต๊ะ"],
+                "optional": []
+            },
+            "ผัด": {
+                "required": ["น้ำมันพืช 2 ช้อนโต๊ะ"],
+                "optional": ["กระเทียม 2 กลีบ", "หอมแดง 2 หัว"]
+            },
+            "คั่ว": {
+                "required": ["น้ำมันพืช 1 ช้อนโต๊ะ"],
+                "optional": []
+            },
+            "ต้ม": {
+                "required": [],
+                "optional": ["เกลือ 1 ช้อนชา"]
+            },
+            "แกง": {
+                "required": [],
+                "optional": ["กะทิ 400 มล", "น้ำปลา 2 ช้อนโต๊ะ"]
+            },
+            "ย่าง": {
+                "required": [],
+                "optional": ["น้ำมันพืช 1 ช้อนชา"]
+            },
+            "ยำ": {
+                "required": [],
+                "optional": ["น้ำปลา 2 ช้อนโต๊ะ", "มะนาว 2 ผล", "น้ำตาลปึก 2 ช้อนชา", "พริกขี้หนู 3 เม็ด"]
+            }
+        }
+
+        # รายการวัตถุดิบที่ขาดหายไปตามชื่อเมนู
+        self.recipe_specific_ingredients = {
+            'ไข่เจียว': ['น้ำมันหมู 2 ช้อนโต๊ะ'],
+            'ไข่ดาว': ['น้ำมันหมู 2 ช้อนโต๊ะ'],
+            'ไข่ทอด': ['น้ำมันพืช 3 ช้อนโต๊ะ'],
+            'ปลาทอด': ['น้ำมันพืช 1 ถ้วย', 'แป้งสาลี 3 ช้อนโต๊ะ'],
+            'ข้าวผัด': ['น้ำมันพืช 2 ช้อนโต๊ะ', 'ไข่ไก่ 2 ฟอง'],
+            'ผัดไทย': ['น้ำมันพืช 3 ช้อนโต๊ะ', 'ไข่ไก่ 2 ฟอง'],
+            'ก๋วยเตี๋ยว': ['น้ำซุป 2 ถ้วย'],
+            'ราดหน้า': ['น้ำมันพืช 2 ช้อนโต๊ะ', 'แป้งข้าวโพด 2 ช้อนโต๊ะ']
         }
 
     def get_default_nutrition_database(self) -> Dict:
@@ -178,6 +238,9 @@ class NutritionAPI:
                     "vitamin_a": 45, "vitamin_c": 0.9, "vitamin_b1": 0.02, "vitamin_b2": 0.11,
                     "calcium": 89, "iron": 0.9, "potassium": 358, "sodium": 54},
             "น้ำมันพืช": {"calories": 884, "protein": 0, "carbs": 0, "fat": 100, "fiber": 0,
+                         "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
+                         "calcium": 0, "iron": 0, "potassium": 0, "sodium": 0},
+            "น้ำมันหมู": {"calories": 902, "protein": 0, "carbs": 0, "fat": 100, "fiber": 0,
                          "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
                          "calcium": 0, "iron": 0, "potassium": 0, "sodium": 0},
             "กระเทียม": {"calories": 149, "protein": 6.4, "carbs": 33, "fat": 0.5, "fiber": 2.1,
@@ -213,7 +276,8 @@ class NutritionAPI:
             "กุ้งนาง": "กุ้ง", "กุ้งตะเข็บ": "กุ้ง",
             "เนื้อหมู": "หมู", "หมูสับ": "หมู",
             "เนื้อไก่": "ไก่", "ไก่สับ": "ไก่",
-            "หอมหัวใหญ่": "หอมใหญ่", "น้ำตาลทราย": "น้ำตาล"
+            "หอมหัวใหญ่": "หอมใหญ่", "น้ำตาลทราย": "น้ำตาล",
+            "หอมแดง": "หอมใหญ่"
         }
         
         for synonym, standard in synonyms.items():
@@ -352,10 +416,58 @@ class NutritionAPI:
                    "vitamin_a": 10, "vitamin_c": 5, "vitamin_b1": 0.05, "vitamin_b2": 0.05,
                    "calcium": 20, "iron": 0.5, "potassium": 100, "sodium": 10}
 
+    def enhance_missing_ingredients(self, ingredients_text: str, recipe_name: str = "", method_text: str = "") -> str:
+        """เพิ่มวัตถุดิบที่ขาดหายไปตามวิธีการทำและชื่อเมนู"""
+        enhanced_ingredients = ingredients_text
+        missing_ingredients = []
+        
+        method_lower = method_text.lower() if method_text else ""
+        ingredients_lower = ingredients_text.lower() if ingredients_text else ""
+        recipe_name_lower = recipe_name.lower() if recipe_name else ""
+        
+        # ตรวจสอบวิธีการทำและเพิ่มวัตถุดิบที่ขาดหาย
+        for cooking_method, ingredients_dict in self.missing_ingredients_by_cooking_method.items():
+            if cooking_method in method_lower:
+                # วัตถุดิบจำเป็น
+                for ingredient in ingredients_dict["required"]:
+                    ingredient_name = ingredient.split()[0]  # เอาชื่อวัตถุดิบ
+                    if ingredient_name not in ingredients_lower:
+                        missing_ingredients.append(f"- {ingredient}")
+                
+                # วัตถุดิบเสริม (หากรายการวัตถุดิบน้อย)
+                if len(ingredients_text.split('\n')) <= 5:
+                    for ingredient in ingredients_dict["optional"]:
+                        ingredient_name = ingredient.split()[0]
+                        if ingredient_name not in ingredients_lower:
+                            missing_ingredients.append(f"- {ingredient}")
+        
+        # ตรวจสอบชื่อเมนูและเพิ่มวัตถุดิบที่ขาดหาย
+        for recipe_pattern, required_ingredients in self.recipe_specific_ingredients.items():
+            if recipe_pattern in recipe_name_lower:
+                for ingredient in required_ingredients:
+                    ingredient_name = ingredient.split()[0]
+                    if ingredient_name not in ingredients_lower:
+                        missing_ingredients.append(f"- {ingredient}")
+        
+        # เพิ่มวัตถุดิบที่ขาดหาย
+        if missing_ingredients:
+            if enhanced_ingredients and not enhanced_ingredients.endswith('\n'):
+                enhanced_ingredients += '\n'
+            enhanced_ingredients += '\n'.join(missing_ingredients)
+        
+        return enhanced_ingredients
+
     def calculate_recipe_nutrition(self, ingredients_text: str, use_api: bool = True, 
                                  adjust_consumption: bool = True, 
-                                 enhance_missing: bool = False) -> Dict:
+                                 enhance_missing: bool = False,
+                                 recipe_name: str = "",
+                                 method_text: str = "") -> Dict:
         """คำนวณค่าโภชนาการของสูตรอาหาร"""
+        
+        # เพิ่มวัตถุดิบที่ขาดหาย (หากเปิดใช้งาน)
+        original_ingredients = ingredients_text
+        if enhance_missing:
+            ingredients_text = self.enhance_missing_ingredients(ingredients_text, recipe_name, method_text)
         
         total_nutrition = {
             "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0,
@@ -374,8 +486,14 @@ class NutritionAPI:
             quantity, unit, ingredient_name = self.extract_quantity_and_unit(ingredient_text)
             grams = self.convert_to_grams(quantity, unit, ingredient_name)
             
+            # ปรับสัดส่วนการบริโภค (หากเปิดใช้งาน)
+            consumption_factor = 1.0
             if adjust_consumption:
-                consumption_factor = self.consumption_ratio.get(ingredient_name, 1.0)
+                # ตรวจสอบชื่อวัตถุดิบใน consumption_ratio
+                for ratio_ingredient, ratio in self.consumption_ratio.items():
+                    if ratio_ingredient.lower() in ingredient_name.lower():
+                        consumption_factor = ratio
+                        break
                 effective_grams = grams * consumption_factor
             else:
                 effective_grams = grams
@@ -397,12 +515,15 @@ class NutritionAPI:
                     "unit": unit,
                     "grams": grams,
                     "effective_grams": effective_grams,
-                    "nutrition": ingredient_nutrition
+                    "consumption_factor": consumption_factor,
+                    "nutrition": ingredient_nutrition,
+                    "was_enhanced": ingredients_text != original_ingredients and ingredient_line not in original_ingredients
                 })
         
         return {
             "total_nutrition": total_nutrition,
             "ingredient_details": ingredient_details,
+            "enhanced_ingredients": ingredients_text if enhance_missing and ingredients_text != original_ingredients else None,
             "settings": {
                 "use_api": use_api,
                 "adjust_consumption": adjust_consumption,
@@ -543,12 +664,14 @@ class RecipeSearchEngine:
         try:
             recipe = self.data.iloc[recipe_index]
             nutrition_data = self.nutrition_api.calculate_recipe_nutrition(
-                recipe['ingredient'], use_api, adjust_consumption, enhance_missing
+                recipe['ingredient'], use_api, adjust_consumption, enhance_missing,
+                recipe['name'], recipe['method']  # เพิ่มการส่งผ่าน recipe_name และ method_text
             )
             
             self.recipe_nutrition_cache[cache_key] = nutrition_data
             return nutrition_data
-        except Exception:
+        except Exception as e:
+            print(f"Error calculating nutrition: {e}")
             # ส่งคืนข้อมูลโภชนาการเริ่มต้นหากเกิดข้อผิดพลาด
             default_nutrition = {
                 "total_nutrition": {
@@ -557,6 +680,7 @@ class RecipeSearchEngine:
                     "calcium": 0, "iron": 0, "potassium": 0, "sodium": 0
                 },
                 "ingredient_details": [],
+                "enhanced_ingredients": None,
                 "settings": {"use_api": use_api, "adjust_consumption": adjust_consumption, "enhance_missing": enhance_missing}
             }
             return default_nutrition
@@ -633,7 +757,7 @@ def create_sample_data():
             '- มะละกอดิบ 2 ถ้วย\n- มะเขือเทศ 3 ผล\n- ถั่วฝักยาว 10 เส้น\n- กุ้งแห้ง 2 ช้อนโต๊ะ\n- น้ำปลา 2 ช้อนโต๊ะ',
             '- เนื้อไก่ 400 กรัม\n- กะทิ 2 ถ้วย\n- มะเขือเปราะ 8 ผล\n- ใบโหระพา 1 ถ้วย\n- น้ำปลา 2 ช้อนโต๊ะ',
             '- เส้นจันท์ 200 กรัม\n- กุ้งสด 100 กรัม\n- เต้าหู้ 100 กรัม\n- ไข่ไก่ 2 ฟอง\n- น้ำปลา 2 ช้อนโต๊ะ',
-            '- ไข่ไก่ 3 ฟอง\n- น้ำปลา 1 ช้อนชา\n- ต้นหอม 2 ต้น\n- น้ำมันหมู 2 ช้อนโต๊ะ',
+            '- ไข่ไก่ 3 ฟอง\n- น้ำปลา 1 ช้อนชา\n- ต้นหอม 2 ต้น',
             '- ข้าวสวย 3 ถ้วย\n- กุ้งสด 150 กรัม\n- ไข่ไก่ 2 ฟอง\n- หอมใหญ่ 1 หัว\n- น้ำปลา 2 ช้อนโต๊ะ',
             '- วุ้นเส้น 150 กรัม\n- กุ้งสด 200 กรัม\n- หมูสับ 100 กรัม\n- มะนาว 3 ผล\n- น้ำปลา 3 ช้อนโต๊ะ',
             '- เนื้อหมูสับ 300 กรัม\n- ข้าวคั่ว 3 ช้อนโต๊ะ\n- พริกแห้ง 8 เม็ด\n- หอมแดง 5 หัว\n- น้ำปลา 4 ช้อนโต๊ะ',
@@ -868,12 +992,29 @@ def display_settings_panel(data, model, settings_state):
     st.sidebar.markdown("### 🧮 การคำนวณโภชนาการ")
     
     adjust_consumption = st.sidebar.checkbox(
-        "ปรับการบริโภคตามความเป็นจริง", value=True, key="adjust_consumption"
+        "ปรับการบริโภคตามความเป็นจริง", value=True, key="adjust_consumption",
+        help="ปรับค่าโภชนาการตามสัดส่วนที่บริโภคจริง เช่น น้ำมันทอดจะไม่กินหมด"
     )
     
     enhance_missing = st.sidebar.checkbox(
-        "เพิ่มวัตถุดิบที่ขาดหาย", value=False, key="enhance_missing"
+        "เพิ่มวัตถุดิบที่ขาดหาย", value=False, key="enhance_missing",
+        help="เพิ่มวัตถุดิบที่มักขาดหายไปตามวิธีการทำ เช่น น้ำมันสำหรับทอด"
     )
+    
+    # แสดงสถานะการเปิดใช้งานฟีเจอร์พิเศษ
+    if adjust_consumption or enhance_missing:
+        features_text = []
+        if adjust_consumption:
+            features_text.append("📊 ปรับค่าการบริโภค")
+        if enhance_missing:
+            features_text.append("🔧 เพิ่มวัตถุดิบ")
+        
+        st.sidebar.markdown(f"""
+        <div class="enhanced-feature">
+            ✨ ฟีเจอร์ที่เปิดใช้งาน:<br>
+            {' | '.join(features_text)}
+        </div>
+        """, unsafe_allow_html=True)
     
     st.sidebar.markdown("### 🔍 การค้นหาที่ปรับปรุงแล้ว")
     
@@ -984,11 +1125,14 @@ def search_recipes_improved(query, model, data, embeddings, search_engine, setti
         nutrition_data = None
         try:
             recipe = data.iloc[recipe_idx]
+            # แก้ไข: ส่งพารามิเตอร์ครบถ้วน
             nutrition_data = nutrition_api.calculate_recipe_nutrition(
                 recipe['ingredient'], settings['use_api'],
-                settings['adjust_consumption'], settings['enhance_missing']
+                settings['adjust_consumption'], settings['enhance_missing'],
+                recipe['name'], recipe['method']  # เพิ่มการส่งผ่าน recipe_name และ method_text
             )
-        except:
+        except Exception as e:
+            print(f"Error calculating nutrition: {e}")
             pass
         
         results.append((recipe_name, similarity, recipe_idx, nutrition_data))
@@ -1013,7 +1157,13 @@ def display_recipe_with_nutrition(recipe, nutrition_data, settings, similarity_s
         
         with col1:
             st.markdown("#### 🥬 วัตถุดิบ")
-            st.markdown(format_ingredients(recipe["ingredient"]), unsafe_allow_html=True)
+            # แสดงวัตถุดิบที่ปรับปรุงแล้ว (หากมี)
+            if nutrition_data and nutrition_data.get('enhanced_ingredients'):
+                st.markdown(format_ingredients(nutrition_data['enhanced_ingredients']), unsafe_allow_html=True)
+                if settings.get('enhance_missing', False):
+                    st.markdown("🔧 <small style='color: #28a745;'>*รายการนี้มีการเพิ่มวัตถุดิบที่ขาดหาย</small>", unsafe_allow_html=True)
+            else:
+                st.markdown(format_ingredients(recipe["ingredient"]), unsafe_allow_html=True)
         
         with col2:
             st.markdown("#### 👨‍🍳 วิธีทำ")
@@ -1022,35 +1172,56 @@ def display_recipe_with_nutrition(recipe, nutrition_data, settings, similarity_s
     with tab2:
         if nutrition_data:
             display_nutrition_info(nutrition_data, recipe['name'])
+            
+            # แสดงคำเตือนเกี่ยวกับการปรับค่า
+            if settings.get('adjust_consumption', False) or settings.get('enhance_missing', False):
+                st.markdown("---")
+                adjustment_notes = []
+                if settings.get('adjust_consumption', False):
+                    adjustment_notes.append("📊 ค่าโภชนาการปรับตามสัดส่วนที่บริโภคจริง")
+                if settings.get('enhance_missing', False):
+                    adjustment_notes.append("🔧 มีการเพิ่มวัตถุดิบที่ขาดหาย")
+                
+                st.info(" | ".join(adjustment_notes))
         else:
             st.info("ไม่มีข้อมูลโภชนาการ หรือเกิดข้อผิดพลาดในการคำนวณ")
     
     with tab3:
-        if nutrition_data:
+        if nutrition_data and nutrition_data.get('ingredient_details'):
             st.markdown("#### 🔬 รายละเอียดวัตถุดิบแต่ละชนิด")
             
             ingredient_df = []
             for ingredient in nutrition_data['ingredient_details']:
+                # แสดงข้อมูลการปรับค่า
+                consumption_info = ""
+                if ingredient.get('consumption_factor', 1.0) != 1.0:
+                    consumption_info = f" (ปรับ {ingredient['consumption_factor']:.0%})"
+                
+                enhanced_marker = ""
+                if ingredient.get('was_enhanced', False):
+                    enhanced_marker = " 🔧"
+                
                 ingredient_df.append({
-                    'วัตถุดิบ': ingredient['name'],
+                    'วัตถุดิบ': ingredient['name'] + enhanced_marker,
                     'ปริมาณ': f"{ingredient['quantity']} {ingredient['unit']}",
-                    'น้ำหนัก (กรัม)': f"{ingredient['grams']:.1f}",
+                    'น้ำหนัก': f"{ingredient['grams']:.1f}g",
+                    'ใช้จริง': f"{ingredient['effective_grams']:.1f}g{consumption_info}",
                     'แคลอรี่': f"{ingredient['nutrition']['calories']:.1f}",
                     'โปรตีน (g)': f"{ingredient['nutrition']['protein']:.1f}",
                     'ไขมัน (g)': f"{ingredient['nutrition']['fat']:.1f}",
-                    'วิตามิน A (IU)': f"{ingredient['nutrition']['vitamin_a']:.1f}",
-                    'วิตามิน C (mg)': f"{ingredient['nutrition']['vitamin_c']:.1f}",
-                    'วิตามิน B1 (mg)': f"{ingredient['nutrition']['vitamin_b1']:.2f}",
-                    'วิตามิน B2 (mg)': f"{ingredient['nutrition']['vitamin_b2']:.2f}",
-                    'แคลเซียม (mg)': f"{ingredient['nutrition']['calcium']:.1f}",
-                    'เหล็ก (mg)': f"{ingredient['nutrition']['iron']:.1f}",
-                    'โปแตสเซียม (mg)': f"{ingredient['nutrition']['potassium']:.1f}",
                     'โซเดียม (mg)': f"{ingredient['nutrition']['sodium']:.1f}"
                 })
             
             if ingredient_df:
                 df = pd.DataFrame(ingredient_df)
                 st.dataframe(df, use_container_width=True)
+                
+                # คำอธิบาย
+                st.markdown("""
+                **คำอธิบาย:**
+                - 🔧 = วัตถุดิบที่เพิ่มโดยระบบ
+                - ใช้จริง = ปรับตามสัดส่วนที่บริโภคจริง
+                """)
         else:
             st.info("ไม่มีข้อมูลรายละเอียดวัตถุดิบ")
 
@@ -1058,7 +1229,7 @@ def main():
     """ฟังก์ชันหลักของแอปพลิเคชัน"""
     
     st.markdown('<h1 class="main-title">Thai Food Recipe Chatbot</h1>', unsafe_allow_html=True)
-    st.markdown("### 🥘 ระบบค้นหาสูตรอาหารไทย")
+    st.markdown("### 🥘 ระบบค้นหาสูตรอาหารไทยพร้อมโภชนาการ")
     
     # เริ่มต้นระบบ
     with st.spinner("กำลังเริ่มต้นระบบที่ปรับปรุงแล้ว..."):
@@ -1114,7 +1285,7 @@ def main():
     
     # ช่องค้นหา
     search_query = st.session_state.get('search_query', '')
-    if prompt := st.chat_input("ค้นหาสูตรอาหาร เช่น 'ผัดกะเพรา' หรือ 'ไข่เจียว'... (ระบบค้นหาปรับปรุงใหม่)", key="main_chat"):
+    if prompt := st.chat_input("ค้นหาสูตรอาหาร", key="main_chat"):
         search_query = prompt
         st.session_state.search_query = ""
     
