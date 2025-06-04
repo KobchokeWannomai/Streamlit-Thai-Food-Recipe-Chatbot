@@ -6,7 +6,7 @@ import os
 from typing import Dict, List, Optional, Tuple
 
 class NutritionAPI:
-    """คลาสสำหรับจัดการข้อมูลโภชนาการจาก API และฐานข้อมูลท้องถิ่น"""
+    """คลาสสำหรับจัดการข้อมูลโภชนาการจาก API และฐานข้อมูลท้องถิ่น - เวอร์ชันปรับปรุงแล้ว"""
     
     def __init__(self):
         # URL ของ API ข้อมูลโภชนาการต่างๆ
@@ -95,7 +95,7 @@ class NutritionAPI:
             },
             "ผัด": {
                 "required": ["น้ำมันพืช 2 ช้อนโต๊ะ"],
-                "optional": ["กระเทียม 2 กลีบ"]
+                "optional": ["กระเทียม 2 กลีบ", "หอมแดง 2 หัว"]
             },
             "คั่ว": {
                 "required": ["น้ำมันพืช 1 ช้อนโต๊ะ"],
@@ -107,7 +107,7 @@ class NutritionAPI:
             },
             "แกง": {
                 "required": [],
-                "optional": ["กะทิ 200 มล"]
+                "optional": ["กะทิ 400 มล", "น้ำปลา 2 ช้อนโต๊ะ"]
             },
             "ย่าง": {
                 "required": [],
@@ -123,8 +123,20 @@ class NutritionAPI:
             },
             "ยำ": {
                 "required": [],
-                "optional": ["น้ำปลา 2 ช้อนโต๊ะ", "มะนาว 2 ผล", "น้ำตาลปึก 2 ช้อนชา"]
+                "optional": ["น้ำปลา 2 ช้อนโต๊ะ", "มะนาว 2 ผล", "น้ำตาลปึก 2 ช้อนชา", "พริกขี้หนู 3 เม็ด"]
             }
+        }
+
+        # รายการวัตถุดิบที่ขาดหายไปตามชื่อเมนู
+        self.recipe_specific_ingredients = {
+            'ไข่เจียว': ['น้ำมันหมู 2 ช้อนโต๊ะ'],
+            'ไข่ดาว': ['น้ำมันหมู 2 ช้อนโต๊ะ'],
+            'ไข่ทอด': ['น้ำมันพืช 3 ช้อนโต๊ะ'],
+            'ปลาทอด': ['น้ำมันพืช 1 ถ้วย', 'แป้งสาลี 3 ช้อนโต๊ะ'],
+            'ข้าวผัด': ['น้ำมันพืช 2 ช้อนโต๊ะ', 'ไข่ไก่ 2 ฟอง'],
+            'ผัดไทย': ['น้ำมันพืช 3 ช้อนโต๊ะ', 'ไข่ไก่ 2 ฟอง'],
+            'ก๋วยเตี๋ยว': ['น้ำซุป 2 ถ้วย'],
+            'ราดหน้า': ['น้ำมันพืช 2 ช้อนโต๊ะ', 'แป้งข้าวโพด 2 ช้อนโต๊ะ']
         }
 
     def load_local_nutrition_database(self) -> Dict:
@@ -155,11 +167,10 @@ class NutritionAPI:
                     }
                     nutrition_db[ingredient_name] = nutrition_data
                     
-                # ลบข้อความแจ้งเตือนออกไป - ไม่แสดงข้อความใดๆ
                 return nutrition_db
                 
             except Exception as e:
-                # ไม่แสดงข้อความเตือน เพื่อให้การทำงานเป็นไปอย่างเงียบๆ
+                print(f"Error loading nutrition CSV: {e}")
                 pass
         
         # หากไม่มีไฟล์ CSV ใช้ข้อมูลเริ่มต้น
@@ -168,7 +179,7 @@ class NutritionAPI:
     def get_default_nutrition_database(self) -> Dict:
         """ฐานข้อมูลโภชนาการเริ่มต้นสำหรับวัตถุดิบไทย (ต่อ 100 กรัม)"""
         return {
-            "ข้าว": {
+            "ข้าวสาร": {
                 "calories": 130, "protein": 2.7, "carbs": 28, "fat": 0.3, "fiber": 0.4,
                 "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0.07, "vitamin_b2": 0.02,
                 "calcium": 10, "iron": 0.8, "potassium": 115, "sodium": 5
@@ -183,25 +194,45 @@ class NutritionAPI:
                 "vitamin_a": 674, "vitamin_c": 0, "vitamin_b1": 0.11, "vitamin_b2": 0.44,
                 "calcium": 64, "iron": 2.7, "potassium": 222, "sodium": 146
             },
-            "กุ้ง": {
+            "กุ้งนาง": {
                 "calories": 99, "protein": 18, "carbs": 0.2, "fat": 1.4, "fiber": 0,
                 "vitamin_a": 54, "vitamin_c": 2.1, "vitamin_b1": 0.02, "vitamin_b2": 0.04,
                 "calcium": 70, "iron": 0.5, "potassium": 259, "sodium": 111
             },
-            "หมู": {
+            "กุ้งตะเข็บ": {
+                "calories": 105, "protein": 20, "carbs": 0.5, "fat": 1.8, "fiber": 0,
+                "vitamin_a": 48, "vitamin_c": 1.8, "vitamin_b1": 0.02, "vitamin_b2": 0.05,
+                "calcium": 65, "iron": 0.6, "potassium": 240, "sodium": 120
+            },
+            "เนื้อหมู": {
                 "calories": 242, "protein": 27, "carbs": 0, "fat": 14, "fiber": 0,
                 "vitamin_a": 2, "vitamin_c": 0.7, "vitamin_b1": 0.66, "vitamin_b2": 0.23,
                 "calcium": 19, "iron": 0.87, "potassium": 423, "sodium": 62
             },
-            "ไก่": {
+            "เนื้อโค": {
+                "calories": 250, "protein": 26, "carbs": 0, "fat": 15, "fiber": 0,
+                "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0.06, "vitamin_b2": 0.15,
+                "calcium": 18, "iron": 2.6, "potassium": 318, "sodium": 55
+            },
+            "เนื้อไก่": {
                 "calories": 165, "protein": 31, "carbs": 0, "fat": 3.6, "fiber": 0,
                 "vitamin_a": 21, "vitamin_c": 1.6, "vitamin_b1": 0.07, "vitamin_b2": 0.12,
                 "calcium": 15, "iron": 1.3, "potassium": 256, "sodium": 82
             },
-            "ปลา": {
+            "ปลาช่อน": {
                 "calories": 112, "protein": 18.7, "carbs": 0, "fat": 3.6, "fiber": 0,
                 "vitamin_a": 45, "vitamin_c": 0.9, "vitamin_b1": 0.02, "vitamin_b2": 0.11,
                 "calcium": 89, "iron": 0.9, "potassium": 358, "sodium": 54
+            },
+            "ปลาทู": {
+                "calories": 146, "protein": 20.1, "carbs": 0, "fat": 6.4, "fiber": 0,
+                "vitamin_a": 167, "vitamin_c": 0, "vitamin_b1": 0.1, "vitamin_b2": 0.23,
+                "calcium": 150, "iron": 1.2, "potassium": 240, "sodium": 76
+            },
+            "ปลาหมึก": {
+                "calories": 92, "protein": 15.6, "carbs": 3.1, "fat": 1.4, "fiber": 0,
+                "vitamin_a": 33, "vitamin_c": 4.8, "vitamin_b1": 0.02, "vitamin_b2": 0.4,
+                "calcium": 32, "iron": 0.7, "potassium": 246, "sodium": 44
             },
             "น้ำมันหมู": {
                 "calories": 902, "protein": 0, "carbs": 0, "fat": 100, "fiber": 0,
@@ -213,35 +244,65 @@ class NutritionAPI:
                 "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
                 "calcium": 0, "iron": 0, "potassium": 0, "sodium": 0
             },
+            "น้ำมันมะพร้าว": {
+                "calories": 862, "protein": 0, "carbs": 0, "fat": 100, "fiber": 0,
+                "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
+                "calcium": 0, "iron": 0, "potassium": 0, "sodium": 0
+            },
             "กระเทียม": {
                 "calories": 149, "protein": 6.4, "carbs": 33, "fat": 0.5, "fiber": 2.1,
                 "vitamin_a": 9, "vitamin_c": 31, "vitamin_b1": 0.2, "vitamin_b2": 0.11,
                 "calcium": 181, "iron": 1.7, "potassium": 401, "sodium": 17
             },
-            "หอมใหญ่": {
+            "หอมแดง": {
                 "calories": 40, "protein": 1.1, "carbs": 9.3, "fat": 0.1, "fiber": 1.7,
                 "vitamin_a": 2, "vitamin_c": 7.4, "vitamin_b1": 0.05, "vitamin_b2": 0.03,
                 "calcium": 23, "iron": 0.21, "potassium": 146, "sodium": 4
+            },
+            "หอมใหญ่": {
+                "calories": 42, "protein": 1.2, "carbs": 9.9, "fat": 0.1, "fiber": 1.9,
+                "vitamin_a": 0, "vitamin_c": 8.1, "vitamin_b1": 0.05, "vitamin_b2": 0.03,
+                "calcium": 25, "iron": 0.25, "potassium": 157, "sodium": 4
             },
             "ผักชี": {
                 "calories": 23, "protein": 2.1, "carbs": 3.7, "fat": 0.5, "fiber": 2.8,
                 "vitamin_a": 3377, "vitamin_c": 27, "vitamin_b1": 0.07, "vitamin_b2": 0.16,
                 "calcium": 67, "iron": 1.77, "potassium": 521, "sodium": 46
             },
+            "ต้นหอม": {
+                "calories": 32, "protein": 1.8, "carbs": 7.3, "fat": 0.2, "fiber": 2.6,
+                "vitamin_a": 997, "vitamin_c": 18.8, "vitamin_b1": 0.05, "vitamin_b2": 0.08,
+                "calcium": 72, "iron": 1.5, "potassium": 276, "sodium": 16
+            },
             "พริกไทย": {
                 "calories": 251, "protein": 10.4, "carbs": 64, "fat": 3.3, "fiber": 25,
                 "vitamin_a": 547, "vitamin_c": 0, "vitamin_b1": 0.11, "vitamin_b2": 0.18,
                 "calcium": 443, "iron": 9.7, "potassium": 1329, "sodium": 20
+            },
+            "พริกแห้ง": {
+                "calories": 324, "protein": 12, "carbs": 56, "fat": 17, "fiber": 28.7,
+                "vitamin_a": 21600, "vitamin_c": 76.4, "vitamin_b1": 0.33, "vitamin_b2": 0.92,
+                "calcium": 148, "iron": 7.8, "potassium": 1870, "sodium": 91
+            },
+            "พริกสด": {
+                "calories": 40, "protein": 1.9, "carbs": 9.5, "fat": 0.4, "fiber": 1.5,
+                "vitamin_a": 952, "vitamin_c": 144, "vitamin_b1": 0.07, "vitamin_b2": 0.09,
+                "calcium": 14, "iron": 1.03, "potassium": 322, "sodium": 9
             },
             "น้ำปลา": {
                 "calories": 42, "protein": 5.8, "carbs": 1.5, "fat": 0.8, "fiber": 0,
                 "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0.03, "vitamin_b2": 0.22,
                 "calcium": 85, "iron": 2.03, "potassium": 84, "sodium": 6976
             },
-            "น้ำตาล": {
+            "น้ำตาลทราย": {
                 "calories": 387, "protein": 0, "carbs": 100, "fat": 0, "fiber": 0,
                 "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
                 "calcium": 1, "iron": 0.01, "potassium": 2, "sodium": 1
+            },
+            "น้ำตาลปึก": {
+                "calories": 375, "protein": 0.1, "carbs": 97, "fat": 0.1, "fiber": 0,
+                "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0.01, "vitamin_b2": 0.01,
+                "calcium": 85, "iron": 1.9, "potassium": 133, "sodium": 39
             },
             "มะนาว": {
                 "calories": 29, "protein": 0.7, "carbs": 9.3, "fat": 0.2, "fiber": 2.8,
@@ -266,9 +327,6 @@ class NutritionAPI:
             if source == "usda":
                 self.api_credentials[source]["api_key"] = api_key
                 self.current_api_source = source
-            elif source in ["nutritionix", "edamam"]:
-                # สำหรับ API ที่ต้องการ app_id และ app_key
-                pass  # จะตั้งค่าใน method แยก
 
     def set_nutritionix_credentials(self, app_id: str, app_key: str):
         """ตั้งค่า credentials สำหรับ Nutritionix API"""
@@ -282,210 +340,6 @@ class NutritionAPI:
         self.api_credentials["edamam"]["app_key"] = app_key
         self.current_api_source = "edamam"
 
-    def search_ingredient_api(self, ingredient: str) -> Optional[Dict]:
-        """ค้นหาข้อมูลโภชนาการจาก API แหล่งต่างๆ"""
-        if self.current_api_source == "usda":
-            return self.search_usda_api(ingredient)
-        elif self.current_api_source == "nutritionix":
-            return self.search_nutritionix_api(ingredient)
-        elif self.current_api_source == "edamam":
-            return self.search_edamam_api(ingredient)
-        return None
-
-    def search_usda_api(self, ingredient: str) -> Optional[Dict]:
-        """ค้นหาข้อมูลจาก USDA FoodData Central API"""
-        api_key = self.api_credentials["usda"]["api_key"]
-        if not api_key:
-            return None
-            
-        try:
-            # ค้นหาในฐานข้อมูล USDA
-            search_url = f"{self.api_urls['usda']}/foods/search"
-            params = {
-                "api_key": api_key,
-                "query": ingredient,
-                "dataType": ["Foundation", "SR Legacy"],
-                "pageSize": 1
-            }
-            
-            response = requests.get(search_url, params=params, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("foods"):
-                    food_id = data["foods"][0]["fdcId"]
-                    return self.get_usda_nutrition_details(food_id)
-            return None
-            
-        except Exception as e:
-            # ไม่แสดงข้อความเตือน เพื่อให้การทำงานเป็นไปอย่างเงียบๆ
-            return None
-
-    def search_nutritionix_api(self, ingredient: str) -> Optional[Dict]:
-        """ค้นหาข้อมูลจาก Nutritionix API"""
-        credentials = self.api_credentials["nutritionix"]
-        if not credentials["app_id"] or not credentials["app_key"]:
-            return None
-            
-        try:
-            search_url = f"{self.api_urls['nutritionix']}/natural/nutrients"
-            headers = {
-                "x-app-id": credentials["app_id"],
-                "x-app-key": credentials["app_key"],
-                "Content-Type": "application/json"
-            }
-            
-            data = {"query": f"100g {ingredient}"}
-            
-            response = requests.post(search_url, headers=headers, json=data, timeout=10)
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("foods"):
-                    food = result["foods"][0]
-                    return self.parse_nutritionix_data(food)
-            return None
-            
-        except Exception as e:
-            # ไม่แสดงข้อความเตือน
-            return None
-
-    def search_edamam_api(self, ingredient: str) -> Optional[Dict]:
-        """ค้นหาข้อมูลจาก Edamam API"""
-        credentials = self.api_credentials["edamam"]
-        if not credentials["app_id"] or not credentials["app_key"]:
-            return None
-            
-        try:
-            params = {
-                "app_id": credentials["app_id"],
-                "app_key": credentials["app_key"],
-                "ingr": f"100g {ingredient}"
-            }
-            
-            response = requests.get(self.api_urls["edamam"], params=params, timeout=10)
-            if response.status_code == 200:
-                result = response.json()
-                return self.parse_edamam_data(result)
-            return None
-            
-        except Exception as e:
-            # ไม่แสดงข้อความเตือน
-            return None
-
-    def get_usda_nutrition_details(self, food_id: int) -> Optional[Dict]:
-        """ดึงรายละเอียดโภชนาการจาก USDA API"""
-        api_key = self.api_credentials["usda"]["api_key"]
-        try:
-            detail_url = f"{self.api_urls['usda']}/food/{food_id}"
-            params = {"api_key": api_key}
-            
-            response = requests.get(detail_url, params=params, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                return self.parse_usda_nutrition_data(data)
-            return None
-            
-        except Exception as e:
-            # ไม่แสดงข้อความเตือน
-            return None
-
-    def parse_usda_nutrition_data(self, data: Dict) -> Dict:
-        """แปลงข้อมูลโภชนาการจาก USDA เป็นรูปแบบมาตรฐาน"""
-        nutrients = {}
-        
-        # แปลงข้อมูลโภชนาการ
-        for nutrient in data.get("foodNutrients", []):
-            nutrient_name = nutrient.get("nutrient", {}).get("name", "")
-            value = nutrient.get("amount", 0)
-            
-            # แปลงเป็นรูปแบบที่ใช้ในระบบ
-            if "Energy" in nutrient_name and "kJ" not in nutrient_name:
-                nutrients["calories"] = value
-            elif "Protein" in nutrient_name:
-                nutrients["protein"] = value
-            elif "Carbohydrate" in nutrient_name and "by difference" in nutrient_name:
-                nutrients["carbs"] = value
-            elif "Total lipid" in nutrient_name or "Fat" in nutrient_name:
-                nutrients["fat"] = value
-            elif "Fiber" in nutrient_name:
-                nutrients["fiber"] = value
-            elif "Vitamin A" in nutrient_name and "IU" in nutrient_name:
-                nutrients["vitamin_a"] = value
-            elif "Vitamin C" in nutrient_name:
-                nutrients["vitamin_c"] = value
-            elif "Thiamin" in nutrient_name:
-                nutrients["vitamin_b1"] = value
-            elif "Riboflavin" in nutrient_name:
-                nutrients["vitamin_b2"] = value
-            elif "Calcium" in nutrient_name:
-                nutrients["calcium"] = value
-            elif "Iron" in nutrient_name:
-                nutrients["iron"] = value
-            elif "Potassium" in nutrient_name:
-                nutrients["potassium"] = value
-            elif "Sodium" in nutrient_name:
-                nutrients["sodium"] = value
-        
-        # เติมค่าที่ขาดหาย
-        default_nutrients = {
-            "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0,
-            "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
-            "calcium": 0, "iron": 0, "potassium": 0, "sodium": 0
-        }
-        
-        for key, default_value in default_nutrients.items():
-            if key not in nutrients:
-                nutrients[key] = default_value
-        
-        return nutrients
-
-    def parse_nutritionix_data(self, food_data: Dict) -> Dict:
-        """แปลงข้อมูลจาก Nutritionix API"""
-        nutrients = {
-            "calories": food_data.get("nf_calories", 0),
-            "protein": food_data.get("nf_protein", 0),
-            "carbs": food_data.get("nf_total_carbohydrate", 0),
-            "fat": food_data.get("nf_total_fat", 0),
-            "fiber": food_data.get("nf_dietary_fiber", 0),
-            "vitamin_a": 0,  # Nutritionix ไม่มีข้อมูลวิตามินโดยตรง
-            "vitamin_c": 0,
-            "vitamin_b1": 0,
-            "vitamin_b2": 0,
-            "calcium": 0,
-            "iron": 0,
-            "potassium": food_data.get("nf_potassium", 0),
-            "sodium": food_data.get("nf_sodium", 0)
-        }
-        return nutrients
-
-    def parse_edamam_data(self, result: Dict) -> Dict:
-        """แปลงข้อมูลจาก Edamam API"""
-        nutrients_map = {
-            "ENERC_KCAL": "calories",
-            "PROCNT": "protein",
-            "CHOCDF": "carbs",
-            "FAT": "fat",
-            "FIBTG": "fiber",
-            "VITA_RAE": "vitamin_a",
-            "VITC": "vitamin_c",
-            "THIA": "vitamin_b1",
-            "RIBF": "vitamin_b2",
-            "CA": "calcium",
-            "FE": "iron",
-            "K": "potassium",
-            "NA": "sodium"
-        }
-        
-        nutrients = {}
-        total_nutrients = result.get("totalNutrients", {})
-        
-        for edamam_key, our_key in nutrients_map.items():
-            if edamam_key in total_nutrients:
-                nutrients[our_key] = total_nutrients[edamam_key].get("quantity", 0)
-            else:
-                nutrients[our_key] = 0
-        
-        return nutrients
-
     def normalize_ingredient_name(self, ingredient: str) -> str:
         """ปรับแต่งชื่อวัตถุดิบให้เป็นมาตรฐาน"""
         # ลบข้อความที่ไม่จำเป็น
@@ -495,20 +349,26 @@ class NutritionAPI:
         
         # แปลงคำพ้องความหมาย
         synonyms = {
-            "กุ้งนาง": "กุ้ง", "กุ้งตะเข็บ": "กุ้ง", "กุ้งฝอย": "กุ้ง",
-            "เนื้อหมู": "หมู", "หมูสับ": "หมู", "สันในหมู": "หมู",
-            "เนื้อโค": "เนื้อ", "เนื้อวัว": "เนื้อ",
-            "เนื้อไก่": "ไก่", "ไก่สับ": "ไก่", "อกไก่": "ไก่",
-            "หอมหัวใหญ่": "หอมใหญ่", "หอมหัวเล็ก": "หอมแดง", "หัวหอม": "หอมแดง",
-            "น้ำมันรำ": "น้ำมันพืช", "น้ำมันมะพร้าว": "น้ำมันพืช", "น้ำมันถั่วเหลือง": "น้ำมันพืช",
-            "น้ำตาลทราย": "น้ำตาล", "น้ำตาลขาว": "น้ำตาล", "น้ำตาลแดง": "น้ำตาล",
-            "ใบผักชี": "ผักชี", "รากผักชี": "ผักชี",
-            "ต้นหอม": "หอมใหญ่", "ใบต้นหอม": "หอมใหญ่"
+            "กุ้ง": ["กุ้งนาง", "กุ้งตะเข็บ", "กุ้งฝอย"],
+            "หมู": ["เนื้อหมู", "หมูสับ", "สันในหมู"],
+            "เนื้อ": ["เนื้อโค", "เนื้อวัว"],
+            "ไก่": ["เนื้อไก่", "ไก่สับ", "อกไก่"],
+            "หอมใหญ่": ["หอมหัวใหญ่"],
+            "หอมแดง": ["หอมหัวเล็ก", "หัวหอม"],
+            "น้ำมันพืช": ["น้ำมันรำ", "น้ำมันถั่วเหลือง"],
+            "น้ำตาล": ["น้ำตาลทราย", "น้ำตาลขาว", "น้ำตาลแดง"],
+            "ผักชี": ["ใบผักชี", "รากผักชี"]
         }
         
-        for synonym, standard in synonyms.items():
-            if synonym in ingredient:
-                ingredient = ingredient.replace(synonym, standard)
+        # หาและแทนที่คำพ้องความหมาย
+        for standard, variants in synonyms.items():
+            for variant in variants:
+                if variant in ingredient:
+                    ingredient = ingredient.replace(variant, standard)
+                    break
+            if ingredient in variants:
+                ingredient = standard
+                break
         
         return ingredient
 
@@ -667,35 +527,45 @@ class NutritionAPI:
         # หากไม่พบหน่วย ใช้ค่าตามที่ระบุ (สมมติเป็นกรัม)
         return quantity
 
-    def enhance_missing_ingredients(self, ingredients_text: str, recipe_name: str, 
-                                  method_text: str) -> str:
-        """เพิ่มวัตถุดิบที่ขาดหายไปตามวิธีการทำ"""
+    def enhance_missing_ingredients(self, ingredients_text: str, recipe_name: str = "", method_text: str = "") -> str:
+        """เพิ่มวัตถุดิบที่ขาดหายไปตามวิธีการทำและชื่อเมนู"""
         enhanced_ingredients = ingredients_text
         missing_ingredients = []
         
-        method_lower = method_text.lower()
-        ingredients_lower = ingredients_text.lower()
+        method_lower = method_text.lower() if method_text else ""
+        ingredients_lower = ingredients_text.lower() if ingredients_text else ""
+        recipe_name_lower = recipe_name.lower() if recipe_name else ""
         
         # ตรวจสอบวิธีการทำและเพิ่มวัตถุดิบที่ขาดหาย
         for cooking_method, ingredients_dict in self.missing_ingredients_by_cooking_method.items():
             if cooking_method in method_lower:
                 # วัตถุดิบจำเป็น
                 for ingredient in ingredients_dict["required"]:
-                    ingredient_name = ingredient.split()[0]
+                    ingredient_name = ingredient.split()[0]  # เอาชื่อวัตถุดิบ
                     if ingredient_name not in ingredients_lower:
                         missing_ingredients.append(f"- {ingredient}")
                 
-                # วัตถุดิบเสริม (ถ้าไม่มีข้อมูลมาก)
-                if len(ingredients_text.split('\n')) < 5:  # ถ้ามีวัตถุดิบน้อย
+                # วัตถุดิบเสริม (หากรายการวัตถุดิบน้อย)
+                if len(ingredients_text.split('\n')) <= 5:
                     for ingredient in ingredients_dict["optional"]:
                         ingredient_name = ingredient.split()[0]
                         if ingredient_name not in ingredients_lower:
                             missing_ingredients.append(f"- {ingredient}")
         
+        # ตรวจสอบชื่อเมนูและเพิ่มวัตถุดิบที่ขาดหาย
+        for recipe_pattern, required_ingredients in self.recipe_specific_ingredients.items():
+            if recipe_pattern in recipe_name_lower:
+                for ingredient in required_ingredients:
+                    ingredient_name = ingredient.split()[0]
+                    if ingredient_name not in ingredients_lower:
+                        missing_ingredients.append(f"- {ingredient}")
+        
         # เพิ่มวัตถุดิบที่ขาดหาย
         if missing_ingredients:
-            enhanced_ingredients += '\n' + '\n'.join(missing_ingredients)
-            
+            if enhanced_ingredients and not enhanced_ingredients.endswith('\n'):
+                enhanced_ingredients += '\n'
+            enhanced_ingredients += '\n'.join(missing_ingredients)
+        
         return enhanced_ingredients
 
     def get_nutrition_data(self, ingredient: str, use_api: bool = True) -> Optional[Dict]:
@@ -716,6 +586,109 @@ class NutritionAPI:
         
         # หากไม่พบ ให้ค่าประมาณการตามประเภทวัตถุดิบ
         return self.estimate_nutrition_by_type(normalized_ingredient)
+
+    def search_ingredient_api(self, ingredient: str) -> Optional[Dict]:
+        """ค้นหาข้อมูลโภชนาการจาก API แหล่งต่างๆ"""
+        if self.current_api_source == "usda":
+            return self.search_usda_api(ingredient)
+        elif self.current_api_source == "nutritionix":
+            return self.search_nutritionix_api(ingredient)
+        elif self.current_api_source == "edamam":
+            return self.search_edamam_api(ingredient)
+        return None
+
+    def search_usda_api(self, ingredient: str) -> Optional[Dict]:
+        """ค้นหาข้อมูลจาก USDA FoodData Central API"""
+        api_key = self.api_credentials["usda"]["api_key"]
+        if not api_key:
+            return None
+            
+        try:
+            # ค้นหาในฐานข้อมูล USDA
+            search_url = f"{self.api_urls['usda']}/foods/search"
+            params = {
+                "api_key": api_key,
+                "query": ingredient,
+                "dataType": ["Foundation", "SR Legacy"],
+                "pageSize": 1
+            }
+            
+            response = requests.get(search_url, params=params, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("foods"):
+                    food_id = data["foods"][0]["fdcId"]
+                    return self.get_usda_nutrition_details(food_id)
+            return None
+            
+        except Exception as e:
+            return None
+
+    def get_usda_nutrition_details(self, food_id: int) -> Optional[Dict]:
+        """ดึงรายละเอียดโภชนาการจาก USDA API"""
+        api_key = self.api_credentials["usda"]["api_key"]
+        try:
+            detail_url = f"{self.api_urls['usda']}/food/{food_id}"
+            params = {"api_key": api_key}
+            
+            response = requests.get(detail_url, params=params, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                return self.parse_usda_nutrition_data(data)
+            return None
+            
+        except Exception as e:
+            return None
+
+    def parse_usda_nutrition_data(self, data: Dict) -> Dict:
+        """แปลงข้อมูลโภชนาการจาก USDA เป็นรูปแบบมาตรฐาน"""
+        nutrients = {}
+        
+        # แปลงข้อมูลโภชนาการ
+        for nutrient in data.get("foodNutrients", []):
+            nutrient_name = nutrient.get("nutrient", {}).get("name", "")
+            value = nutrient.get("amount", 0)
+            
+            # แปลงเป็นรูปแบบที่ใช้ในระบบ
+            if "Energy" in nutrient_name and "kJ" not in nutrient_name:
+                nutrients["calories"] = value
+            elif "Protein" in nutrient_name:
+                nutrients["protein"] = value
+            elif "Carbohydrate" in nutrient_name and "by difference" in nutrient_name:
+                nutrients["carbs"] = value
+            elif "Total lipid" in nutrient_name or "Fat" in nutrient_name:
+                nutrients["fat"] = value
+            elif "Fiber" in nutrient_name:
+                nutrients["fiber"] = value
+            elif "Vitamin A" in nutrient_name and "IU" in nutrient_name:
+                nutrients["vitamin_a"] = value
+            elif "Vitamin C" in nutrient_name:
+                nutrients["vitamin_c"] = value
+            elif "Thiamin" in nutrient_name:
+                nutrients["vitamin_b1"] = value
+            elif "Riboflavin" in nutrient_name:
+                nutrients["vitamin_b2"] = value
+            elif "Calcium" in nutrient_name:
+                nutrients["calcium"] = value
+            elif "Iron" in nutrient_name:
+                nutrients["iron"] = value
+            elif "Potassium" in nutrient_name:
+                nutrients["potassium"] = value
+            elif "Sodium" in nutrient_name:
+                nutrients["sodium"] = value
+        
+        # เติมค่าที่ขาดหาย
+        default_nutrients = {
+            "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0,
+            "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
+            "calcium": 0, "iron": 0, "potassium": 0, "sodium": 0
+        }
+        
+        for key, default_value in default_nutrients.items():
+            if key not in nutrients:
+                nutrients[key] = default_value
+        
+        return nutrients
 
     def estimate_nutrition_by_type(self, ingredient: str) -> Dict:
         """ประมาณค่าโภชนาการตามประเภทวัตถุดิบ"""
@@ -754,15 +727,14 @@ class NutritionAPI:
 
     def calculate_recipe_nutrition(self, ingredients_text: str, use_api: bool = True, 
                                  adjust_consumption: bool = True, 
-                                 enhance_missing: bool = False) -> Dict:
+                                 enhance_missing: bool = False,
+                                 recipe_name: str = "", method_text: str = "") -> Dict:
         """คำนวณค่าโภชนาการของสูตรอาหารอย่างครอบคลุม"""
         
         # เพิ่มวัตถุดิบที่ขาดหาย (หากเปิดใช้งาน)
+        original_ingredients = ingredients_text
         if enhance_missing:
-            # สำหรับเมนูที่ต้องการเพิ่มวัตถุดิบ อาจต้องข้อมูลเพิ่มเติม
-            # ในที่นี้เราจะเพิ่มการประมาณการง่ายๆ
-            if "ทอด" in ingredients_text.lower() and "น้ำมัน" not in ingredients_text.lower():
-                ingredients_text += "\n- น้ำมันพืช 3 ช้อนโต๊ะ"
+            ingredients_text = self.enhance_missing_ingredients(ingredients_text, recipe_name, method_text)
         
         total_nutrition = {
             "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0,
@@ -789,8 +761,13 @@ class NutritionAPI:
             grams = self.convert_to_grams(quantity, unit, ingredient_name)
             
             # ปรับสัดส่วนการบริโภค (หากเปิดใช้งาน)
+            consumption_factor = 1.0
             if adjust_consumption:
-                consumption_factor = self.consumption_ratio.get(ingredient_name, 1.0)
+                # ตรวจสอบชื่อวัตถุดิบใน consumption_ratio
+                for ratio_ingredient, ratio in self.consumption_ratio.items():
+                    if ratio_ingredient in ingredient_name.lower():
+                        consumption_factor = ratio
+                        break
                 effective_grams = grams * consumption_factor
             else:
                 effective_grams = grams
@@ -814,13 +791,14 @@ class NutritionAPI:
                     "unit": unit,
                     "grams": grams,
                     "effective_grams": effective_grams,
-                    "consumption_factor": consumption_factor if adjust_consumption else 1.0,
+                    "consumption_factor": consumption_factor,
                     "nutrition": ingredient_nutrition
                 })
         
         return {
             "total_nutrition": total_nutrition,
             "ingredient_details": ingredient_details,
+            "enhanced_ingredients": ingredients_text if enhance_missing and ingredients_text != original_ingredients else None,
             "settings": {
                 "use_api": use_api,
                 "adjust_consumption": adjust_consumption,
