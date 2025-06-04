@@ -558,5 +558,22 @@ def main():
         print("\n❌ การประมวลผลล้มเหลว")
         print("💡 กรุณาตรวจสอบข้อผิดพลาดข้างต้นและลองใหม่")
 
+# Import NutritionAPI จากไฟล์ที่ปรับปรุงแล้ว
+try:
+    from nutrition_api import NutritionAPI
+except ImportError:
+    print("⚠️  ไม่พบไฟล์ nutrition_api.py หรือมีปัญหาการ import")
+    print("💡 กรุณาตรวจสอบว่าไฟล์ nutrition_api.py อยู่ในโฟลเดอร์เดียวกัน")
+    
+    # สร้าง NutritionAPI แบบง่าย
+    class NutritionAPI:
+        def __init__(self):
+            pass
+        def calculate_recipe_nutrition(self, *args, **kwargs):
+            return {"total_nutrition": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0,
+                                      "vitamin_a": 0, "vitamin_c": 0, "vitamin_b1": 0, "vitamin_b2": 0,
+                                      "calcium": 0, "iron": 0, "potassium": 0, "sodium": 0}}
+    print("✅ ใช้ NutritionAPI แบบพื้นฐานแทน")
+
 if __name__ == "__main__":
     main()
