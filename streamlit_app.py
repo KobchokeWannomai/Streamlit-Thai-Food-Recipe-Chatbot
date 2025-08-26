@@ -87,29 +87,6 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    .vitamin-mineral-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin: 1rem 0;
-    }
-    
-    .vitamin-item {
-        background: #e3f2fd;
-        border-left: 4px solid #2196f3;
-        padding: 0.5rem;
-        border-radius: 5px;
-        font-size: 0.9rem;
-    }
-    
-    .mineral-item {
-        background: #fff3e0;
-        border-left: 4px solid #ff9800;
-        padding: 0.5rem;
-        border-radius: 5px;
-        font-size: 0.9rem;
-    }
-    
     .search-tips {
         background: #f0f8ff;
         border: 1px solid #b3d9ff;
@@ -288,8 +265,29 @@ def load_food_data():
             df = df.rename(columns={'food_method': 'method'})
         return df
     else:
-        st.error("ไม่พบไฟล์ข้อมูลอาหาร กรุณาตรวจสอบไฟล์ thai_food_processed.csv หรือ thai_food_processed_cleaned.csv")
-        return pd.DataFrame()
+        st.warning("ไม่พบไฟล์ข้อมูลอาหาร - ใช้ข้อมูลตัวอย่าง")
+        return create_sample_data()
+
+def create_sample_data():
+    """สร้างข้อมูลตัวอย่างเมื่อไม่มีไฟล์หลัก"""
+    sample = {
+        'name': ['ต้มยำกุ้ง', 'ผัดไทย', 'แกงเผ็ดไก่', 'ส้มตำ', 'ข้าวผัด'],
+        'ingredient': [
+            '- กุ้งสด 200 กรัม\n- เห็ดฟาง 100 กรัม\n- มะนาว 2 ลูก\n- พริกขี้หนู 3 เม็ด\n- ตะไคร้ 2 ต้น',
+            '- เส้นหมี่แห้ง 200 กรัม\n- ไข่ไก่ 2 ฟอง\n- ถั่วงอก 100 กรัม\n- กุ้งแห้ง 2 ช้อนโต๊ะ\n- น้ำตาลปี๊บ 2 ช้อนโต๊ะ',
+            '- เนื้อไก่ 300 กรัม\n- มะเขือเปราะ 3 ลูก\n- พริกแกงเผ็ด 3 ช้อนโต๊ะ\n- กะทิ 400 มล.\n- ใบโหระพา',
+            '- มะละกอดิบ 300 กรัม\n- มะเขือเทศ 2 ลูก\n- ถั่วฝักยาว 50 กรัม\n- กุ้งแห้ง 1 ช้อนโต๊ะ\n- พริกขี้หนู 5 เม็ด',
+            '- ข้าวสวย 2 ถ้วย\n- ไข่ไก่ 2 ฟอง\n- หมูหั่นเต็ม 100 กรัม\n- ข้าวโพดอ่อน 50 กรัม\n- หอมใหญ่ 1 หัว'
+        ],
+        'method': [
+            'ต้มน้ำให้เดือด ใส่ตะไคร้ ใส่กุ้งและเห็ด ปรุงรสด้วยมะนาวและพริก',
+            'แช่เส้นหมี่ให้นิ่ม ผัดไข่ให้สุก ใส่เส้นหมี่ลงผัด ปรุงรสและใส่ถั่วงอก', 
+            'ผัดพริกแกงกับกะทิให้หอม ใส่เนื้อไก่ ใส่มะเขือ ปรุงรสและใส่ใบโหระพา',
+            'โขลกพริกขี้หนูกับกุ้งแห้ง ใส่มะละกอตำให้พอแหลก ใส่มะเขือเทศและถั่วฝักยาว ปรุงรส',
+            'ตั้งกะทะใส่น้ำมัน ผัดไข่ให้สุก ใส่หมูผัดจนสุก ใส่ข้าวและข้าวโพด ปรุงรสตามชอบ'
+        ]
+    }
+    return pd.DataFrame(sample)
 
 # ฟังก์ชันดึง embeddings
 @st.cache_data
@@ -350,6 +348,9 @@ def get_tfidf_embeddings(data):
         embeddings = vectorizer.fit_transform(texts).toarray()
         return embeddings
     else:
+        # Simple word-based similarity (fallback)
+        return create_simple_embeddings(texts)
+
 def create_simple_embeddings(texts):
     """สร้าง simple embeddings โดยใช้ word count"""
     # สร้าง vocabulary จากคำทั้งหมด
@@ -388,44 +389,102 @@ def simple_cosine_similarity(query_vec, embeddings):
 
 # ฟังก์ชันค้นหาสูตรอาหาร
 def search_recipes(query: str, model, data: pd.DataFrame, embeddings, top_k: int = 5):
-    """ค้นหาสูตরอาหารตามคำถาม"""
-    if model is None or data.empty or len(embeddings) == 0:
+    """ค้นหาสูตรอาหารตามคำถาม"""
+    if data.empty:
         return []
     
-    # ค้นหาแบบ semantic search
-    query_embedding = model.encode([query])
-    similarities = cosine_similarity(query_embedding, embeddings)[0]
-    top_indices = np.argsort(-similarities)[:top_k]
-    
     results = []
-    for idx in top_indices:
-        if idx < len(data):
-            results.append({
-                'name': data.iloc[idx]['name'],
-                'similarity': similarities[idx],
-                'ingredients': data.iloc[idx].get('ingredient', ''),
-                'method': data.iloc[idx].get('method', ''),
-                'index': idx
-            })
     
-    # ถ้าผลลัพธ์ไม่ดี ลองค้นหาแบบ fuzzy
-    if not results or results[0]['similarity'] < 0.3:
-        food_names = data['name'].tolist()
-        close_matches = difflib.get_close_matches(query, food_names, n=top_k, cutoff=0.4)
+    # ถ้ามี AI model ใช้ semantic search
+    if model is not None and SENTENCE_TRANSFORMERS_AVAILABLE and len(embeddings) > 0:
+        query_embedding = model.encode([query])
+        if SKLEARN_AVAILABLE:
+            similarities = cosine_similarity(query_embedding, embeddings)[0]
+        else:
+            similarities = simple_cosine_similarity(query_embedding[0], embeddings)
         
-        for match in close_matches:
-            idx = data[data['name'] == match].index[0]
-            similarity = difflib.SequenceMatcher(None, query, match).ratio()
-            results.append({
-                'name': match,
-                'similarity': similarity,
-                'ingredients': data.iloc[idx].get('ingredient', ''),
-                'method': data.iloc[idx].get('method', ''),
-                'index': idx,
-                'type': 'fuzzy'
-            })
+        top_indices = np.argsort(-similarities)[:top_k]
+        
+        for idx in top_indices:
+            if idx < len(data):
+                results.append({
+                    'name': data.iloc[idx]['name'],
+                    'similarity': similarities[idx],
+                    'ingredients': data.iloc[idx].get('ingredient', ''),
+                    'method': data.iloc[idx].get('method', ''),
+                    'index': idx,
+                    'type': 'semantic'
+                })
+    
+    # ถ้าไม่มีผลลัพธ์ดี หรือไม่มี AI model ใช้ fuzzy search
+    if not results or (results and results[0]['similarity'] < 0.3) or model is None:
+        fuzzy_results = fuzzy_search_recipes(query, data, top_k)
+        
+        if not results:
+            results = fuzzy_results
+        else:
+            # รวมผลลัพธ์และเรียงตามความเกี่ยวข้อง
+            all_results = results + fuzzy_results
+            # ลบรายการซ้ำ
+            seen_indices = set()
+            unique_results = []
+            for result in all_results:
+                if result['index'] not in seen_indices:
+                    unique_results.append(result)
+                    seen_indices.add(result['index'])
+            
+            results = sorted(unique_results, key=lambda x: x['similarity'], reverse=True)[:top_k]
     
     return results
+
+def fuzzy_search_recipes(query: str, data: pd.DataFrame, top_k: int = 5) -> List[Dict]:
+    """ค้นหาแบบ fuzzy matching"""
+    food_names = data['name'].tolist()
+    close_matches = difflib.get_close_matches(query, food_names, n=top_k, cutoff=0.3)
+    
+    results = []
+    for match in close_matches:
+        idx = data[data['name'] == match].index[0]
+        # คำนวณความคล้ายคลึงจาก difflib
+        similarity = difflib.SequenceMatcher(None, query.lower(), match.lower()).ratio()
+        
+        results.append({
+            'name': match,
+            'similarity': similarity,
+            'ingredients': data.iloc[idx].get('ingredient', ''),
+            'method': data.iloc[idx].get('method', ''),
+            'index': idx,
+            'type': 'fuzzy'
+        })
+    
+    # หากยังไม่พบ ค้นหาในส่วนผสมและวิธีทำ
+    if len(results) < top_k:
+        for idx, row in data.iterrows():
+            name = str(row['name']).lower()
+            ingredients = str(row.get('ingredient', '')).lower()
+            method = str(row.get('method', '')).lower()
+            
+            # ค้นหาคำที่คล้าย
+            query_lower = query.lower()
+            name_score = difflib.SequenceMatcher(None, query_lower, name).ratio()
+            ingredient_score = max([difflib.SequenceMatcher(None, query_lower, word).ratio() 
+                                  for word in ingredients.split()] + [0])
+            method_score = max([difflib.SequenceMatcher(None, query_lower, word).ratio() 
+                               for word in method.split()] + [0])
+            
+            max_score = max(name_score, ingredient_score, method_score)
+            
+            if max_score > 0.4 and idx not in [r['index'] for r in results]:
+                results.append({
+                    'name': row['name'],
+                    'similarity': max_score,
+                    'ingredients': row.get('ingredient', ''),
+                    'method': row.get('method', ''),
+                    'index': idx,
+                    'type': 'content_match'
+                })
+    
+    return sorted(results, key=lambda x: x['similarity'], reverse=True)[:top_k]
 
 # ฟังก์ชันแสดงผลโภชนาการ
 def display_nutrition_card(nutrition_data: Dict, title: str = "ค่าโภชนาการ"):
@@ -512,8 +571,7 @@ def main():
         data = load_food_data()
         
         if data.empty:
-            st.error("ไม่สามารถโหลดข้อมูลอาหารได้ กรุณาตรวจสอบไฟล์ข้อมูล")
-            st.info("📁 กรุณาเตรียมไฟล์ thai_food_processed.csv หรือ thai_food_processed_cleaned.csv")
+            st.error("ไม่สามารถโหลดข้อมูลอาหารได้")
             return
         
         embeddings = get_embeddings(model, data)
@@ -574,6 +632,7 @@ def main():
     with tab1:
         st.markdown("## ค้นหาสูตรอาหารและวิเคราะห์คุณค่าทางโภชนาการ")
         
+        # แสดงเคล็ดลับการค้นหา
         st.markdown("""
         <div class="search-tips">
             <h4>💡 เคล็ดลับการค้นหา:</h4>
@@ -832,13 +891,35 @@ def main():
         # ข้อมูลเพิ่มเติม
         st.markdown("### 🚀 การพัฒนาต่อ")
         
-        st.info("""
-        **ฟีเจอร์ที่กำลังพัฒนา:**
-        - รวมข้อมูลจาก USDA FoodData Central
-        - การคำนวณโภชนาการที่แม่นยำขึ้น
-        - การแนะนำอาหารตามความต้องการเฉพาะ
-        - รองรับภาพประกอบอาหาร
-        """)
+        if not SENTENCE_TRANSFORMERS_AVAILABLE:
+            st.info("""
+            **📱 โหมดปัจจุบัน: Basic Mode**
+            
+            แอปทำงานในโหมดพื้นฐานด้วย Fuzzy Search ที่ยังคงมีประสิทธิภาพดี
+            
+            **ฟีเจอร์ที่ทำงาน:**
+            - ✅ การค้นหาแบบ Fuzzy Matching
+            - ✅ รองรับการพิมพ์ผิด
+            - ✅ การคำนวณโภชนาการ
+            - ✅ UI ที่สวยงาม
+            
+            **เพื่อเปิดใช้ AI Features:**
+            - ติดตั้ง sentence-transformers
+            - ติดตั้ง scikit-learn
+            - รีสตาร์ทแอป
+            """)
+        else:
+            st.success("""
+            **🤖 โหมดปัจจุบัน: AI Enhanced**
+            
+            แอปทำงานเต็มประสิทธิภาพด้วย AI Search
+            
+            **ฟีเจอร์ที่พร้อมใช้งาน:**
+            - ✅ Semantic Search ด้วย AI
+            - ✅ Fuzzy Search สำรอง
+            - ✅ การจับคู่วัตถุดิบอัจฉริยะ
+            - ✅ การคำนวณโภชนาการแบบครบถ้วน
+            """)
 
 if __name__ == "__main__":
     main()
