@@ -100,24 +100,43 @@ echo 📚 กำลังติดตั้ง Python packages...
 echo    (กระบวนการนี้อาจใช้เวลา 5-10 นาที)
 echo.
 
-:: ติดตั้ง packages แบบแยก เพื่อให้เห็นความคืบหน้า
-echo 🔧 กำลังติดตั้ง Core packages...
-pip install streamlit pandas numpy
+:: อัปเกรด pip และ setuptools ก่อน
+echo 🔧 กำลังอัปเกรด pip และ setuptools...
+python -m pip install --upgrade pip setuptools wheel
+if %errorlevel% neq 0 (
+    echo ⚠️  ไม่สามารถอัปเกรด pip ได้ แต่จะดำเนินการต่อ
+)
 
-echo 🤖 กำลังติดตั้ง AI/ML packages...
-pip install sentence-transformers scikit-learn transformers
-
-echo 🔥 กำลังติดตั้ง PyTorch...
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-
-echo 🌐 กำลังติดตั้ง Web packages...
-pip install requests urllib3
-
-echo 📊 กำลังติดตั้ง Data packages...
-pip install openpyxl plotly matplotlib
-
-echo 🛠️  กำลังติดตั้ง Utility packages...
-pip install python-dateutil python-dotenv tqdm fuzzywuzzy python-levenshtein numba
+:: ลองติดตั้งแบบเต็มก่อน
+echo 🚀 กำลังติดตั้ง packages แบบเต็ม...
+pip install -r requirements.txt --timeout=300
+if %errorlevel% neq 0 (
+    echo ⚠️  การติดตั้งแบบเต็มล้มเหลว กำลังลองแบบ minimal...
+    echo.
+    
+    :: ติดตั้ง essential packages ทีละตัว
+    echo 📦 ติดตั้ง packages ที่จำเป็น...
+    pip install "streamlit>=1.25.0,<2.0.0"
+    pip install "pandas>=1.5.0,<2.0.0"  
+    pip install "numpy>=1.21.0,<1.25.0"
+    pip install "requests>=2.28.0"
+    
+    :: ติดตั้ง optional packages
+    echo 🔧 ติดตั้ง packages เสริม...
+    pip install fuzzywuzzy python-levenshtein python-dotenv tqdm plotly matplotlib openpyxl 2>nul
+    
+    :: ลองติดตั้ง AI packages
+    echo 🤖 ลองติดตั้ง AI packages...
+    pip install scikit-learn 2>nul
+    pip install sentence-transformers 2>nul
+    
+    :: ลองติดตั้ง PyTorch CPU
+    echo 🔥 ลองติดตั้ง PyTorch...
+    pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu 2>nul
+    if %errorlevel% neq 0 (
+        echo ⚠️  ไม่สามารถติดตั้ง PyTorch ได้ - จะใช้โหมดพื้นฐาน
+    )
+)
 
 if %errorlevel% neq 0 (
     echo ❌ การติดตั้งล้มเหลว! กำลังลองวิธีอื่น...
