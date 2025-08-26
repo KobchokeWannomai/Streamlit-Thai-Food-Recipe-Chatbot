@@ -2,26 +2,46 @@ import pandas as pd
 import re
 import os
 import argparse
+import numpy as np
+from typing import List, Dict, Optional
+import json
+from datetime import datetime
 
-def clean_text(text):
-    """ทำความสะอาดและจัดรูปแบบข้อความ"""
+def clean_text(text: str) -> str:
+    """
+    ทำความสะอาดและจัดรูปแบบข้อความ
+    
+    Args:
+        text (str): ข้อความที่ต้องการทำความสะอาด
+        
+    Returns:
+        str: ข้อความที่ทำความสะอาดแล้ว
+    """
     if not isinstance(text, str):
         return ""
     
-    # ลบช่องว่างเกิน
+    # ลบช่องว่างที่เกินจำเป็น
     text = re.sub(r'\s+', ' ', text)
     
-    # ลบอักขระพิเศษยกเว้นตัวอักษรไทย ภาษาอังกฤษ ตัวเลข และเครื่องหมายวรรคตอนพื้นฐาน
-    text = re.sub(r'[^\u0E00-\u0E7Fa-zA-Z0-9\s.,\-\(\)/]', '', text)
+    # ลบอักขระพิเศษ ยกเว้นตัวอักษรไทย ตัวเลข และเครื่องหมายวรรคตอนพื้นฐาน
+    text = re.sub(r'[^\u0E00-\u0E7Fa-zA-Z0-9\s.,\-\(\)\[\]/]', '', text)
     
     return text.strip()
 
-def standardize_ingredients(text):
-    """มาตรฐานการเขียนรายการวัตถุดิบ"""
+def preprocess_ingredients(text: str) -> str:
+    """
+    จัดรูปแบบรายการวัตถุดิบให้เป็นมาตรฐาน
+    
+    Args:
+        text (str): รายการวัตถุดิบ
+        
+    Returns:
+        str: รายการวัตถุดิบที่จัดรูปแบบแล้ว
+    """
     if not isinstance(text, str):
         return ""
     
-    # แยกแต่ละบรรทัด
+    # แยกบรรทัด
     lines = text.split('\n')
     formatted_lines = []
     
@@ -30,316 +50,370 @@ def standardize_ingredients(text):
         if not line:
             continue
         
-        # ตรวจสอบและปรับปรุงหน่วยวัด
-        line = standardize_units(line)
+        # ทำความสะอาดเครื่องหมายที่ไม่ต้องการ
+        line = re.sub(r'^[-•*\s]+', '', line)  # ลบเครื่องหมาย bullet ที่หน้า
         
-        # ตรวจสอบให้แต่ละบรรทัดขึ้นต้นด้วยเครื่องหมาย -
-        if not line.startswith('-'):
+        # เพิ่มเครื่องหมาย dash ถ้ายังไม่มี
+        if line and not line.startswith('- '):
             line = f"- {line}"
         
         formatted_lines.append(line)
     
     return '\n'.join(formatted_lines)
 
-def standardize_units(text):
-    """มาตรฐานหน่วยวัดในวัตถุดิบ"""
-    # แผนผังการแทนที่หน่วยวัด
-    unit_replacements = {
-        # หน่วยน้ำหนัก
-        r'กิโลกรัม|กก\.|kg': 'กิโลกรัม',
-        r'กรัม|ก\.|g(?!\w)': 'กรัม',
-        r'ขีด|บาท': 'ขีด',
+def standardize_ingredient_amounts(text: str) -> str:
+    """
+    มาตรฐานปริมาณและหน่วยของวัตถุดิบ
+    
+    Args:
+        text (str): ข้อความวัตถุดิบ
         
-        # หน่วยปริมาตร  
-        r'ลิตร|ล\.|L': 'ลิตร',
-        r'มิลลิลิตร|มล\.|ml': 'มิลลิลิตร',
-        r'ถ้วยชา': 'ถ้วยชา',
-        r'ช้อนโต๊ะ': 'ช้อนโต๊ะ',
-        r'ช้อนชา': 'ช้อนชา',
-        
-        # หน่วยนับ
-        r'ตัว': 'ตัว',
-        r'ผล': 'ผล', 
-        r'หัว': 'หัว',
-        r'กลีบ': 'กลีบ',
-        r'เม็ด': 'เม็ด',
-        r'ฟอง': 'ฟอง',
-        r'ต้น': 'ต้น',
-        r'ราก': 'ราก',
-        r'ใบ': 'ใบ'
+    Returns:
+        str: ข้อความที่มีหน่วยมาตรฐาน
+    """
+    if not isinstance(text, str):
+        return text
+    
+    # พจนานุกรมแปลงหน่วย
+    unit_standardization = {
+        'กิโลกรัม': 'กิโลกรัม', 'กก.': 'กิโลกรัม', 'กก': 'กิโลกรัม',
+        'กรัม': 'กรัม', 'ก.': 'กรัม', 'ก': 'กรัม',
+        'ช้อนโต๊ะ': 'ช้อนโต๊ะ', 'ช้อนใหญ่': 'ช้อนโต๊ะ', 
+        'ช้อนชา': 'ช้อนชา', 'ช้อนเล็ก': 'ช้อนชา',
+        'ถ้วยตวง': 'ถ้วยตวง', 'ถ้วย': 'ถ้วยตวง',
+        'ลูก': 'ลูก', 'หัว': 'หัว', 'กิ่ง': 'กิ่ง',
+        'แผ่น': 'แผ่น', 'เส้น': 'เส้น', 'ฝัก': 'ฝัก',
+        'ใบ': 'ใบ', 'ดอก': 'ดอก'
     }
     
-    # ทำการแทนที่
-    for pattern, replacement in unit_replacements.items():
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    # ประมาณปริมาณจากคำอธิบาย
+    amount_estimation = {
+        r'เล็กน้อย|นิดหน่อย|เล็กๆ': '1 ช้อนชา',
+        r'ปานกลาง|กลาง|พอประมาณ': '1 ช้อนโต๊ะ',
+        r'มาก|เยอะ|เยอะๆ|ใหญ่': '2 ช้อนโต๊ะ',
+        r'ตามชอบ|ตามใจชอบ': '1 ช้อนชา',
+        r'หยิบมือหนึ่ง|กำมือหนึ่ง': '30 กรัม'
+    }
     
-    return text
-
-def extract_ingredient_info(ingredient_text):
-    """แยกข้อมูลปริมาณ หน่วย และชื่อวัตถุดิบ"""
-    # ลบเครื่องหมาย - ที่ด้านหน้า
-    text = ingredient_text.strip().lstrip('-').strip()
+    processed_text = text
     
-    # ค้นหารูปแบบตัวเลขและหน่วย
-    patterns = [
-        r'(\d+(?:[./]\d+)?)\s*([ก-๙a-zA-Z]+)',  # ตัวเลขตามด้วยหน่วย
-        r'(\d+(?:[./]\d+)?)',  # เฉพาะตัวเลข
-    ]
+    # แทนที่หน่วยด้วยหน่วยมาตรฐาน
+    for old_unit, new_unit in unit_standardization.items():
+        processed_text = re.sub(rf'\b{old_unit}\b', new_unit, processed_text)
     
-    amount = None
-    unit = ""
-    name = text
-    
-    for pattern in patterns:
-        match = re.search(pattern, text)
-        if match:
-            amount_str = match.group(1)
-            unit = match.group(2) if len(match.groups()) > 1 else ""
-            
-            # แปลงเศษส่วนเป็นทศนิยม
-            if '/' in amount_str:
-                parts = amount_str.split('/')
-                try:
-                    amount = float(parts[0]) / float(parts[1])
-                except:
-                    amount = 1
-            else:
-                try:
-                    amount = float(amount_str)
-                except:
-                    amount = 1
-            
-            # ลบส่วนที่เป็นตัวเลขและหน่วยออก
-            name = text.replace(match.group(0), '').strip()
+    # เพิ่มปริมาณประมาณสำหรับคำอธิบาย
+    for pattern, replacement in amount_estimation.items():
+        if re.search(pattern, processed_text) and not re.search(r'\d+', processed_text):
+            processed_text = f"{replacement} {processed_text}"
             break
     
-    return {
-        'original': ingredient_text,
-        'amount': amount if amount is not None else 1,
-        'unit': unit,
-        'name': name,
-        'standardized': f"- {name} {amount if amount else ''} {unit}".strip()
+    return processed_text
+
+def extract_cooking_methods(text: str) -> List[str]:
+    """
+    สกัดวิธีการทำอาหารจากข้อความ
+    
+    Args:
+        text (str): ข้อความวิธีทำ
+        
+    Returns:
+        List[str]: รายการวิธีการทำอาหาร
+    """
+    if not isinstance(text, str):
+        return []
+    
+    cooking_methods = []
+    method_keywords = {
+        'ทอด': ['ทอด', 'ลงกระทะ', 'น้ำมันร้อน'],
+        'ผัด': ['ผัด', 'คนให้เข้ากัน'],
+        'ต้ม': ['ต้ม', 'เอาไปต้ม', 'ใส่น้ำ'],
+        'นึ่ง': ['นึ่ง', 'หม้อนึ่ง'],
+        'ปิ้ง': ['ปิ้ง', 'ย่าง'],
+        'คั่ว': ['คั่ว', 'คั่วให้หอม'],
+        'ดอง': ['ดอง', 'หมัก'],
+        'ต้มแกง': ['แกง', 'ใส่กะทิ']
     }
-
-def validate_ingredient_amounts(ingredients_text):
-    """ตรวจสอบและปรับปรุงปริมาณวัตถุดิบให้สมเหตุสมผล"""
-    lines = ingredients_text.split('\n')
-    validated_lines = []
     
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
+    for method, keywords in method_keywords.items():
+        if any(keyword in text for keyword in keywords):
+            cooking_methods.append(method)
+    
+    return cooking_methods if cooking_methods else ['ผสม']  # default method
+
+def validate_recipe_data(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    ตรวจสอบและทำความสะอาดข้อมูลสูตรอาหาร
+    
+    Args:
+        df (pd.DataFrame): ข้อมูลสูตรอาหารดิบ
         
-        info = extract_ingredient_info(line)
+    Returns:
+        pd.DataFrame: ข้อมูลที่ตรวจสอบและทำความสะอาดแล้ว
+    """
+    # ลบแถวที่ข้อมูลสำคัญว่าง
+    df = df.dropna(subset=['name'])
+    
+    # เติมข้อมูลที่หายไป
+    df['text_ingradiant'] = df['text_ingradiant'].fillna('- ไม่ระบุวัตถุดิบ')
+    df['food_method'] = df['food_method'].fillna('ไม่ระบุวิธีทำ')
+    
+    # ตรวจสอบความยาวของข้อมูล
+    df = df[df['name'].str.len() >= 2]  # ชื่ออาหารต้องมีความยาวอย่างน้อย 2 ตัวอักษร
+    
+    # ลบรายการซ้ำ (เก็บรายการแรก)
+    df = df.drop_duplicates(subset=['name'], keep='first')
+    
+    return df
+
+def enhance_recipe_data(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    เพิ่มข้อมูลเพิ่มเติมให้กับสูตรอาหาร
+    
+    Args:
+        df (pd.DataFrame): ข้อมูลสูตรอาหาร
         
-        # ปรับปรุงปริมาณที่ไม่สมเหตุสมผล
-        if info['amount'] and info['unit']:
-            # ตรวจสอบปริมาณที่มากผิดปกติ
-            if info['unit'] in ['กิโลกรัม', 'กก.'] and info['amount'] > 5:
-                # ถ้าเกิน 5 กิโลกรัม อาจเป็นความผิดพลาด
-                new_amount = info['amount'] / 1000  # แปลงเป็นกรัม
-                validated_lines.append(f"- {info['name']} {new_amount} กรัม")
-            elif info['unit'] in ['ถ้วย'] and info['amount'] > 10:
-                # ถ้าเกิน 10 ถ้วย อาจมากเกินไป
-                new_amount = min(info['amount'], 3)
-                validated_lines.append(f"- {info['name']} {new_amount} {info['unit']}")
-            else:
-                validated_lines.append(f"- {info['name']} {info['amount']} {info['unit']}")
-        elif info['amount'] and not info['unit']:
-            # ถ้ามีตัวเลขแต่ไม่มีหน่วย ให้เดาหน่วยจากชื่อวัตถุดิบ
-            suggested_unit = suggest_unit_from_name(info['name'])
-            validated_lines.append(f"- {info['name']} {info['amount']} {suggested_unit}")
+    Returns:
+        pd.DataFrame: ข้อมูลที่เพิ่มเติมแล้ว
+    """
+    # เพิ่มคอลัมน์ข้อมูลเพิ่มเติม
+    df['ingredient_count'] = df['text_ingradiant'].apply(
+        lambda x: len([line for line in str(x).split('\n') if line.strip()])
+    )
+    
+    df['cooking_methods'] = df['food_method'].apply(extract_cooking_methods)
+    df['cooking_methods_str'] = df['cooking_methods'].apply(lambda x: ', '.join(x))
+    
+    # ประเมินความซับซ้อนของสูตร
+    def estimate_complexity(row):
+        ingredient_count = row['ingredient_count']
+        method_text = str(row['food_method'])
+        method_length = len(method_text)
+        
+        if ingredient_count <= 3 and method_length <= 100:
+            return 'ง่าย'
+        elif ingredient_count <= 7 and method_length <= 300:
+            return 'ปานกลาง'
         else:
-            # ถ้าไม่มีตัวเลขเลย ให้ใส่ปริมาณประมาณ
-            suggested_amount, suggested_unit = suggest_amount_from_name(info['name'])
-            validated_lines.append(f"- {info['name']} {suggested_amount} {suggested_unit}")
+            return 'ยาก'
     
-    return '\n'.join(validated_lines)
+    df['complexity'] = df.apply(estimate_complexity, axis=1)
+    
+    # เพิ่มแท็กหมวดหมู่อาหาร
+    def categorize_food(name):
+        name_lower = name.lower()
+        
+        if any(word in name_lower for word in ['แกง', 'ต้มยำ', 'ต้มข่า']):
+            return 'แกงและซุป'
+        elif any(word in name_lower for word in ['ผัด', 'ผัดไท', 'ผัดกะเพรา']):
+            return 'อาหารผัด'
+        elif any(word in name_lower for word in ['ทอด', 'ปอเปี๊ยะ']):
+            return 'อาหารทอด'
+        elif any(word in name_lower for word in ['ยำ', 'ตำ', 'ลาบ']):
+            return 'ยำและตำ'
+        elif any(word in name_lower for word in ['ข้าว', 'เสี้ยว', 'ก๋วยเตี๋ยว']):
+            return 'อาหารหลัก'
+        elif any(word in name_lower for word in ['ขนม', 'เค้ก', 'ลูกชุบ']):
+            return 'ขนมและของหวาน'
+        else:
+            return 'อื่นๆ'
+    
+    df['category'] = df['name'].apply(categorize_food)
+    
+    return df
 
-def suggest_unit_from_name(name):
-    """เสนอแนะหน่วยวัดจากชื่อวัตถุดิบ"""
-    name_lower = name.lower()
+def create_metadata_file(df: pd.DataFrame, output_path: str) -> None:
+    """
+    สร้างไฟล์ metadata สำหรับชุดข้อมูล
     
-    # หน่วยนับ
-    if any(word in name_lower for word in ['ไก่', 'หมู', 'ปลา', 'กบ']):
-        return 'ตัว'
-    elif any(word in name_lower for word in ['มะเขือเทศ', 'มะนาว', 'แตงกวา', 'มะละกอ']):
-        return 'ผล'
-    elif any(word in name_lower for word in ['หอม', 'กระเทียม']):
-        return 'หัว'
-    elif 'กลีบ' in name_lower:
-        return 'กลีบ'
-    elif 'ไข่' in name_lower:
-        return 'ฟอง'
-    elif any(word in name_lower for word in ['ผักชี', 'ต้นหอม']):
-        return 'ต้น'
-    elif any(word in name_lower for word in ['พริก']):
-        return 'เม็ด'
+    Args:
+        df (pd.DataFrame): ข้อมูลที่ประมวลผลแล้ว
+        output_path (str): พาธไฟล์ output
+    """
+    metadata = {
+        'dataset_info': {
+            'name': 'Thai Food Recipes Dataset',
+            'version': '2.0',
+            'created_date': datetime.now().isoformat(),
+            'total_recipes': len(df),
+            'columns': list(df.columns),
+            'categories': df['category'].value_counts().to_dict() if 'category' in df.columns else {},
+            'complexity_distribution': df['complexity'].value_counts().to_dict() if 'complexity' in df.columns else {}
+        },
+        'preprocessing_info': {
+            'text_cleaning': 'Applied',
+            'ingredient_standardization': 'Applied',
+            'duplicate_removal': 'Applied',
+            'data_validation': 'Applied'
+        },
+        'statistics': {
+            'avg_ingredient_count': float(df['ingredient_count'].mean()) if 'ingredient_count' in df.columns else 0,
+            'max_ingredient_count': int(df['ingredient_count'].max()) if 'ingredient_count' in df.columns else 0,
+            'min_ingredient_count': int(df['ingredient_count'].min()) if 'ingredient_count' in df.columns else 0
+        }
+    }
     
-    # หน่วยน้ำหนัก
-    elif any(word in name_lower for word in ['น้ำมัน', 'น้ำปลา', 'น้ำส้ม']):
-        return 'ช้อนโต๊ะ'
-    elif any(word in name_lower for word in ['เกลือ', 'น้ำตาล', 'พริกไทย']):
-        return 'ช้อนชา'
-    else:
-        return 'กรัม'
+    # บันทึกไฟล์ metadata
+    metadata_path = output_path.replace('.csv', '_metadata.json')
+    with open(metadata_path, 'w', encoding='utf-8') as f:
+        json.dump(metadata, f, ensure_ascii=False, indent=2)
+    
+    print(f"Metadata saved to: {metadata_path}")
 
-def suggest_amount_from_name(name):
-    """เสนอแนะปริมาณจากชื่อวัตถุดิบ"""
-    name_lower = name.lower()
+def preprocess_data(input_file: str, output_file: str, enhanced_mode: bool = True) -> bool:
+    """
+    ประมวลผลข้อมูลอาหารไทยแบบครบถ้วน
     
-    # ปริมาณสำหรับเครื่องปรุง
-    if any(word in name_lower for word in ['เกลือ', 'พริกไทย']):
-        return 1, 'ช้อนชา'
-    elif any(word in name_lower for word in ['น้ำปลา', 'น้ำตาล']):
-        return 2, 'ช้อนโต๊ะ'
-    elif 'น้ำมัน' in name_lower:
-        return 3, 'ช้อนโต๊ะ'
-    
-    # ปริมาณสำหรับผัก/เครื่องเทศ
-    elif any(word in name_lower for word in ['ผักชี', 'ต้นหอม']):
-        return 2, 'ต้น'
-    elif 'พริก' in name_lower:
-        return 3, 'เม็ด'
-    elif 'กระเทียม' in name_lower:
-        return 3, 'กลีบ'
-    elif 'หอม' in name_lower:
-        return 1, 'หัว'
-    
-    # ปริมาณสำหรับเนื้อสัตว์
-    elif any(word in name_lower for word in ['ไก่', 'หมู', 'เนื้อ']):
-        return 300, 'กรัม'
-    elif any(word in name_lower for word in ['ปลา', 'กุ้ง']):
-        return 200, 'กรัม'
-    elif 'ไข่' in name_lower:
-        return 2, 'ฟอง'
-    
-    # ค่าเริ่มต้น
-    else:
-        return 100, 'กรัม'
-
-def preprocess_data(input_file, output_file):
-    """ประมวลผลล่วงหน้าข้อมูลสูตรอาหารไทย"""
-    # ตรวจสอบว่ามีไฟล์อินพุตหรือไม่
+    Args:
+        input_file (str): ไฟล์ข้อมูลดิบ
+        output_file (str): ไฟล์ข้อมูลที่ประมวลผลแล้ว
+        enhanced_mode (bool): โหมดเพิ่มข้อมูลเพิ่มเติม
+        
+    Returns:
+        bool: ความสำเร็จของการประมวลผล
+    """
+    # ตรวจสอบไฟล์อินพุต
     if not os.path.exists(input_file):
-        print(f"ข้อผิดพลาด: ไม่พบไฟล์อินพุต '{input_file}'")
+        print(f"Error: ไม่พบไฟล์อินพุต '{input_file}'")
         return False
     
     try:
-        # อ่านไฟล์ CSV
-        print(f"กำลังอ่านไฟล์ {input_file}...")
-        df = pd.read_csv(input_file)
+        print("กำลังโหลดข้อมูล...")
+        # โหลดข้อมูล
+        df = pd.read_csv(input_file, encoding='utf-8')
+        print(f"โหลดข้อมูลสำเร็จ: {len(df)} แถว")
         
         # ตรวจสอบคอลัมน์ที่จำเป็น
         required_columns = ['name', 'text_ingradiant', 'food_method']
         missing_columns = [col for col in required_columns if col not in df.columns]
         
         if missing_columns:
-            print(f"ข้อผิดพลาด: ไม่พบคอลัมน์ที่จำเป็น: {', '.join(missing_columns)}")
+            print(f"Error: ไม่พบคอลัมน์ที่จำเป็น: {', '.join(missing_columns)}")
             return False
         
-        print("กำลังทำความสะอาดและปรับปรุงข้อมูล...")
-        
-        # ทำความสะอาดข้อความในแต่ละคอลัมน์
+        print("กำลังทำความสะอาดข้อมูล...")
+        # ทำความสะอาดข้อมูลพื้นฐาน
         df['name'] = df['name'].apply(clean_text)
         df['food_method'] = df['food_method'].apply(clean_text)
+        df['text_ingradiant'] = df['text_ingradiant'].apply(preprocess_ingredients)
         
-        # ปรับปรุงรายการวัตถุดิบ
-        print("กำลังปรับปรุงรายการวัตถุดิบ...")
-        df['ingredient'] = df['text_ingradiant'].apply(standardize_ingredients)
-        df['ingredient'] = df['ingredient'].apply(validate_ingredient_amounts)
+        # มาตรฐานวัตถุดิบ
+        print("กำลังมาตรฐานวัตถุดิบ...")
+        df['text_ingradiant'] = df['text_ingradiant'].apply(standardize_ingredient_amounts)
         
-        # ลบคอลัมน์เก่า
-        df = df.drop('text_ingradiant', axis=1)
+        # ตรวจสอบและทำความสะอาดข้อมูล
+        print("กำลังตรวจสอบข้อมูล...")
+        original_count = len(df)
+        df = validate_recipe_data(df)
+        removed_count = original_count - len(df)
         
-        # เปลี่ยนชื่อคอลัมน์
-        df = df.rename(columns={'food_method': 'method'})
+        if removed_count > 0:
+            print(f"ลบข้อมูลที่ไม่สมบูรณ์: {removed_count} แถว")
         
-        # ลบรายการที่ซ้ำ
-        df = df.drop_duplicates(subset=['name'])
+        # เพิ่มข้อมูลเพิ่มเติม (ถ้าเปิดใช้งาน)
+        if enhanced_mode:
+            print("กำลังเพิ่มข้อมูลเพิ่มเติม...")
+            df = enhance_recipe_data(df)
         
-        # จัดเรียงข้อมูลใหม่
+        # รีเซ็ตอินเด็กซ์
         df = df.reset_index(drop=True)
         
         # บันทึกข้อมูลที่ประมวลผลแล้ว
+        print("กำลังบันทึกไฟล์...")
         df.to_csv(output_file, index=False, encoding='utf-8-sig')
         
-        print(f"การประมวลผลเสร็จสิ้น บันทึกไปยัง '{output_file}'")
+        # สร้างไฟล์ metadata
+        if enhanced_mode:
+            create_metadata_file(df, output_file)
+        
+        print(f"ประมวลผลสำเร็จ! บันทึกไปที่ '{output_file}'")
         print(f"จำนวนสูตรอาหารทั้งหมด: {len(df)}")
         
-        # ลบไฟล์ embeddings ถ้ามี เพื่อให้สร้างใหม่
-        if os.path.exists('embeddings.pkl'):
-            os.remove('embeddings.pkl')
-            print("ลบไฟล์ embeddings เดิม จะสร้างใหม่เมื่อรันแอป")
+        # แสดงสถิติเพิ่มเติม
+        if enhanced_mode and 'category' in df.columns:
+            print("\nสถิติหมวดหมู่อาหาร:")
+            category_counts = df['category'].value_counts()
+            for category, count in category_counts.items():
+                print(f"  - {category}: {count} รายการ")
         
-        # แสดงตัวอย่างข้อมูลที่ปรับปรุงแล้ว
-        print("\nตัวอย่างข้อมูลที่ปรับปรุงแล้ว:")
-        print("=" * 60)
-        for i in range(min(3, len(df))):
-            print(f"\nสูตรที่ {i+1}: {df.iloc[i]['name']}")
-            print("วัตถุดิบ:")
-            ingredients = df.iloc[i]['ingredient'].split('\n')
-            for ing in ingredients[:5]:  # แสดง 5 รายการแรก
-                if ing.strip():
-                    print(f"  {ing}")
-            if len(ingredients) > 5:
-                print(f"  ... และอื่นๆ อีก {len(ingredients)-5} รายการ")
+        # ลบไฟล์ embeddings เก่า (ถ้ามี) เพื่อให้สร้างใหม่
+        embeddings_files = ['embeddings.pkl', 'recipe_embeddings.pkl']
+        for emb_file in embeddings_files:
+            if os.path.exists(emb_file):
+                os.remove(emb_file)
+                print(f"ลบไฟล์ embeddings เก่า: {emb_file}")
         
         return True
-    
+        
     except Exception as e:
-        print(f"เกิดข้อผิดพลาดในการประมวลผล: {str(e)}")
+        print(f"Error: เกิดข้อผิดพลาดในการประมวลผล: {str(e)}")
         return False
 
-def analyze_ingredients(csv_file):
-    """วิเคราะห์และสรุปข้อมูลวัตถุดิบ"""
-    try:
-        df = pd.read_csv(csv_file)
-        
-        print("\nการวิเคราะห์ข้อมูลวัตถุดิบ")
-        print("=" * 50)
-        
-        # นับจำนวนวัตถุดิบที่ใช้บ่อย
-        all_ingredients = []
-        for ingredients in df['ingredient']:
-            for ingredient in ingredients.split('\n'):
-                ingredient = ingredient.strip().lstrip('-').strip()
-                if ingredient:
-                    # แยกเฉพาะชื่อวัตถุดิบ ไม่เอาปริมาณ
-                    name = re.sub(r'^\d+(?:[./]\d+)?\s*[ก-๙a-zA-Z]*\s*', '', ingredient)
-                    if name:
-                        all_ingredients.append(name.lower())
-        
-        # นับความถี่
-        from collections import Counter
-        ingredient_counts = Counter(all_ingredients)
-        
-        print(f"วัตถุดิบที่พบบ่อยที่สุด 10 อันดับแรก:")
-        for ingredient, count in ingredient_counts.most_common(10):
-            print(f"  {ingredient}: {count} ครั้ง")
-        
-        print(f"\nสถิติทั่วไป:")
-        print(f"  จำนวนสูตรอาหารทั้งหมด: {len(df)}")
-        print(f"  จำนวนวัตถุดิบที่แตกต่างกัน: {len(ingredient_counts)}")
-        print(f"  วัตถุดิบเฉลี่ยต่อสูตร: {len(all_ingredients)/len(df):.1f}")
-        
-    except Exception as e:
-        print(f"เกิดข้อผิดพลาดในการวิเคราะห์: {str(e)}")
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='ประมวลผลข้อมูลสูตรอาหารไทย')
-    parser.add_argument('--input', type=str, default='thai_food_raw.csv', 
-                        help='เส้นทางไฟล์ CSV อินพุต')
-    parser.add_argument('--output', type=str, default='thai_food_processed.csv', 
-                        help='เส้นทางไฟล์ CSV เอาท์พุต')
-    parser.add_argument('--analyze', action='store_true',
-                        help='วิเคราะห์ข้อมูลหลังประมวลผล')
+def main():
+    """ฟังก์ชันหลักสำหรับรันสคริปต์"""
+    parser = argparse.ArgumentParser(
+        description='สคริปต์ประมวลผลข้อมูลสูตรอาหารไทย (Thai Food Recipe Preprocessor)',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+ตัวอย่างการใช้งาน:
+  python preprocess.py --input thai_food_raw.csv --output thai_food_processed_cleaned.csv
+  python preprocess.py --input data.csv --output clean_data.csv --enhanced
+  python preprocess.py --input data.csv --output basic_data.csv --no-enhanced
+        """
+    )
+    
+    parser.add_argument(
+        '--input', '-i', 
+        type=str, 
+        default='thai_food_raw.csv',
+        help='ไฟล์อินพุต CSV (default: thai_food_raw.csv)'
+    )
+    
+    parser.add_argument(
+        '--output', '-o', 
+        type=str, 
+        default='thai_food_processed_cleaned.csv',
+        help='ไฟล์เอาต์พุต CSV (default: thai_food_processed_cleaned.csv)'
+    )
+    
+    parser.add_argument(
+        '--enhanced', 
+        action='store_true',
+        help='เปิดใช้โหมดเพิ่มข้อมูลเพิ่มเติม (หมวดหมู่, ความซับซ้อน, etc.)'
+    )
+    
+    parser.add_argument(
+        '--no-enhanced', 
+        action='store_true',
+        help='ปิดใช้โหมดเพิ่มข้อมูลเพิ่มเติม (ทำความสะอาดพื้นฐานเท่านั้น)'
+    )
     
     args = parser.parse_args()
     
-    # ประมวลผลข้อมูล
-    success = preprocess_data(args.input, args.output)
+    # กำหนดโหมด enhanced
+    if args.no_enhanced:
+        enhanced_mode = False
+    elif args.enhanced:
+        enhanced_mode = True
+    else:
+        enhanced_mode = True  # default เป็น enhanced
     
-    if success and args.analyze:
-        analyze_ingredients(args.output)
+    print("=" * 60)
+    print("🍲 Thai Food Recipe Preprocessor 🍲")
+    print("=" * 60)
+    print(f"Input file: {args.input}")
+    print(f"Output file: {args.output}")
+    print(f"Enhanced mode: {'✅ เปิดใช้งาน' if enhanced_mode else '❌ ปิดใช้งาน'}")
+    print("-" * 60)
+    
+    # เริ่มประมวลผล
+    success = preprocess_data(args.input, args.output, enhanced_mode)
+    
+    if success:
+        print("\n✅ ประมวลผลสำเร็จ!")
+        print("🚀 พร้อมใช้งานกับแอปพลิเคชัน Thai Food Nutrition Analyzer")
+    else:
+        print("\n❌ ประมวลผลล้มเหลว!")
+        print("🔧 กรุณาตรวจสอบไฟล์อินพุตและลองใหม่")
+
+if __name__ == "__main__":
+    main()
