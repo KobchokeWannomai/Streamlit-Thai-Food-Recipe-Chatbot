@@ -1,39 +1,19 @@
-# Minimal requirements for Thai Food Nutrition Analyzer
-# ความต้องการขั้นต่ำสำหรับแอปพลิเคชัน
-# ใช้เมื่อการติดตั้งแบบเต็มไม่สำเร็จ
-
-# Core web framework (จำเป็น)
-streamlit>=1.25.0,<2.0.0
-
-# Data manipulation (จำเป็น)
+# Core requirements - ติดตั้งแน่นอน
+streamlit>=1.25.0
 pandas
 numpy
-
-# HTTP requests (จำเป็น)
 requests
 
-# Text processing (แนะนำ)
-fuzzywuzzy
+# Text processing
+fuzzywuzzy>=0.18.0
 python-levenshtein
 
-# Utilities (แนะนำ)
-python-dotenv
-tqdm
-
-# Data visualization (ทำงานได้โดยไม่มี)
+# Visualization
 plotly
-matplotlib
 
-# File handling (ทำงานได้โดยไม่มี)
-openpyxl
+# Optional AI packages - อาจติดตั้งไม่ได้แต่แอปจะทำงาน
+scikit-learn
+sentence-transformers
 
-# Machine Learning (ทำงานได้โดยไม่มี แต่จะไม่มี AI features)
-# scikit-learn
-# sentence-transformers
-# torch
-# transformers
-
-# หมายเหตุ:
-# - แอปจะทำงานได้โดยไม่มี ML packages แต่จะไม่มีฟีเจอร์ AI
-# - สำหรับฟีเจอร์ AI ให้ติดตั้งเพิ่ม: pip install sentence-transformers torch
-# - ถ้าติดตั้งไม่ได้ ให้ลองใช้ conda แทน pip
+# PyTorch CPU - สำหรับ AI features
+torch
