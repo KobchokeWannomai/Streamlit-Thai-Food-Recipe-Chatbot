@@ -555,17 +555,7 @@ def display_ingredients(ingredients_text: str):
 
 # ฟังก์ชันหลัก
 def main():
-    # ส่วนหัว
-    mode_indicator = "🤖 AI Enhanced" if SENTENCE_TRANSFORMERS_AVAILABLE and model else "🔍 Basic Mode"
-    
-    st.markdown(f"""
-    <div class="main-header">
-        <h1>🍲 ระบบวิเคราะห์คุณค่าทางโภชนาการอาหารไทย</h1>
-        <p>Thai Food Nutrition Analyzer - {mode_indicator}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # โหลดข้อมูลและโมเดล
+    # โหลดข้อมูลและโมเดลก่อน
     with st.spinner("กำลังโหลดระบบ..."):
         model = load_model()
         data = load_food_data()
@@ -576,6 +566,16 @@ def main():
         
         embeddings = get_embeddings(model, data)
         nutrition_calculator = SimpleNutritionCalculator()
+    
+    # ส่วนหัว (หลังจากโหลดโมเดลแล้ว)
+    mode_indicator = "🤖 AI Enhanced" if SENTENCE_TRANSFORMERS_AVAILABLE and model else "🔍 Basic Mode"
+    
+    st.markdown(f"""
+    <div class="main-header">
+        <h1>🍲 ระบบวิเคราะห์คุณค่าทางโภชนาการอาหารไทย</h1>
+        <p>Thai Food Nutrition Analyzer - {mode_indicator}</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # แถบด้านข้าง
     with st.sidebar:
